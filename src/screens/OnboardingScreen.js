@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import BackgroundDecoration from '../components/BackgroundDecoration';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -22,11 +23,11 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 // ========================================================================
 const ONBOARDING_SCREENS = [
   { image: null, title: 'All-in-One Financial Hub', subtitle: 'From insurance to travel — access 10+ services in one app.' },
-  { image: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/financial_hub.png'), title: 'All-in-One Financial Hub', subtitle: 'From insurance to travel — access 10+ services in one app.' },
+  { image: require('../../assets/Icons/financial_hub.png'), title: 'All-in-One Financial Hub', subtitle: 'From insurance to travel — access 10+ services in one app.' },
   { image: null, title: 'Refer People, Earn Cash', subtitle: 'Invite others and earn every time they use a service.' },
-  { image: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/cash.png'), title: 'Refer People, Earn Cash', subtitle: 'Invite others and earn every time they use a service.' },
+  { image: require('../../assets/Icons/cash.png'), title: 'Refer People, Earn Cash', subtitle: 'Invite others and earn every time they use a service.' },
   { image: null, title: 'Start Earning Your Way', subtitle: 'Become an affiliate or ambassador and grow your income.' },
-  { image: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/earning.png'), title: 'Start Earning Your Way', subtitle: 'Become an affiliate or ambassador and grow your income.' },
+  { image: require('../../assets/Icons/earning.png'), title: 'Start Earning Your Way', subtitle: 'Become an affiliate or ambassador and grow your income.' },
 ];
 
 // ========================================================================
@@ -38,29 +39,15 @@ const SplashScreen = () => (
   <View style={styles.container}>
     <StatusBar barStyle="light-content" />
     <LinearGradient colors={['#8F31F9', '#521B90']} style={styles.gradient}>
-      {/* Background Image - positioned as per Figma design */}
+      {/* Screen-relative background decoration */}
+      <BackgroundDecoration opacity={0.95} />
+      {/* Bottom vector pattern */}
       <Image
-       source={require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/background_image.png')}
-        style={styles.backgroundImage}
+        source={require('../../assets/Icons/vector.png')}
+        style={styles.vectorPattern}
         resizeMode="cover"
       />
       
-      {/* Vector Pattern with gradient background - positioned exactly like CSS */}
-      <View style={styles.vectorPatternContainer}>
-        <LinearGradient
-          colors={['rgba(150, 61, 251, 0)', 'rgba(150, 61, 251, 0.05)']}
-          locations={[0.334, 0.7699]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.vectorGradient}
-        >
-          <Image
-            source={require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/vector_pattern.svg')}
-            style={styles.vectorPattern}
-            resizeMode="cover"
-          />
-        </LinearGradient>
-      </View>
       
       <SafeAreaView style={styles.splashSafeArea}>
         {/* Empty container - logo and tagline removed */}
@@ -156,13 +143,13 @@ const OnboardingContentScreenComponent = ({ onNext, onBack, currentIndex, isLast
   const [content, setContent] = useState(ONBOARDING_SCREENS[currentIndex]);
   const [displayedImage, setDisplayedImage] = useState(ONBOARDING_SCREENS[currentIndex].image);
 
-  // Memoize the current screen data to prevent unnecessary re-renders
-  const currentScreenData = useMemo(() => ONBOARDING_SCREENS[currentIndex], [currentIndex]);
-
   const imageAnim = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(1)).current;
 
-  const animateTransition = useCallback((newScreenData, newImage) => {
+  useEffect(() => {
+    const newScreenData = ONBOARDING_SCREENS[currentIndex];
+    const newImage = newScreenData.image;
+
     const animateOut = Animated.timing(imageAnim, {
       toValue: -screenHeight * 0.5,
       duration: 300,
@@ -203,17 +190,13 @@ const OnboardingContentScreenComponent = ({ onNext, onBack, currentIndex, isLast
         fadeInText.start();
       });
     }
-  }, [displayedImage, imageAnim, contentOpacity]);
-
-  useEffect(() => {
-    const newImage = currentScreenData.image;
-    animateTransition(currentScreenData, newImage);
-  }, [currentIndex, animateTransition, currentScreenData]);
+  }, [currentIndex]);
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <LinearGradient colors={['#F3ECFE', '#F6F6FE']} locations={[0, 0.49]} style={styles.gradient}>
+        <BackgroundDecoration opacity={0.8} />
         <FaintTrianglePattern />
         <SafeAreaView style={styles.mainSafeArea}>
           <View style={styles.topNav}>
@@ -266,25 +249,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 297,
     height: 297,
-    left: 39,
+    left: 55,
     top: 188,
   },
-  vectorPatternContainer: {
-    position: 'absolute',
-    width: 811,
-    height: 659,
-    left: (screenWidth - 811) / 2, // calc(50% - 811px/2)
-    bottom: 313,
-    // background: linear-gradient(216.27deg, rgba(150, 61, 251, 0) 33.4%, rgba(150, 61, 251, 0.05) 76.99%);
-  },
-  vectorGradient: {
-    width: '100%',
-    height: '100%',
-  },
   vectorPattern: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
-    height: '100%',
-    opacity: 1, // Full opacity since gradient handles transparency
+    height: screenHeight * 0.45,
+    opacity: 0.85,
   },
   mainSafeArea: { flex: 1 },
   topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 10, height: 44, zIndex: 10 },
