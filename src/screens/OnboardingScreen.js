@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -45,12 +45,22 @@ const SplashScreen = () => (
         resizeMode="cover"
       />
       
-      {/* Vector Pattern at bottom - positioned exactly like Figma */}
-      <Image
-        source={require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/vector_pattern.svg')}
-        style={styles.vectorPattern}
-        resizeMode="cover"
-      />
+      {/* Vector Pattern with gradient background - positioned exactly like CSS */}
+      <View style={styles.vectorPatternContainer}>
+        <LinearGradient
+          colors={['rgba(150, 61, 251, 0)', 'rgba(150, 61, 251, 0.05)']}
+          locations={[0.334, 0.7699]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.vectorGradient}
+        >
+          <Image
+            source={require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/vector_pattern.svg')}
+            style={styles.vectorPattern}
+            resizeMode="cover"
+          />
+        </LinearGradient>
+      </View>
       
       <SafeAreaView style={styles.splashSafeArea}>
         {/* Empty container - logo and tagline removed */}
@@ -146,13 +156,13 @@ const OnboardingContentScreenComponent = ({ onNext, onBack, currentIndex, isLast
   const [content, setContent] = useState(ONBOARDING_SCREENS[currentIndex]);
   const [displayedImage, setDisplayedImage] = useState(ONBOARDING_SCREENS[currentIndex].image);
 
+  // Memoize the current screen data to prevent unnecessary re-renders
+  const currentScreenData = useMemo(() => ONBOARDING_SCREENS[currentIndex], [currentIndex]);
+
   const imageAnim = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
-    const newScreenData = ONBOARDING_SCREENS[currentIndex];
-    const newImage = newScreenData.image;
-
+  const animateTransition = useCallback((newScreenData, newImage) => {
     const animateOut = Animated.timing(imageAnim, {
       toValue: -screenHeight * 0.5,
       duration: 300,
@@ -193,7 +203,12 @@ const OnboardingContentScreenComponent = ({ onNext, onBack, currentIndex, isLast
         fadeInText.start();
       });
     }
-  }, [currentIndex]);
+  }, [displayedImage, imageAnim, contentOpacity]);
+
+  useEffect(() => {
+    const newImage = currentScreenData.image;
+    animateTransition(currentScreenData, newImage);
+  }, [currentIndex, animateTransition, currentScreenData]);
 
   return (
     <View style={styles.container}>
@@ -254,13 +269,22 @@ const styles = StyleSheet.create({
     left: 39,
     top: 188,
   },
-  vectorPattern: {
+  vectorPatternContainer: {
     position: 'absolute',
-    left: 0,
-    top: 547,
-    width: 375,
-    height: 304.9,
-    opacity: 0.8, // Add transparency like in Figma
+    width: 811,
+    height: 659,
+    left: (screenWidth - 811) / 2, // calc(50% - 811px/2)
+    bottom: 313,
+    // background: linear-gradient(216.27deg, rgba(150, 61, 251, 0) 33.4%, rgba(150, 61, 251, 0.05) 76.99%);
+  },
+  vectorGradient: {
+    width: '100%',
+    height: '100%',
+  },
+  vectorPattern: {
+    width: '100%',
+    height: '100%',
+    opacity: 1, // Full opacity since gradient handles transparency
   },
   mainSafeArea: { flex: 1 },
   topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 10, height: 44, zIndex: 10 },
