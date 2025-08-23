@@ -1,31 +1,32 @@
+// CameraIcon.js
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 const CameraIcon = ({ onPress }) => {
   return (
-    <TouchableOpacity onPress={onPress} style={{
-      position: 'absolute',
-      bottom: 5,
-      right: 5,
-    }}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
       <LinearGradient
-        colors={['#C391F6', '#9333EA']}
-        style={{
-          width: 30,
-          height: 30,
-          borderRadius: 15,
-          justifyContent: 'center',
-          alignItems: 'center',
-          borderWidth: 2,
-          borderColor: 'white',
-        }}
+        colors={['#8F31F9', '#6F29D4']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.wrap}
       >
-        <Ionicons name="camera" size={16} color="white" />
+        <Ionicons name="camera" size={18} color="#fff" />
       </LinearGradient>
     </TouchableOpacity>
   );
 };
+
+const styles = StyleSheet.create({
+  wrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 export default CameraIcon;

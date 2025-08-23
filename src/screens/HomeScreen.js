@@ -1,620 +1,910 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, StatusBar, TextInput, Dimensions, Image } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useRef, useState } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  SafeAreaView, 
+  ScrollView, 
+  TouchableOpacity, 
+  StatusBar, 
+  TextInput, 
+  Dimensions, 
+  Image, 
+  Animated, 
+  Platform,
+  FlatList 
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, radii, type } from '../theme/tokens';
+import BottomBar from '../components/BottomBar';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: W } = Dimensions.get('window');
 
-// --- Mock Data for UI elements ---
-const filterButtons = [
-  { id: 'all', name: 'All', icon: 'checkmark-circle' },
-  { id: 'insurance', name: 'Insureces', icon: 'shield-checkmark' },
-  { id: 'investments', name: 'Investments', icon: 'trending-up' },
-  { id: 'loans', name: 'Loans', icon: 'home' },
-  { id: 'tax', name: 'Tax', icon: 'calculator' },
-  { id: 'travel', name: 'Travel', icon: 'airplane' },
+const filters = [
+  { id: 'all', label: 'All', icon: 'checkmark-circle', active: true },
+  { id: 'ins', label: 'Insurances', icon: 'shield-checkmark', active: false },
+  { id: 'inv', label: 'Investments', icon: 'trending-up', active: false },
+  { id: 'loans', label: 'Loans', icon: 'card', active: false },
+  { id: 'tax', label: 'Tax', icon: 'receipt', active: false },
+  { id: 'travel', label: 'Travel', icon: 'airplane', active: false },
 ];
 
-const insuranceSubCategories = ['Life', 'Health', 'Motor', 'General', 'Travel'];
-const investmentsSubCategories = ['Trading', 'NPS', 'LAS', 'Gold', 'BOND', 'Fixed', 'Mutual Fund'];
-const loansSubCategories = ['Business Loan', 'Mortgage Loan', 'Personal Loans', 'Home Loan'];
+const insuranceItems = [
+  { title: 'Life', icon: '🏛️' },
+  { title: 'Health', icon: '❤️' },
+  { title: 'Motor', icon: '🚗' },
+  { title: 'General', icon: '🛡️' },
+];
 
-// --- Reusable Component for Category Cards (Unchanged from your code) ---
-const CategoryCard = ({ title, description, subcategories, cardColor, accentColor, children, isGrid }) => (
-  <View style={[styles.categoryCard, { backgroundColor: cardColor }]}>
-    <View style={styles.categoryCardHeader}>
-      <View>
-        <Text style={styles.categoryCardTitle}>{title}</Text>
-        <Text style={styles.categoryCardSubtitle}>{description}</Text>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <TouchableOpacity style={[styles.categoryUpArrow, { backgroundColor: accentColor }]}>
-          <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
-        </TouchableOpacity>
-        <TouchableOpacity>
-          <Ionicons name="arrow-forward" size={20} color="#7D7D7D" />
-        </TouchableOpacity>
-      </View>
-    </View>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={isGrid && { flexWrap: 'wrap' }}>
-      <View style={styles.subcategoryContainer}>
-        {subcategories.map(item => (
-          <TouchableOpacity key={item} style={styles.subcategoryItem}>
-            <View style={styles.subcategoryIcon} />
-            <Text style={styles.subcategoryText}>{item}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </ScrollView>
-    {children}
-  </View>
-);
+const investmentItems = [
+  { title: 'Trading' },
+  { title: 'NPS' },
+  { title: 'LAS' },
+  { title: 'Gold' },
+  { title: 'BOND' },
+  { title: 'Fixed' },
+  { title: 'Mutual Fund' },
+];
+
+const loanItems = [
+  { title: 'Business Loan' },
+  { title: 'Mortgage Loan' },
+  { title: 'Personal Loans' },
+  { title: 'Home Loan' },
+];
+
+// Slider cards data
+const sliderCards = [
+  {
+    id: 1,
+    backgroundColor: ['#4CAF50', '#66BB6A'],
+    title: 'Earn While You Refer',
+    subtitle: 'Share services you trust and\nget paid for every referral',
+    buttonText: 'Start Now',
+    image: 'https://api.builder.io/api/v1/image/assets/TEMP/5ee1f76dd94b467d35cd958b74224a628b637374?width=284',
+    badge: 'Popular'
+  },
+  {
+    id: 2,
+    backgroundColor: ['#9D4BFA', '#AF6CFA'],
+    title: 'Invest Smart Today',
+    subtitle: 'Discover investment opportunities\nand grow your wealth',
+    buttonText: 'Explore',
+    image: 'https://api.builder.io/api/v1/image/assets/TEMP/5ee1f76dd94b467d35cd958b74224a628b637374?width=284',
+    badge: 'Trending'
+  },
+  {
+    id: 3,
+    backgroundColor: ['#F6AC11', '#FFB84D'],
+    title: 'Secure Your Future',
+    subtitle: 'Get the best insurance plans\nfor complete protection',
+    buttonText: 'Get Started',
+    image: 'https://api.builder.io/api/v1/image/assets/TEMP/5ee1f76dd94b467d35cd958b74224a628b637374?width=284',
+    badge: 'Featured'
+  }
+];
 
 const HomeScreen = () => {
-  const navigation = useNavigation();
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [active, setActive] = useState('all');
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const sliderRef = useRef(null);
+
+  const onSliderViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (viewableItems.length > 0) {
+      setCurrentSlide(viewableItems[0].index);
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
+
+  const renderSliderCard = ({ item, index }) => (
+    <View style={styles.heroCard}>
+      <LinearGradient
+        colors={item.backgroundColor}
+        style={styles.heroGradient}
+      >
+        <View style={styles.heroContent}>
+          <View style={styles.popularBadge}>
+            <Text style={styles.popularText}>{item.badge}</Text>
+          </View>
+          <Text style={styles.heroTitle}>{item.title}</Text>
+          <Text style={styles.heroSubtitle}>{item.subtitle}</Text>
+          <TouchableOpacity style={styles.startButton}>
+            <Text style={styles.startButtonText}>{item.buttonText}</Text>
+          </TouchableOpacity>
+        </View>
+        <Image 
+          source={{ uri: item.image }}
+          style={styles.heroImage}
+        />
+      </LinearGradient>
+    </View>
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#8D45F1" translucent={true} />
-      <ScrollView style={styles.mainScroll} showsVerticalScrollIndicator={false}>
-
-        {/* --- STICKY HEADER - EXACTLY LIKE FIRST IMAGE --- */}
-        <View style={styles.stickyHeaderContainer}>
-          <LinearGradient
-            colors={['#8D45F1', '#9142F9']}
-            locations={[0.0509, 0.9815]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.headerGradient}
-          >
-            {/* Status Bar - Let React Native handle this natively */}
-            <View style={styles.statusBarSpacer} />
-
-            {/* Logo Section */}
-            <View style={styles.logoSection}>
-              <Image 
-                source={require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/background_image.png')}
-                style={styles.logoIcon} 
-              />
-              <View style={styles.logoTextContainer}>
-                <Text style={styles.logoText}>Dr WISE</Text>
-                <Text style={styles.logoTagline}>Your Future, Engineered Wisely</Text>
-              </View>
-            </View>
-
-            {/* Notification Button */}
-            <TouchableOpacity style={styles.notificationButtonContainer}>
-              <View style={styles.notificationButtonBg}>
-                <Ionicons name="notifications-outline" size={19} color="#FFFFFF" />
-                <View style={styles.notificationDot} />
-              </View>
-            </TouchableOpacity>
-          </LinearGradient>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#8638EE" />
+      
+      {/* Simple Sticky Brand Row Only */}
+      <LinearGradient
+        colors={['#8638EE', '#9553F5', '#8D30FC']}
+        style={styles.stickyBrand}
+      >
+        <View style={styles.brandRow}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../assets/Icons/tree.png')}
+              style={styles.treeIcon}
+            />
+            <Image
+              source={require('../../assets/Icons/drwise_text-removebg-preview.png')}
+              style={styles.brandTextImage}
+            />
+          </View>
+          <TouchableOpacity style={styles.notifBtn} activeOpacity={0.8}>
+            <Ionicons name="notifications-outline" size={19} color="#FBFBFB" />
+            <View style={styles.notifDot} />
+          </TouchableOpacity>
         </View>
-
-        {/* --- HERO SECTION - EXACTLY LIKE CSS STRUCTURE --- */}
+      </LinearGradient>
+      
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      >
+        {/* Header Section with Search and Filters */}
         <LinearGradient
           colors={['#8638EE', '#9553F5', '#8D30FC']}
-          locations={[-0.0382, 0.1464, 0.6594]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroGradientContainer}
+          style={styles.headerSection}
         >
-          {/* MAIN PURPLE CARD */}
-          <View style={styles.mainPurpleCard}>
-            {/* Search Bar */}
-            <View style={styles.searchBar}>
-              <Ionicons name="search" size={22} color="#7D7D7D" style={{ marginRight: 10 }} />
-              <TextInput placeholder="Search.." placeholderTextColor="#7D7D7D" style={styles.searchInput} />
-            </View>
-            
-            {/* Filter Buttons */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
-              {filterButtons.map(filter => (
-                <TouchableOpacity
-                  key={filter.id}
-                  style={[styles.filterButton, activeFilter === filter.id && styles.filterButtonActive]}
-                  onPress={() => setActiveFilter(filter.id)}
-                >
-                  <Ionicons 
-                    name={filter.icon} 
-                    size={15} 
-                    color={activeFilter === filter.id ? '#8F31F9' : '#F6F6FE'} 
-                  />
-                  <Text style={[styles.filterText, activeFilter === filter.id && styles.filterTextActive]}>
-                    {filter.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search-outline" size={22} color="#1A1B20" />
+            <TextInput 
+              placeholder="Search.." 
+              placeholderTextColor="#7D7D7D" 
+              style={styles.searchInput} 
+            />
           </View>
 
-          {/* PROMO CAROUSEL */}
-          <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.promoCarousel}>
-            {/* Card 1 - Green */}
-            <LinearGradient colors={['#38D552', '#1D6F2B']} style={styles.promoCard}>
-              <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>Popular</Text></View>
-              <View style={styles.promoTextContainer}>
-                <Text style={styles.promoTitle}>Earn While You Refer</Text>
-                <Text style={styles.promoDescription}>Share services you trust and get paid for every referral</Text>
-                <TouchableOpacity style={styles.promoButton}><Text style={styles.promoButtonText}>Start Now</Text></TouchableOpacity>
-              </View>
-              <Image 
-                source={require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/background_image.png')}
-                style={styles.promoImage} 
-              />
-            </LinearGradient>
-
-            {/* Card 2 - Purple */}
-            <LinearGradient colors={['#9D4BFA', '#AF6CFA', '#8F31F9']} locations={[0.0192, 0.3094, 0.9479]} style={styles.promoCard}>
-              <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>Popular</Text></View>
-              <View style={styles.promoTextContainer}>
-                <Text style={styles.promoTitle}>Earn While You Refer</Text>
-                <Text style={styles.promoDescription}>Share services you trust and get paid for every referral</Text>
-                <TouchableOpacity style={styles.promoButton}><Text style={styles.promoButtonText}>Start Now</Text></TouchableOpacity>
-              </View>
-              <Image 
-                source={require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/background_image.png')}
-                style={styles.promoImage} 
-              />
-            </LinearGradient>
-
-            {/* Card 3 - Orange/Yellow */}
-            <LinearGradient colors={['#FAB91D', '#946E11']} style={styles.promoCard}>
-              <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>Popular</Text></View>
-              <View style={styles.promoTextContainer}>
-                <Text style={styles.promoTitle}>Earn While You Refer</Text>
-                <Text style={styles.promoDescription}>Share services you trust and get paid for every referral</Text>
-                <TouchableOpacity style={styles.promoButton}><Text style={styles.promoButtonText}>Start Now</Text></TouchableOpacity>
-              </View>
-              <Image 
-                source={require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/background_image.png')}
-                style={styles.promoImage} 
-              />
-            </LinearGradient>
+          {/* Filter Tabs */}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterContainer}
+            contentContainerStyle={styles.filterContent}
+          >
+            {filters.map((filter) => (
+              <TouchableOpacity
+                key={filter.id}
+                style={[
+                  styles.filterTab,
+                  filter.active ? styles.filterTabActive : styles.filterTabInactive
+                ]}
+                onPress={() => setActive(filter.id)}
+              >
+                <Ionicons 
+                  name={filter.icon} 
+                  size={15} 
+                  color={filter.active ? '#8F31F9' : '#F6F6FE'} 
+                />
+                <Text style={[
+                  styles.filterText,
+                  { color: filter.active ? '#8F31F9' : '#F6F6FE' }
+                ]}>
+                  {filter.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
-          
-          {/* Page Indicator */}
-          <View style={styles.pageIndicatorContainer}>
-            <View style={styles.pageIndicatorActive} />
-            <View style={styles.pageIndicator} />
-            <View style={styles.pageIndicator} />
+
+          {/* Hero Referral Cards Slider */}
+          <View style={styles.heroSliderContainer}>
+            <FlatList
+              ref={sliderRef}
+              data={sliderCards}
+              renderItem={renderSliderCard}
+              keyExtractor={(item) => item.id.toString()}
+              horizontal
+              pagingEnabled={false}
+              showsHorizontalScrollIndicator={false}
+              onViewableItemsChanged={onSliderViewableItemsChanged}
+              viewabilityConfig={viewabilityConfig}
+              contentContainerStyle={styles.sliderContent}
+              snapToInterval={W - 20}
+              snapToAlignment="start"
+              decelerationRate="fast"
+              scrollEventThrottle={16}
+              bounces={false}
+            />
+          </View>
+
+          {/* Page Dots */}
+          <View style={styles.pageDots}>
+            {sliderCards.map((_, index) => (
+              <View 
+                key={index}
+                style={[
+                  styles.pageDot, 
+                  currentSlide === index && styles.pageDotActive
+                ]} 
+              />
+            ))}
           </View>
         </LinearGradient>
 
-        {/* --- Main Content Section (Unchanged from your code) --- */}
-        <View style={styles.contentSection}>
-          <CategoryCard
-            title="Insurance"
-            description="Pick an insurance plan and share it to earn rewards on every signup."
-            subcategories={insuranceSubCategories}
-            cardColor="#C9EBE9"
-            accentColor="#1D8C7C"
-          />
-          
-          <View style={styles.taxCard}>
-            <Image source={require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/background_image.png')} style={styles.taxCardIcon} />
-            <View style={styles.taxCardTextContainer}>
-              <Text style={styles.categoryCardTitle}>Tax</Text>
-              <Text style={styles.categoryCardSubtitle}>Get expert help to file your taxes on time and save more.</Text>
-            </View>
-            <TouchableOpacity style={styles.taxCardArrow}><Ionicons name="arrow-up" size={18} color="#1A1B20" /></TouchableOpacity>
+        {/* Content Sections */}
+        <View style={styles.contentContainer}>
+          {/* Insurance Section */}
+          <View style={styles.sectionCard}>
+            <LinearGradient
+              colors={['#C9EBE9', '#C9EBE9']}
+              style={styles.sectionGradient}
+            >
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionInfo}>
+                  <Text style={styles.sectionTitle}>Insurances</Text>
+                  <Text style={styles.sectionSubtitle}>Explore insurance plans tailored to your needs.</Text>
+                </View>
+                <TouchableOpacity style={styles.sectionArrow}>
+                  <View style={styles.arrowCircle}>
+                    <Ionicons name="arrow-up-outline" size={20} color="#1D8C7C" style={{ transform: [{ rotate: '45deg' }] }} />
+                  </View>
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.itemsContainer}
+              >
+                {insuranceItems.map((item, index) => (
+                  <View key={index} style={styles.insuranceItem}>
+                    <Text style={styles.itemTitle}>{item.title}</Text>
+                    <Text style={styles.itemIcon}>{item.icon}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+
+              <View style={styles.itemDots}>
+                <View style={[styles.itemDot, styles.itemDotActive]} />
+                <View style={styles.itemDot} />
+              </View>
+
+              <TouchableOpacity style={styles.expandButton}>
+                <Ionicons name="chevron-down-outline" size={16} color="#7D7D7D" />
+              </TouchableOpacity>
+            </LinearGradient>
           </View>
 
-          <CategoryCard
-            title="Investments"
-            description="Explore top investment options and share them to earn with every new join."
-            subcategories={investmentsSubCategories}
-            cardColor="#FEE9CF"
-            accentColor="#F6AC11"
-            isGrid={true}
-          />
+          {/* Investment Section */}
+          <View style={styles.sectionCard}>
+            <LinearGradient
+              colors={['#FEE9CF', '#FEE9CF']}
+              style={styles.sectionGradient}
+            >
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionInfo}>
+                  <Text style={styles.sectionTitle}>Investments</Text>
+                  <Text style={styles.sectionSubtitle}>Explore top investment options and share them to earn with every new join.</Text>
+                </View>
+                <TouchableOpacity style={styles.sectionArrow}>
+                  <View style={[styles.arrowCircle, { backgroundColor: '#F6AC11' }]}>
+                    <Ionicons name="arrow-up-outline" size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
+                  </View>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.investmentGrid}>
+                {investmentItems.map((item, index) => (
+                  <View key={index} style={styles.investmentItem}>
+                    <Text style={styles.itemTitle}>{item.title}</Text>
+                  </View>
+                ))}
+              </View>
+            </LinearGradient>
+          </View>
 
-          <CategoryCard
-            title="Loans"
-            description="Select the right loan offers and share them to earn when someone applies."
-            subcategories={loansSubCategories}
-            cardColor="#F6DCDD"
-            accentColor="#A5236A"
-          />
+          {/* Loans Section */}
+          <View style={styles.sectionCard}>
+            <LinearGradient
+              colors={['#F6DCDD', '#F6DCDD']}
+              style={styles.sectionGradient}
+            >
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionInfo}>
+                  <Text style={styles.sectionTitle}>Loans</Text>
+                  <Text style={styles.sectionSubtitle}>Select the right loan offers and share them to earn when someone applies.</Text>
+                </View>
+              </View>
+              
+              <View style={styles.loansGrid}>
+                {loanItems.map((item, index) => (
+                  <View key={index} style={styles.loanItem}>
+                    <Text style={styles.itemTitle}>{item.title}</Text>
+                  </View>
+                ))}
+              </View>
+            </LinearGradient>
+          </View>
 
-          <View style={styles.travelCardContainer}>
-            <Image source={require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/background_image.png')} style={styles.travelBgImage} />
-            <View style={styles.categoryCardHeader}>
-              <View>
-                <Text style={[styles.categoryCardTitle, { color: '#FFFFFF' }]}>Travel</Text>
-                <Text style={[styles.categoryCardSubtitle, { color: '#FFFFFF' }]}>Share the best travel deals and earn when someone books.</Text>
+          {/* Tax Section */}
+          <View style={styles.taxCard}>
+            <Text style={styles.sectionTitle}>Tax</Text>
+            <Text style={styles.sectionSubtitle}>Get expert help to file your taxes on time and save more.</Text>
+          </View>
+
+          {/* Travel Section */}
+          <View style={styles.travelCard}>
+            <Text style={styles.sectionTitle}>Travel</Text>
+            <Text style={styles.sectionSubtitle}>Share the best travel deals and earn when someone books through your link.</Text>
+            
+            <View style={styles.travelOptions}>
+              <View style={styles.travelOption}>
+                <LinearGradient
+                  colors={['#FBFBFB', '#F0E2FF']}
+                  style={styles.travelOptionGradient}
+                >
+                  <Text style={styles.travelOptionTitle}>International Travel</Text>
+                </LinearGradient>
+              </View>
+              <View style={styles.travelOption}>
+                <LinearGradient
+                  colors={['#FBFBFB', '#F0E2FF']}
+                  style={styles.travelOptionGradient}
+                >
+                  <Text style={styles.travelOptionTitle}>Domestic Travel</Text>
+                </LinearGradient>
               </View>
             </View>
-            <View style={styles.travelSubCards}>
-              <TouchableOpacity style={styles.travelSubCard}>
-                <TouchableOpacity style={styles.travelCardArrow}><Ionicons name="arrow-up" size={12} color="#1A1B20" /></TouchableOpacity>
-                <Text style={styles.travelSubCardText}>International Travel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.travelSubCard}>
-                <TouchableOpacity style={styles.travelCardArrow}><Ionicons name="arrow-up" size={12} color="#1A1B20" /></TouchableOpacity>
-                <Text style={styles.travelSubCardText}>Domestic Travel</Text>
-              </TouchableOpacity>
+          </View>
+
+          {/* Statistics Section */}
+          <View style={styles.statsCard}>
+            <Text style={styles.statsTitle}>Built on Trust, Growing with You</Text>
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>10K+</Text>
+                <Text style={styles.statLabel}>Users exploring services</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>1K+</Text>
+                <Text style={styles.statLabel}>Verified Affiliates and Ambassadors</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>20+</Text>
+                <Text style={styles.statLabel}>Trusted Financial Partners</Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.trustCard}>
-            <Text style={styles.trustTitle}>Built on Trust, Growing with You</Text>
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}><Ionicons name="people-outline" size={30} color="#3CAAFD" /><Text style={styles.statNumber}>10K+</Text><Text style={styles.statLabel}>Users exploring</Text></View>
-              <View style={styles.statItem}><Ionicons name="star-outline" size={30} color="#FFD541" /><Text style={styles.statNumber}>1K+</Text><Text style={styles.statLabel}>Verified Affiliates</Text></View>
-              <View style={styles.statItem}><Ionicons name="shield-checkmark-outline" size={30} color="#28a745" /><Text style={styles.statNumber}>20+</Text><Text style={styles.statLabel}>Trusted Partners</Text></View>
-            </View>
-          </View>
+          {/* Bottom Image */}
+          <Image
+            source={require('../../assets/Icons/homepage_bottom.png')}
+            style={styles.bottomImage}
+          />
+
+          <View style={{ height: 120 }} />
         </View>
       </ScrollView>
-      
-      {/* --- Floating Bottom Navigation Bar (Unchanged from your code) --- */}
-      <View style={styles.bottomNavContainer}>
-        <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navItem}><Ionicons name="home" size={24} color="#1A1B20" /><Text style={styles.navTextActive}>Home</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}><Ionicons name="wallet-outline" size={24} color="#7D7D7D" /><Text style={styles.navText}>Credits</Text></TouchableOpacity>
-          <View style={styles.navItem} /> 
-          <TouchableOpacity style={styles.navItem}><Ionicons name="people-outline" size={24} color="#7D7D7D" /><Text style={styles.navText}>My Referral</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}><Ionicons name="person-outline" size={24} color="#7D7D7D" /><Text style={styles.navText}>Profile</Text></TouchableOpacity>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity style={styles.fab}>
+        <View style={styles.fabIcon}>
+          <Ionicons name="apps" size={18} color="#FBFBFB" />
         </View>
-        <TouchableOpacity style={styles.addButton}><Ionicons name="add" size={30} color="#FFFFFF" /></TouchableOpacity>
-        <View style={styles.homeIndicator}><View style={styles.homeIndicatorLine} /></View>
-      </View>
-    </SafeAreaView>
+      </TouchableOpacity>
+
+      {/* <BottomBar /> */}
+    </View>
   );
 };
 
-// --- Stylesheet - EXACTLY LIKE FIRST IMAGE ---
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F6F6FE' },
-  mainScroll: { flex: 1 },
-  
-  // STICKY HEADER - EXACTLY LIKE FIRST IMAGE
-  stickyHeaderContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+  container: {
+    flex: 1,
+    backgroundColor: '#F6F6FE',
+  },
+  stickyBrand: {
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingBottom: 15,
     zIndex: 1000,
-    width: screenWidth,
-    height: 100,
+    elevation: 5,
   },
-  statusBarSpacer: {
-    height: 44, // Standard status bar height
+  scrollView: {
+    flex: 1,
   },
-  headerGradient: {
-    width: '100%',
-    height: '100%',
+  headerSection: {
+    paddingTop: 30,
+    paddingBottom: 13,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  logoSection: {
-    position: 'absolute',
-    left: 23,
-    top: 43,
+  statusBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 23,
+    paddingTop: 11,
+    height: 20,
+  },
+  statusTime: {
+    color: '#FBFBFB',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  statusRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoIcon: {
+  signalBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 3,
+  },
+  bar: {
+    width: 4,
+    backgroundColor: '#FBFBFB',
+    borderRadius: 1,
+  },
+  battery: {
+    width: 27,
+    height: 13,
+    borderWidth: 1,
+    borderColor: '#FBFBFB',
+    borderRadius: 2,
+    marginLeft: 5,
+    padding: 1,
+  },
+  batteryFill: {
+    flex: 1,
+    backgroundColor: '#FBFBFB',
+    borderRadius: 1,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  treeIcon: {
     width: 49,
     height: 47,
     resizeMode: 'contain',
-    marginRight: 10,
+    marginRight: 8,
   },
-  logoTextContainer: {
-    flexDirection: 'column',
+  brandTextImage: {
+    width: 88,
+    height: 29,
+    resizeMode: 'contain',
   },
-  logoText: {
-    fontFamily: 'Rubik',
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#FBFBFB',
-    lineHeight: 28,
-  },
-  logoTagline: {
-    fontFamily: 'Rubik',
-    fontSize: 12,
-    color: '#FBFBFB',
-    opacity: 0.8,
-    marginTop: 2,
-  },
-  notificationButtonContainer: {
-    position: 'absolute',
-    right: 20,
-    bottom: 15,
-  },
-  notificationButtonBg: {
+  notifBtn: {
     width: 31,
     height: 31,
-    backgroundColor: '#7830E2',
     borderRadius: 4,
-    justifyContent: 'center',
+    backgroundColor: '#7830E2',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  notificationDot: {
+  notifDot: {
     position: 'absolute',
     top: -2,
     right: -2,
     width: 8,
     height: 8,
+    borderRadius: 4,
     backgroundColor: '#EE5855',
-    borderRadius: 4,
   },
-
-  // HERO GRADIENT CONTAINER - EXACTLY LIKE CSS Frame 9176
-  heroGradientContainer: {
-    width: screenWidth,
-    height: 385,
-    borderRadius: 30,
-    paddingTop: 100, // Account for sticky header
-    paddingBottom: 20,
-  },
-  // MAIN PURPLE CARD - EXACTLY LIKE CSS Rectangle 2375
-  mainPurpleCard: {
-    width: screenWidth - 40, // 335px equivalent
-    height: 266,
-    backgroundColor: '#7930E2',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginTop: 0,
-    padding: 15,
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  // HERO SECTION STYLES (for the content below sticky header)
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingHorizontal: 20, 
-    paddingTop: 50, // Adjust for status bar
-    paddingBottom: 15 
-  },
-  logoImage: {
-    width: 150,
-    height: 40,
-    resizeMode: 'contain',
-  },
-  notificationButton: { 
-    position: 'relative',
-    padding: 5,
-  },
-  notificationDot: { 
-    position: 'absolute', 
-    top: 3, 
-    right: 3, 
-    width: 8, 
-    height: 8, 
-    backgroundColor: '#EE5855', 
-    borderRadius: 4,
-  },
-  searchBar: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#FBFBFB', 
-    borderRadius: 10, 
-    paddingHorizontal: 15,
-    height: 40,
-    width: screenWidth - 64, // 311px equivalent
-    alignSelf: 'center',
-    marginTop: 14, // 114px - 100px (header)
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-    shadowColor: 'rgba(143, 49, 249, 0.1)',
-    shadowOffset: { width: 0, height: 0 }, 
-    shadowRadius: 10, 
-    elevation: 5 
-  },
-  searchInput: { 
-    flex: 1, 
-    fontFamily: 'Rubik', 
-    fontSize: 13, 
-    color: '#7D7D7D',
-    lineHeight: 15,
-    letterSpacing: 0.2,
-  },
-  filterContainer: { 
-    paddingVertical: 15, 
-    paddingHorizontal: 12, // 32px - 20px (card padding)
-    gap: 10,
-    marginTop: 10, // 164px - 154px (search bar bottom)
-    height: 33,
-  },
-  filterButton: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-    paddingHorizontal: 10, 
-    paddingVertical: 8, 
-    borderRadius: 6, 
-    gap: 6,
-    height: 33,
-    shadowColor: 'rgba(143, 49, 249, 0.1)',
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  filterButtonActive: { 
-    backgroundColor: '#FFFFFF',
-    height: 33,
-    shadowColor: 'rgba(143, 49, 249, 0.1)',
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  filterText: { 
-    fontFamily: 'Rubik', 
-    fontSize: 14, 
-    color: '#F6F6FE',
-    lineHeight: 17,
-    letterSpacing: 0.2,
-  },
-  filterTextActive: { 
-    color: '#8F31F9',
-    fontFamily: 'Rubik',
-    lineHeight: 17,
-    letterSpacing: 0.2,
-  },
-  promoCarousel: { 
-    width: screenWidth - 40, // 335px equivalent
-    height: 159,
-    marginTop: 7, // 207px - 200px (card bottom)
-    alignSelf: 'center',
-    overflow: 'visible',
-    position: 'absolute',
-    top: 207,
-  },
-  promoCard: { 
-    width: screenWidth - 40, // 335px equivalent
-    height: 159,
-    borderRadius: 20, 
-    padding: 15, 
-    marginRight: 10, 
-    flexDirection: 'row', 
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  promoBadge: { 
-    backgroundColor: 'rgba(255, 255, 255, 0.2)', 
-    paddingHorizontal: 14, 
-    paddingVertical: 6, 
-    borderRadius: 100, 
-    alignSelf: 'flex-start',
-    position: 'absolute',
-    top: 12,
-    left: 12,
-  },
-  promoBadgeText: { 
-    fontFamily: 'Rubik', 
-    fontSize: 11, 
-    color: '#FBFBFB',
-    lineHeight: 15,
-    letterSpacing: 0.2,
-  },
-  promoTextContainer: { 
-    flex: 1, 
-    justifyContent: 'center',
-    paddingLeft: 12,
-    paddingTop: 44,
-  },
-  promoTitle: { 
-    fontFamily: 'Rubik', 
-    fontSize: 18, 
-    fontWeight: '600',
-    color: '#FBFBFB', 
-    marginTop: 8,
-    lineHeight: 21,
-  },
-  promoDescription: { 
-    fontFamily: 'Rubik', 
-    fontSize: 12, 
-    color: '#F6F6FE', 
-    marginVertical: 4, 
-    lineHeight: 14,
-    letterSpacing: 0.2,
-  },
-  promoButton: { 
-    backgroundColor: '#FBFBFB', 
-    paddingHorizontal: 16, 
-    paddingVertical: 14, 
-    borderRadius: 8, 
-    alignSelf: 'flex-start', 
-    marginTop: 10,
-    height: 26,
-  },
-  promoButtonText: { 
-    fontFamily: 'Rubik', 
-    fontSize: 12, 
-    fontWeight: '600',
-    color: '#8F31F9',
-    lineHeight: 14,
-    letterSpacing: 0.2,
-  },
-  promoImage: { 
-    position: 'absolute', 
-    right: 0, 
-    top: 0, 
-    width: 142, 
-    height: 161,
-    resizeMode: 'contain',
-  },
-  pageIndicatorContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    gap: 5, 
-    marginTop: 15,
-    paddingBottom: 10,
-    alignSelf: 'center',
-    width: 37,
-    height: 9,
-    position: 'absolute',
-    bottom: 20,
-    left: '50%',
-    transform: [{ translateX: -18.5 }], // Half of 37px width
-  },
-  pageIndicatorActive: { 
-    width: 16, 
-    height: 3, 
-    backgroundColor: '#FBFBFB', 
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FBFBFB',
     borderRadius: 10,
-    marginRight: 2,
+    borderWidth: 1,
+    borderColor: '#FFF',
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    marginHorizontal: 20,
+    marginBottom: 14,
+    shadowColor: '#8F31F9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  pageIndicator: { 
-    width: 3, 
-    height: 3, 
-    backgroundColor: '#FBFBFB', 
-    borderRadius: 2, 
-    opacity: 0.5 
+  searchInput: {
+    flex: 1,
+    marginLeft: 11,
+    fontSize: 13,
+    color: '#7D7D7D',
   },
-  // REBUILT STYLES END
-  contentSection: { 
-    padding: 20, 
-    backgroundColor: '#F6F6FE', 
-    borderTopLeftRadius: 20, 
-    borderTopRightRadius: 20, 
-    marginTop: -20,
+  filterContainer: {
+    marginBottom: 10,
   },
-  categoryCard: { borderRadius: 10, padding: 14, marginBottom: 20, shadowColor: 'rgba(143, 49, 249, 0.1)', shadowOffset: { width: 0, height: 4 }, shadowRadius: 10, elevation: 5 },
-  categoryCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  categoryCardTitle: { fontFamily: 'Rubik-Medium', fontSize: 18, color: '#1A1B20', marginBottom: 4 },
-  categoryCardSubtitle: { fontFamily: 'Rubik-Regular', fontSize: 12, color: '#7D7D7D', lineHeight: 14, maxWidth: '80%' },
-  categoryUpArrow: { borderRadius: 24, padding: 6 },
-  subcategoryContainer: { flexDirection: 'row', gap: 12 },
-  subcategoryItem: { backgroundColor: '#FFFFFF', borderRadius: 10, padding: 10, width: 95, height: 99, alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#FFFFFF', shadowColor: 'rgba(143, 49, 249, 0.1)', shadowOffset: { width: 0, height: 2 }, shadowRadius: 5, elevation: 3, marginBottom: 12 },
-  subcategoryIcon: { width: 60, height: 60, backgroundColor: '#F0F0F0', borderRadius: 8 },
-  subcategoryText: { fontFamily: 'Rubik-Medium', fontSize: 10, color: '#1A1B20', textAlign: 'center' },
-  taxCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FBFBFB', borderRadius: 10, padding: 14, marginBottom: 20, shadowColor: 'rgba(143, 49, 249, 0.1)', shadowOffset: { width: 0, height: 4 }, shadowRadius: 10, elevation: 5 },
-  taxCardIcon: { width: 68, height: 68, borderRadius: 8, marginRight: 16 },
-  taxCardTextContainer: { flex: 1 },
-  taxCardArrow: { backgroundColor: '#F0F0F0', borderRadius: 12, padding: 6, alignSelf: 'flex-start' },
-  travelCardContainer: { borderRadius: 10, padding: 14, marginBottom: 20, backgroundColor: '#8F31F9', overflow: 'hidden' },
-  travelBgImage: { position: 'absolute', top: 0, right: 0, width: '100%', height: '100%' },
-  travelSubCards: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  travelSubCard: { flex: 1, height: 160, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 10, padding: 12, justifyContent: 'flex-end', alignItems: 'center' },
-  travelCardArrow: { position: 'absolute', top: 12, right: 12, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 6 },
-  travelSubCardText: { fontFamily: 'Rubik-Medium', fontSize: 11, color: '#FFFFFF' },
-  trustCard: { backgroundColor: '#FFFFFF', borderRadius: 10, padding: 20, marginBottom: 100, alignItems: 'center' },
-  trustTitle: { fontFamily: 'Rubik-Medium', fontSize: 18, color: '#1A1B20', marginBottom: 20, textAlign: 'center' },
-  statsContainer: { flexDirection: 'row', justifyContent: 'space-around', width: '100%' },
-  statItem: { alignItems: 'center', flex: 1, gap: 4 },
-  statNumber: { fontFamily: 'Rubik-Medium', fontSize: 20, color: '#1A1B20' },
-  statLabel: { fontFamily: 'Rubik-Regular', fontSize: 10, color: '#7D7D7D', textAlign: 'center' },
-  bottomNavContainer: { position: 'absolute', bottom: 0, left: 0, right: 0 },
-  bottomNav: { flexDirection: 'row', height: 80, backgroundColor: '#FBFBFB', borderTopWidth: 1, borderColor: '#F0F0F0', alignItems: 'center', paddingBottom: 20 },
-  navItem: { flex: 1, alignItems: 'center', gap: 4 },
-  navText: { fontFamily: 'Rubik-Regular', fontSize: 12, color: '#7D7D7D' },
-  navTextActive: { fontFamily: 'Rubik-Regular', fontSize: 12, color: '#1A1B20' },
-  addButton: { position: 'absolute', alignSelf: 'center', top: -26, width: 52, height: 52, borderRadius: 26, backgroundColor: '#8F31F9', justifyContent: 'center', alignItems: 'center', shadowColor: '#8F31F9', shadowOffset: { width: 0, height: 4 }, shadowRadius: 10, elevation: 8 },
-  homeIndicator: { height: 34, backgroundColor: '#FBFBFB', justifyContent: 'center', alignItems: 'center' },
-  homeIndicatorLine: { width: 135, height: 5, backgroundColor: '#1A1B20', borderRadius: 100 },
+  filterContent: {
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  filterTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    gap: 6,
+  },
+  filterTabActive: {
+    backgroundColor: '#FFF',
+    shadowColor: '#8F31F9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  filterTabInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+    shadowColor: '#8F31F9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 1,
+  },
+  filterText: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  heroSliderContainer: {
+    height: 180,
+    marginTop: 0,
+    marginBottom: 20,
+    paddingTop: 20,
+  },
+  sliderContent: {
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  heroCard: {
+    marginHorizontal: 10,
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 159,
+    width: W - 60,
+  },
+  heroGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    padding: 12,
+  },
+  heroContent: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  popularBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.20)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 100,
+    alignSelf: 'flex-start',
+  },
+  popularText: {
+    color: '#FBFBFB',
+    fontSize: 11,
+    fontWeight: '400',
+  },
+  heroTitle: {
+    color: '#FBFBFB',
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 12,
+  },
+  heroSubtitle: {
+    color: '#F6F6FE',
+    fontSize: 12,
+    fontWeight: '400',
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  startButton: {
+    backgroundColor: '#FBFBFB',
+    paddingHorizontal: 30,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+  },
+  startButtonText: {
+    color: '#8F31F9',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  heroImage: {
+    width: 142,
+    height: 161,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  pageDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 4,
+  },
+  pageDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 10,
+    backgroundColor: '#FBFBFB',
+    opacity: 0.5,
+  },
+  pageDotActive: {
+    width: 20,
+    opacity: 1,
+  },
+  contentContainer: {
+    padding: 8,
+    gap: 30,
+  },
+  sectionCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#8F31F9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  sectionGradient: {
+    padding: 14,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  sectionInfo: {
+    flex: 1,
+  },
+  sectionTitle: {
+    color: '#1A1B20',
+    fontSize: 18,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    color: '#7D7D7D',
+    fontSize: 12,
+    fontWeight: '400',
+    lineHeight: 16,
+  },
+  sectionArrow: {
+    marginLeft: 10,
+  },
+  arrowCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#1D8C7C',
+    opacity: 0.3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemsContainer: {
+    marginBottom: 16,
+  },
+  insuranceItem: {
+    width: 95,
+    height: 99,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FFF',
+    padding: 10,
+    marginRight: 12,
+    justifyContent: 'space-between',
+    shadowColor: '#8F31F9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  itemTitle: {
+    color: '#1A1B20',
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  itemIcon: {
+    fontSize: 40,
+    textAlign: 'center',
+  },
+  itemDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 4,
+  },
+  itemDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 10,
+    backgroundColor: '#7D7D7D',
+    opacity: 0.5,
+  },
+  itemDotActive: {
+    width: 21,
+    backgroundColor: '#1A1B20',
+    opacity: 1,
+  },
+  expandButton: {
+    alignSelf: 'center',
+    padding: 8,
+  },
+  investmentGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  investmentItem: {
+    width: '31%',
+    height: 99,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FFF',
+    padding: 10,
+    shadowColor: '#8F31F9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  loansGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  loanItem: {
+    width: '47%',
+    height: 99,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FFF',
+    padding: 10,
+    shadowColor: '#8F31F9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  taxCard: {
+    backgroundColor: '#FBFBFB',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FFF',
+    padding: 18,
+    shadowColor: '#8F31F9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  travelCard: {
+    backgroundColor: '#FBFBFB',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FFF',
+    padding: 12,
+    shadowColor: '#8F31F9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  travelOptions: {
+    flexDirection: 'row',
+    gap: 15,
+    marginTop: 20,
+  },
+  travelOption: {
+    flex: 1,
+    height: 160,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  travelOptionGradient: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'flex-end',
+  },
+  travelOptionTitle: {
+    color: '#1A1B20',
+    fontSize: 18,
+    fontWeight: '500',
+  },
+  statsCard: {
+    backgroundColor: '#FBFBFB',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FFF',
+    padding: 20,
+    shadowColor: '#8F31F9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  statsTitle: {
+    color: '#1A1B20',
+    fontSize: 18,
+    fontWeight: '500',
+    textAlign: 'left',
+    marginBottom: 20,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: 27,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    color: '#1A1B20',
+    fontSize: 20,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  statLabel: {
+    color: '#7D7D7D',
+    fontSize: 10,
+    fontWeight: '400',
+    textAlign: 'center',
+    lineHeight: 12,
+  },
+  bottomImage: {
+    width: '100%',
+    height: 312,
+    resizeMode: 'contain',
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 120,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    shadowColor: '#1187FE',
+    shadowOffset: { width: 0, height: 3.077 },
+    shadowOpacity: 0.5,
+    shadowRadius: 7.692,
+    elevation: 8,
+  },
+  fabIcon: {
+    flex: 1,
+    backgroundColor: '#1187FE',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 export default HomeScreen;
