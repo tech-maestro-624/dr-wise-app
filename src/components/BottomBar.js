@@ -75,10 +75,11 @@ const styles = StyleSheet.create({
   },
   bar: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 30,
-    height: 60,
+    width: 393,
+    height: 90,
+    left: '50%',
+    marginLeft: -196.5, // -393/2 to center
+    bottom: 0,
     backgroundColor: colors.white,
     flexDirection: 'row',
     justifyContent: 'space-around',

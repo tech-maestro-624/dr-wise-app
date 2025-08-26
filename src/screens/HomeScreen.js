@@ -12,7 +12,8 @@ import {
   Image, 
   Animated, 
   Platform,
-  FlatList 
+  FlatList,
+  Easing
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ import { colors, spacing, radii, type } from '../theme/tokens';
 import BottomBar from '../components/BottomBar';
 
 const { width: W } = Dimensions.get('window');
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 const filters = [
   { id: 'all', label: 'All', icon: 'checkmark-circle', active: true },
@@ -32,10 +34,11 @@ const filters = [
 ];
 
 const insuranceItems = [
-  { title: 'Life', icon: '🏛️' },
-  { title: 'Health', icon: '❤️' },
-  { title: 'Motor', icon: '🚗' },
-  { title: 'General', icon: '🛡️' },
+  { title: 'Life' },
+  { title: 'Health' },
+  { title: 'Motor' },
+  { title: 'General' },
+  { title: 'Travel' },
 ];
 
 const investmentItems = [
@@ -69,20 +72,20 @@ const sliderCards = [
   {
     id: 2,
     backgroundColor: ['#9D4BFA', '#AF6CFA'],
-    title: 'Invest Smart Today',
-    subtitle: 'Discover investment opportunities\nand grow your wealth',
-    buttonText: 'Explore',
+    title: 'Earn While You Refer',
+    subtitle: 'Share services you trust and\nget paid for every referral',
+    buttonText: 'Start Now',
     image: 'https://api.builder.io/api/v1/image/assets/TEMP/5ee1f76dd94b467d35cd958b74224a628b637374?width=284',
-    badge: 'Trending'
+    badge: 'Popular'
   },
   {
     id: 3,
     backgroundColor: ['#F6AC11', '#FFB84D'],
-    title: 'Secure Your Future',
-    subtitle: 'Get the best insurance plans\nfor complete protection',
-    buttonText: 'Get Started',
+    title: 'Earn While You Refer',
+    subtitle: 'Share services you trust and\nget paid for every referral',
+    buttonText: 'Start Now',
     image: 'https://api.builder.io/api/v1/image/assets/TEMP/5ee1f76dd94b467d35cd958b74224a628b637374?width=284',
-    badge: 'Featured'
+    badge: 'Popular'
   }
 ];
 
@@ -90,8 +93,29 @@ const HomeScreen = () => {
   const navigation = useNavigation();
   const [active, setActive] = useState('all');
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isInsuranceExpanded, setIsInsuranceExpanded] = useState(false);
+  const [isInvestmentExpanded, setIsInvestmentExpanded] = useState(false);
+  const [isLoansExpanded, setIsLoansExpanded] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
   const sliderRef = useRef(null);
+  
+  // Animation values for insurance items
+  const generalAnimatedValue = useRef(new Animated.Value(0)).current;
+  const travelAnimatedValue = useRef(new Animated.Value(0)).current;
+  
+  // Animation values for investment items (4th, 5th, 6th, 7th items)
+  const goldAnimatedValue = useRef(new Animated.Value(0)).current;
+  const bondAnimatedValue = useRef(new Animated.Value(0)).current;
+  const fixedAnimatedValue = useRef(new Animated.Value(0)).current;
+  const mutualFundAnimatedValue = useRef(new Animated.Value(0)).current;
+  
+  // Animation values for loan items (4th item only)
+  const homeLoanAnimatedValue = useRef(new Animated.Value(0)).current;
+  
+  // Animation values for container heights
+  const insuranceHeightAnimated = useRef(new Animated.Value(0)).current;
+  const investmentHeightAnimated = useRef(new Animated.Value(0)).current;
+  const loansHeightAnimated = useRef(new Animated.Value(0)).current;
 
   const onSliderViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
@@ -103,12 +127,200 @@ const HomeScreen = () => {
     itemVisiblePercentThreshold: 50,
   }).current;
 
+  const toggleInsuranceExpansion = () => {
+    if (!isInsuranceExpanded) {
+      // Expand animation
+      setIsInsuranceExpanded(true);
+      
+      // Animate container height
+      Animated.timing(insuranceHeightAnimated, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+      
+      // Animate General item from top-right
+      Animated.timing(generalAnimatedValue, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+      
+      // Animate Travel item from top-right with slight delay
+      Animated.timing(travelAnimatedValue, {
+        toValue: 1,
+        duration: 600,
+        delay: 50,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      // Collapse animation
+      Animated.parallel([
+        Animated.timing(insuranceHeightAnimated, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(generalAnimatedValue, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(travelAnimatedValue, {
+          toValue: 0,
+          duration: 400,
+          delay: 50,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        })
+      ]).start(() => {
+        setIsInsuranceExpanded(false);
+      });
+    }
+  };
+
+  const toggleInvestmentExpansion = () => {
+    if (!isInvestmentExpanded) {
+      // Expand animation
+      setIsInvestmentExpanded(true);
+      
+      // Animate container height
+      Animated.timing(investmentHeightAnimated, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+      
+      // Animate items from top-right with staggered delays
+      Animated.timing(goldAnimatedValue, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+      
+      Animated.timing(bondAnimatedValue, {
+        toValue: 1,
+        duration: 600,
+        delay: 100,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+      
+      Animated.timing(fixedAnimatedValue, {
+        toValue: 1,
+        duration: 600,
+        delay: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+      
+      Animated.timing(mutualFundAnimatedValue, {
+        toValue: 1,
+        duration: 600,
+        delay: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      // Collapse animation
+      Animated.parallel([
+        Animated.timing(investmentHeightAnimated, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(goldAnimatedValue, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bondAnimatedValue, {
+          toValue: 0,
+          duration: 400,
+          delay: 50,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(fixedAnimatedValue, {
+          toValue: 0,
+          duration: 400,
+          delay: 100,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(mutualFundAnimatedValue, {
+          toValue: 0,
+          duration: 400,
+          delay: 150,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        })
+      ]).start(() => {
+        setIsInvestmentExpanded(false);
+      });
+    }
+  };
+
+  const toggleLoansExpansion = () => {
+    if (!isLoansExpanded) {
+      // Expand animation
+      setIsLoansExpanded(true);
+      
+      // Animate container height
+      Animated.timing(loansHeightAnimated, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+      
+      // Animate only Home Loan from top-right
+      Animated.timing(homeLoanAnimatedValue, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      // Collapse animation
+      Animated.parallel([
+        Animated.timing(loansHeightAnimated, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(homeLoanAnimatedValue, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        })
+      ]).start(() => {
+        setIsLoansExpanded(false);
+      });
+    }
+  };
+
   const renderSliderCard = ({ item, index }) => (
     <View style={styles.heroCard}>
       <LinearGradient
         colors={item.backgroundColor}
         style={styles.heroGradient}
       >
+        <Image 
+          source={require('../../assets/Icons/vectorForHero.png')}
+          style={styles.heroBackgroundVector}
+        />
         <View style={styles.heroContent}>
           <View style={styles.popularBadge}>
             <Text style={styles.popularText}>{item.badge}</Text>
@@ -128,7 +340,11 @@ const HomeScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#FBFBFB', '#FBFBFB', '#F0E2FF']}
+      locations={[0, 0.7, 1]}
+      style={styles.container}
+    >
       <StatusBar barStyle="light-content" backgroundColor="#8638EE" />
       
       {/* Simple Sticky Brand Row Only */}
@@ -249,115 +465,626 @@ const HomeScreen = () => {
         <View style={styles.contentContainer}>
           {/* Insurance Section */}
           <View style={styles.sectionCard}>
-            <LinearGradient
-              colors={['#C9EBE9', '#C9EBE9']}
-              style={styles.sectionGradient}
-            >
+            <Image 
+              source={require('../../assets/Icons/insurancesBack.png')} 
+              style={styles.sectionBackgroundImage}
+            />
+            <View style={styles.sectionGradient}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionInfo}>
                   <Text style={styles.sectionTitle}>Insurances</Text>
                   <Text style={styles.sectionSubtitle}>Explore insurance plans tailored to your needs.</Text>
                 </View>
-                <TouchableOpacity 
-                  style={styles.sectionArrow}
-                  onPress={() => navigation.navigate('Insurances')}
-                >
+                <TouchableOpacity style={styles.sectionArrow}>
                   <View style={styles.arrowCircle}>
                     <Ionicons name="arrow-up-outline" size={20} color="#1D8C7C" style={{ transform: [{ rotate: '45deg' }] }} />
                   </View>
                 </TouchableOpacity>
               </View>
               
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                style={styles.itemsContainer}
+              
+              <Animated.View 
+                style={[
+                  styles.insuranceGrid,
+                  {
+                    height: insuranceHeightAnimated.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [120, 270], // 2 rows + gap + arrow space
+                    }),
+                  }
+                ]}
               >
-                {insuranceItems.map((item, index) => (
-                  <View key={index} style={styles.insuranceItem}>
-                    <Text style={styles.itemTitle}>{item.title}</Text>
-                    <Text style={styles.itemIcon}>{item.icon}</Text>
+                {/* Always visible first row */}
+                {/* Life Card */}
+                <LinearGradient
+                  colors={['#FBFBFB', '#E6FFF1']}
+                  style={styles.insuranceItem}
+                >
+                  <Text style={styles.itemTitle}>Life</Text>
+                  <View style={styles.insuranceIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/umbrella.png')} 
+                      style={styles.insuranceIcon}
+                      resizeMode="contain"
+                    />
                   </View>
-                ))}
-              </ScrollView>
+                </LinearGradient>
 
-              <View style={styles.itemDots}>
-                <View style={[styles.itemDot, styles.itemDotActive]} />
-                <View style={styles.itemDot} />
-              </View>
+                {/* Health Card */}
+                <LinearGradient
+                  colors={['#FBFBFB', '#E6FFF1']}
+                  style={styles.insuranceItem}
+                >
+                  <Text style={styles.itemTitle}>Health</Text>
+                  <View style={styles.insuranceIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/heartInsurance.png')} 
+                      style={styles.insuranceIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </LinearGradient>
 
-              <TouchableOpacity style={styles.expandButton}>
-                <Ionicons name="chevron-down-outline" size={16} color="#7D7D7D" />
+                {/* Motor Card */}
+                <LinearGradient
+                  colors={['#FBFBFB', '#E6FFF1']}
+                  style={styles.insuranceItem}
+                >
+                  <Text style={styles.itemTitle}>Motor</Text>
+                  <View style={styles.insuranceIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/steeringwheel.png')} 
+                      style={styles.insuranceIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </LinearGradient>
+
+                {/* Animated second row - only visible when expanded */}
+                {isInsuranceExpanded && (
+                  <>
+                    {/* General Card */}
+                    <AnimatedLinearGradient
+                      colors={['#FBFBFB', '#E6FFF1']}
+                      style={[
+                        styles.insuranceItem,
+                        {
+                          transform: [
+                            {
+                              translateX: generalAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [200, 0], // Start from right
+                              }),
+                            },
+                            {
+                              translateY: generalAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [-100, 0], // Start from top
+                              }),
+                            },
+                            {
+                              scale: generalAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.3, 1], // Scale up
+                              }),
+                            },
+                          ],
+                          opacity: generalAnimatedValue,
+                        }
+                      ]}
+                    >
+                      <Text style={styles.itemTitle}>General</Text>
+                      <View style={styles.insuranceIconContainer}>
+                        <Image 
+                          source={require('../../assets/Icons/generalInsurance.png')} 
+                          style={styles.insuranceIcon}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    </AnimatedLinearGradient>
+
+                    {/* Travel Card */}
+                    <AnimatedLinearGradient
+                      colors={['#FBFBFB', '#E6FFF1']}
+                      style={[
+                        styles.insuranceItem,
+                        {
+                          transform: [
+                            {
+                              translateX: travelAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [200, 0], // Start from right
+                              }),
+                            },
+                            {
+                              translateY: travelAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [-100, 0], // Start from top
+                              }),
+                            },
+                            {
+                              scale: travelAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.3, 1], // Scale up
+                              }),
+                            },
+                          ],
+                          opacity: travelAnimatedValue,
+                        }
+                      ]}
+                    >
+                      <Text style={styles.itemTitle}>Travel</Text>
+                      <View style={styles.insuranceIconContainer}>
+                        <Image 
+                          source={require('../../assets/Icons/planeInsurance.png')} 
+                          style={styles.insuranceIcon}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    </AnimatedLinearGradient>
+                  </>
+                )}
+              </Animated.View>
+
+              {/* Down Arrow Navigation */}
+              <TouchableOpacity 
+                style={styles.insuranceDownArrow}
+                onPress={toggleInsuranceExpansion}
+                activeOpacity={0.7}
+              >
+                <Animated.View
+                  style={{
+                    transform: [{
+                      rotate: isInsuranceExpanded ? '180deg' : '0deg'
+                    }]
+                  }}
+                >
+                  <Ionicons 
+                    name="chevron-down-outline" 
+                    size={24} 
+                    color="#7D7D7D" 
+                  />
+                </Animated.View>
               </TouchableOpacity>
-            </LinearGradient>
+            </View>
+          </View>
+
+          {/* Tax Section */}
+          <View style={styles.taxCard}>
+            <View style={styles.taxContent}>
+              <View style={styles.taxTextSection}>
+                <Text style={styles.taxTitle}>Tax</Text>
+                <Text style={styles.taxSubtitle}>Get expert help to file your taxes on time and save more.</Text>
+              </View>
+              
+              <View style={styles.taxImageSection}>
+                <View style={styles.taxImageBackground}>
+                  <View style={styles.taxIconContainer}>
+                    {/* Vector Tax as Background Pattern */}
+                    <Image 
+                      source={require('../../assets/Icons/vector_tax.png')} 
+                      style={styles.taxVectorBackground}
+                      resizeMode="cover"
+                    />
+                    
+                    {/* Tax PNG Icon - Main foreground element */}
+                    <Image 
+                      source={require('../../assets/Icons/tax.png')} 
+                      style={styles.taxMainIcon}
+                      resizeMode="contain"
+                    />
+                    
+                    {/* Arrow */}
+                    <View style={styles.taxArrow}>
+                      <Ionicons name="arrow-forward" size={16} color="#6B7280" />
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
           </View>
 
           {/* Investment Section */}
           <View style={styles.sectionCard}>
-            <LinearGradient
-              colors={['#FEE9CF', '#FEE9CF']}
-              style={styles.sectionGradient}
-            >
+            <Image 
+              source={require('../../assets/Icons/investmentsBack.png')} 
+              style={styles.sectionBackgroundImage}
+            />
+            <View style={styles.sectionGradient}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionInfo}>
                   <Text style={styles.sectionTitle}>Investments</Text>
                   <Text style={styles.sectionSubtitle}>Explore top investment options and share them to earn with every new join.</Text>
                 </View>
-                <TouchableOpacity 
-                  style={styles.sectionArrow}
-                  onPress={() => navigation.navigate('Investments')}
-                >
+                <TouchableOpacity style={styles.sectionArrow}>
                   <View style={[styles.arrowCircle, { backgroundColor: '#F6AC11' }]}>
                     <Ionicons name="arrow-up-outline" size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
                   </View>
                 </TouchableOpacity>
               </View>
               
-              <View style={styles.investmentGrid}>
-                {investmentItems.map((item, index) => (
-                  <View key={index} style={styles.investmentItem}>
-                    <Text style={styles.itemTitle}>{item.title}</Text>
+              <Animated.View 
+                style={[
+                  styles.investmentGrid,
+                  {
+                    height: investmentHeightAnimated.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [120, 390], // 3 rows + gaps + arrow space for 7 items
+                    }),
+                  }
+                ]}
+              >
+                {/* Always visible first row */}
+                {/* Mutual Fund Card */}
+                <LinearGradient
+                  colors={['#FBFBFB', '#FFF4E6']}
+                  style={styles.investmentItem}
+                >
+                  <Text style={styles.itemTitle}>Mutual Fund</Text>
+                  <View style={styles.investmentIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/mutualFund.png')} 
+                      style={styles.investmentIcon}
+                      resizeMode="contain"
+                    />
                   </View>
-                ))}
-              </View>
-            </LinearGradient>
+                </LinearGradient>
+
+                {/* Fixed Card */}
+                <LinearGradient
+                  colors={['#FBFBFB', '#FFF4E6']}
+                  style={styles.investmentItem}
+                >
+                  <Text style={styles.itemTitle}>Fixed</Text>
+                  <View style={styles.investmentIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/fixedInv.png')} 
+                      style={styles.investmentIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </LinearGradient>
+
+                {/* BOND Card */}
+                <LinearGradient
+                  colors={['#FBFBFB', '#FFF4E6']}
+                  style={styles.investmentItem}
+                >
+                  <Text style={styles.itemTitle}>BOND</Text>
+                  <View style={styles.investmentIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/bondInv.png')} 
+                      style={styles.investmentIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </LinearGradient>
+
+                {/* Animated additional items - only visible when expanded */}
+                {isInvestmentExpanded && (
+                  <>
+                    {/* Gold Card */}
+                    <AnimatedLinearGradient
+                      colors={['#FBFBFB', '#FFF4E6']}
+                      style={[
+                        styles.investmentItem,
+                        {
+                          transform: [
+                            {
+                              translateX: goldAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [200, 0],
+                              }),
+                            },
+                            {
+                              translateY: goldAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [-100, 0],
+                              }),
+                            },
+                            {
+                              scale: goldAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.3, 1],
+                              }),
+                            },
+                          ],
+                          opacity: goldAnimatedValue,
+                        }
+                      ]}
+                    >
+                      <Text style={styles.itemTitle}>Gold</Text>
+                      <View style={styles.investmentIconContainer}>
+                        <Image 
+                          source={require('../../assets/Icons/goldInv.png')} 
+                          style={styles.investmentIcon}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    </AnimatedLinearGradient>
+
+                    {/* LAS Card */}
+                    <AnimatedLinearGradient
+                      colors={['#FBFBFB', '#FFF4E6']}
+                      style={[
+                        styles.investmentItem,
+                        {
+                          transform: [
+                            {
+                              translateX: bondAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [200, 0],
+                              }),
+                            },
+                            {
+                              translateY: bondAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [-100, 0],
+                              }),
+                            },
+                            {
+                              scale: bondAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.3, 1],
+                              }),
+                            },
+                          ],
+                          opacity: bondAnimatedValue,
+                        }
+                      ]}
+                    >
+                      <Text style={styles.itemTitle}>LAS</Text>
+                      <View style={styles.investmentIconContainer}>
+                        <Image 
+                          source={require('../../assets/Icons/LASInvestments.png')} 
+                          style={styles.investmentIcon}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    </AnimatedLinearGradient>
+
+                    {/* NPS Card */}
+                    <AnimatedLinearGradient
+                      colors={['#FBFBFB', '#FFF4E6']}
+                      style={[
+                        styles.investmentItem,
+                        {
+                          transform: [
+                            {
+                              translateX: fixedAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [200, 0],
+                              }),
+                            },
+                            {
+                              translateY: fixedAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [-100, 0],
+                              }),
+                            },
+                            {
+                              scale: fixedAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.3, 1],
+                              }),
+                            },
+                          ],
+                          opacity: fixedAnimatedValue,
+                        }
+                      ]}
+                    >
+                      <Text style={styles.itemTitle}>NPS</Text>
+                      <View style={styles.investmentIconContainer}>
+                        <Image 
+                          source={require('../../assets/Icons/npsInsurance.png')} 
+                          style={styles.investmentIcon}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    </AnimatedLinearGradient>
+
+                    {/* Trading Card */}
+                    <AnimatedLinearGradient
+                      colors={['#FBFBFB', '#FFF4E6']}
+                      style={[
+                        styles.investmentItem,
+                        {
+                          transform: [
+                            {
+                              translateX: mutualFundAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [200, 0],
+                              }),
+                            },
+                            {
+                              translateY: mutualFundAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [-100, 0],
+                              }),
+                            },
+                            {
+                              scale: mutualFundAnimatedValue.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.3, 1],
+                              }),
+                            },
+                          ],
+                          opacity: mutualFundAnimatedValue,
+                        }
+                      ]}
+                    >
+                      <Text style={styles.itemTitle}>Trading</Text>
+                      <View style={styles.investmentIconContainer}>
+                        <Image 
+                          source={require('../../assets/Icons/investmentsTrading.png')} 
+                          style={styles.investmentIcon}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    </AnimatedLinearGradient>
+                  </>
+                )}
+              </Animated.View>
+
+              {/* Down Arrow Navigation */}
+              <TouchableOpacity 
+                style={styles.investmentDownArrow}
+                onPress={toggleInvestmentExpansion}
+                activeOpacity={0.7}
+              >
+                <Animated.View
+                  style={{
+                    transform: [{
+                      rotate: isInvestmentExpanded ? '180deg' : '0deg'
+                    }]
+                  }}
+                >
+                  <Ionicons 
+                    name="chevron-down-outline" 
+                    size={24} 
+                    color="#7D7D7D" 
+                  />
+                </Animated.View>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Loans Section */}
           <View style={styles.sectionCard}>
-            <LinearGradient
-              colors={['#F6DCDD', '#F6DCDD']}
-              style={styles.sectionGradient}
-            >
+            <Image 
+              source={require('../../assets/Icons/loansBack.png')} 
+              style={styles.sectionBackgroundImage}
+            />
+            <View style={styles.sectionGradient}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionInfo}>
                   <Text style={styles.sectionTitle}>Loans</Text>
                   <Text style={styles.sectionSubtitle}>Select the right loan offers and share them to earn when someone applies.</Text>
                 </View>
-                <TouchableOpacity 
-                  style={styles.sectionArrow}
-                  onPress={() => navigation.navigate('Loans')}
-                >
-                  <View style={[styles.arrowCircle, { backgroundColor: '#A5236A' }]}>
-                    <Ionicons name="arrow-up-outline" size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
-                  </View>
-                </TouchableOpacity>
               </View>
               
-              <View style={styles.loansGrid}>
-                {loanItems.map((item, index) => (
-                  <View key={index} style={styles.loanItem}>
-                    <Text style={styles.itemTitle}>{item.title}</Text>
+              <Animated.View 
+                style={[
+                  styles.loansGrid,
+                  {
+                    height: loansHeightAnimated.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [120, 270], // 2 rows + gap + arrow space
+                    }),
+                  }
+                ]}
+              >
+                {/* Always visible first row (3 items) */}
+                {/* Home Loan Card */}
+                <LinearGradient
+                  colors={['#FBFBFB', '#FCE4EC']}
+                  style={styles.loanItem}
+                >
+                  <Text style={styles.itemTitle}>Home Loan</Text>
+                  <View style={styles.loanIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/propertyLoans.png')} 
+                      style={styles.loanIcon}
+                      resizeMode="contain"
+                    />
                   </View>
-                ))}
-              </View>
-            </LinearGradient>
-          </View>
+                </LinearGradient>
 
-          {/* Tax Section */}
-          <View style={styles.taxCard}>
-            <Text style={styles.sectionTitle}>Tax</Text>
-            <Text style={styles.sectionSubtitle}>Get expert help to file your taxes on time and save more.</Text>
+                {/* Personal Loans Card */}
+                <LinearGradient
+                  colors={['#FBFBFB', '#FCE4EC']}
+                  style={styles.loanItem}
+                >
+                  <Text style={styles.itemTitle}>Personal Loans</Text>
+                  <View style={styles.loanIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/personalLoans.png')} 
+                      style={styles.loanIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </LinearGradient>
+
+                {/* Mortgage Loan Card */}
+                <LinearGradient
+                  colors={['#FBFBFB', '#FCE4EC']}
+                  style={styles.loanItem}
+                >
+                  <Text style={styles.itemTitle}>Mortgage Loan</Text>
+                  <View style={styles.loanIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/loansSection.png')} 
+                      style={styles.loanIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </LinearGradient>
+
+                {/* Animated additional item - only visible when expanded */}
+                {isLoansExpanded && (
+                  /* Business Loan Card */
+                  <AnimatedLinearGradient
+                    colors={['#FBFBFB', '#FCE4EC']}
+                    style={[
+                      styles.loanItem,
+                      {
+                        transform: [
+                          {
+                            translateX: homeLoanAnimatedValue.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [200, 0],
+                            }),
+                          },
+                          {
+                            translateY: homeLoanAnimatedValue.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [-100, 0],
+                            }),
+                          },
+                          {
+                            scale: homeLoanAnimatedValue.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0.3, 1],
+                            }),
+                          },
+                        ],
+                        opacity: homeLoanAnimatedValue,
+                      }
+                    ]}
+                  >
+                    <Text style={styles.itemTitle}>Business Loan</Text>
+                    <View style={styles.loanIconContainer}>
+                      <Image 
+                        source={require('../../assets/Icons/businessLoans.png')} 
+                        style={styles.loanIcon}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  </AnimatedLinearGradient>
+                )}
+              </Animated.View>
+
+              {/* Down Arrow Navigation */}
+              <TouchableOpacity 
+                style={styles.loansDownArrow}
+                onPress={toggleLoansExpansion}
+                activeOpacity={0.7}
+              >
+                <Animated.View
+                  style={{
+                    transform: [{
+                      rotate: isLoansExpanded ? '180deg' : '0deg'
+                    }]
+                  }}
+                >
+                  <Ionicons 
+                    name="chevron-down-outline" 
+                    size={24} 
+                    color="#7D7D7D" 
+                  />
+                </Animated.View>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Travel Section */}
@@ -366,22 +1093,51 @@ const HomeScreen = () => {
             <Text style={styles.sectionSubtitle}>Share the best travel deals and earn when someone books through your link.</Text>
             
             <View style={styles.travelOptions}>
-              <View style={styles.travelOption}>
+              {/* Domestic Travel */}
+              <TouchableOpacity style={styles.travelOption} activeOpacity={0.8}>
                 <LinearGradient
-                  colors={['#FBFBFB', '#F0E2FF']}
+                  colors={['#FBFBFB', '#FBFBFB', '#F0E2FF']}
+                  locations={[0, 0.7, 1]}
                   style={styles.travelOptionGradient}
                 >
-                  <Text style={styles.travelOptionTitle}>International Travel</Text>
+                  <View style={styles.travelArrow}>
+                    <Ionicons name="arrow-forward" size={16} color="#1A1B20" />
+                  </View>
+                  
+                  <View style={styles.travelIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/domesticTravel.png')} 
+                      style={styles.travelIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  
+                  <Text style={styles.travelOptionTitle}>Domestic{'\n'}Travel</Text>
                 </LinearGradient>
-              </View>
-              <View style={styles.travelOption}>
+              </TouchableOpacity>
+
+              {/* International Travel */}
+              <TouchableOpacity style={styles.travelOption} activeOpacity={0.8}>
                 <LinearGradient
-                  colors={['#FBFBFB', '#F0E2FF']}
+                  colors={['#FBFBFB', '#FBFBFB', '#F0E2FF']}
+                  locations={[0, 0.7, 1]}
                   style={styles.travelOptionGradient}
                 >
-                  <Text style={styles.travelOptionTitle}>Domestic Travel</Text>
+                  <View style={styles.travelArrow}>
+                    <Ionicons name="arrow-forward" size={16} color="#1A1B20" />
+                  </View>
+                  
+                  <View style={styles.travelIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/internationalTravel.png')} 
+                      style={styles.travelIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  
+                  <Text style={styles.travelOptionTitle}>International{'\n'}Travel</Text>
                 </LinearGradient>
-              </View>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -390,16 +1146,39 @@ const HomeScreen = () => {
             <Text style={styles.statsTitle}>Built on Trust, Growing with You</Text>
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
+                <View style={styles.statIconContainer}>
+                  <Image 
+                    source={require('../../assets/Icons/10k_plus.png')} 
+                    style={styles.statIcon}
+                    resizeMode="contain"
+                  />
+                </View>
                 <Text style={styles.statNumber}>10K+</Text>
-                <Text style={styles.statLabel}>Users exploring services</Text>
+                <Text style={styles.statLabel}>Users exploring{'\n'}services</Text>
               </View>
+              
               <View style={styles.statItem}>
+                <View style={styles.statIconContainer}>
+                  <Image 
+                    source={require('../../assets/Icons/1k_plus.png')} 
+                    style={styles.statIcon}
+                    resizeMode="contain"
+                  />
+                </View>
                 <Text style={styles.statNumber}>1K+</Text>
-                <Text style={styles.statLabel}>Verified Affiliates and Ambassadors</Text>
+                <Text style={styles.statLabel}>Verified Affiliates{'\n'}and Ambassadors</Text>
               </View>
+              
               <View style={styles.statItem}>
+                <View style={styles.statIconContainer}>
+                  <Image 
+                    source={require('../../assets/Icons/20_plus.png')} 
+                    style={styles.statIcon}
+                    resizeMode="contain"
+                  />
+                </View>
                 <Text style={styles.statNumber}>20+</Text>
-                <Text style={styles.statLabel}>Trusted Financial Partners</Text>
+                <Text style={styles.statLabel}>Trusted Financial{'\n'}Partners</Text>
               </View>
             </View>
           </View>
@@ -410,26 +1189,28 @@ const HomeScreen = () => {
             style={styles.bottomImage}
           />
 
-          <View style={{ height: 120 }} />
+          {/* <View style={{ height: 120 }} /> */}
         </View>
       </ScrollView>
 
       {/* Floating Action Button */}
       <TouchableOpacity style={styles.fab}>
         <View style={styles.fabIcon}>
-          <Ionicons name="apps" size={18} color="#FBFBFB" />
+          <Image 
+            source={require('../../assets/Icons/hoveringVector.png')} 
+            style={styles.fabImage}
+          />
         </View>
       </TouchableOpacity>
 
       {/* <BottomBar /> */}
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6F6FE',
   },
   stickyBrand: {
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
@@ -441,8 +1222,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerSection: {
-    paddingTop: 30,
-    paddingBottom: 13,
+    paddingTop: 20,
+    paddingBottom: 20,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
@@ -458,6 +1239,7 @@ const styles = StyleSheet.create({
     color: '#FBFBFB',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'Rubik-SemiBold',
   },
   statusRight: {
     flexDirection: 'row',
@@ -496,21 +1278,24 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-start',
   },
   treeIcon: {
     width: 49,
     height: 47,
     resizeMode: 'contain',
-    marginRight: 8,
+    marginRight: 1,
   },
   brandTextImage: {
     width: 88,
     height: 29,
     resizeMode: 'contain',
+    marginTop: 20,
   },
   notifBtn: {
     width: 31,
     height: 31,
+    marginTop: 15,
     borderRadius: 4,
     backgroundColor: '#7830E2',
     alignItems: 'center',
@@ -529,13 +1314,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FBFBFB',
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#FFF',
-    paddingHorizontal: 11,
-    paddingVertical: 9,
-    marginHorizontal: 20,
-    marginBottom: 14,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    marginHorizontal: 25,
+    marginBottom: 20,
     shadowColor: '#8F31F9',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,
@@ -547,20 +1332,21 @@ const styles = StyleSheet.create({
     marginLeft: 11,
     fontSize: 13,
     color: '#7D7D7D',
+    fontFamily: 'Rubik-Regular',
   },
   filterContainer: {
-    marginBottom: 10,
+    marginBottom: 5,
   },
   filterContent: {
-    paddingHorizontal: 20,
-    gap: 10,
+    paddingHorizontal: 25,
+    gap: 12,
   },
   filterTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     gap: 6,
   },
   filterTabActive: {
@@ -582,32 +1368,36 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: 14,
     fontWeight: '400',
+    fontFamily: 'Rubik-Regular',
   },
   heroSliderContainer: {
-    height: 180,
-    marginTop: 0,
-    marginBottom: 20,
-    paddingTop: 20,
+    height: 220,
+    marginTop: 5,
+    marginBottom: 10,
+    paddingTop: 0,
   },
   sliderContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
     alignItems: 'center',
   },
   heroCard: {
-    marginHorizontal: 10,
+    marginHorizontal: 8,
     borderRadius: 20,
     overflow: 'hidden',
-    height: 159,
-    width: W - 60,
+    height: 200,
+    width: W - 50,
   },
   heroGradient: {
     flex: 1,
     flexDirection: 'row',
-    padding: 12,
+    padding: 16,
+    paddingBottom: 20,
   },
   heroContent: {
     flex: 1,
     paddingRight: 10,
+    justifyContent: 'space-between',
+    paddingBottom: 10,
   },
   popularBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.20)',
@@ -620,12 +1410,14 @@ const styles = StyleSheet.create({
     color: '#FBFBFB',
     fontSize: 11,
     fontWeight: '400',
+    fontFamily: 'Rubik-Regular',
   },
   heroTitle: {
     color: '#FBFBFB',
     fontSize: 18,
     fontWeight: '600',
     marginTop: 12,
+    fontFamily: 'Rubik-SemiBold',
   },
   heroSubtitle: {
     color: '#F6F6FE',
@@ -633,26 +1425,40 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     marginTop: 8,
     lineHeight: 16,
+    fontFamily: 'Rubik-Regular',
   },
   startButton: {
     backgroundColor: '#FBFBFB',
     paddingHorizontal: 30,
-    paddingVertical: 5,
+    paddingVertical: 8,
     borderRadius: 8,
     alignSelf: 'flex-start',
-    marginTop: 6,
+    marginTop: 12,
   },
   startButtonText: {
     color: '#8F31F9',
     fontSize: 12,
     fontWeight: '600',
+    fontFamily: 'Rubik-SemiBold',
   },
   heroImage: {
-    width: 142,
-    height: 161,
+    width: 160,
+    height: 180,
     position: 'absolute',
-    right: 0,
+    right: 5,
+    bottom: 0,
+  },
+  heroBackgroundVector: {
+    position: 'absolute',
     top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '115%',
+    height: '100%',
+    opacity: 1,
+    resizeMode: 'cover',
+    tintColor: 'rgba(255, 255, 255, 1 )',
   },
   pageDots: {
     flexDirection: 'row',
@@ -673,20 +1479,39 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   contentContainer: {
-    padding: 8,
-    gap: 30,
+    padding: 20,
+    gap: 20,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   sectionCard: {
-    borderRadius: 20,
     overflow: 'hidden',
     shadowColor: '#8F31F9',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 3,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+    backgroundColor: 'transparent',
+    marginBottom: 20,
   },
   sectionGradient: {
-    padding: 14,
+    padding: 20,
+    zIndex: 2,
+    position: 'relative',
+  },
+  sectionBackgroundImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 1,
+    resizeMode: 'stretch',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -699,165 +1524,247 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: '#1A1B20',
-    fontSize: 18,
-    fontWeight: '500',
-    marginBottom: 4,
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 6,
+    fontFamily: 'Rubik-SemiBold',
   },
   sectionSubtitle: {
     color: '#7D7D7D',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '400',
-    lineHeight: 16,
+    lineHeight: 18,
+    fontFamily: 'Rubik-Regular',
   },
   sectionArrow: {
     marginLeft: 10,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  arrowCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#1D8C7C',
-    opacity: 0.3,
+  arrowOuterCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  itemsContainer: {
-    marginBottom: 16,
+  arrowCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1D8C7C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  insuranceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+    justifyContent: 'flex-start',
   },
   insuranceItem: {
-    width: 95,
-    height: 99,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    width: '30%',
+    height: 110,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#FFF',
-    padding: 10,
-    marginRight: 12,
-    justifyContent: 'space-between',
-    shadowColor: '#8F31F9',
+    borderColor: '#FFFFFF',
+    padding: 12,
+    shadowColor: 'rgba(143, 49, 249, 0.1)',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 1,
     shadowRadius: 10,
     elevation: 2,
+    justifyContent: 'flex-start',
+  },
+  insuranceDownArrow: {
+    alignSelf: 'center',
+    top: 7,
+    padding: 8,
+  },
+  insuranceIconContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 5,
+  },
+  insuranceIcon: {
+    width: 70,
+    height: 70,
   },
   itemTitle: {
     color: '#1A1B20',
-    fontSize: 10,
-    fontWeight: '500',
-  },
-  itemIcon: {
-    fontSize: 40,
-    textAlign: 'center',
-  },
-  itemDots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 4,
-  },
-  itemDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 10,
-    backgroundColor: '#7D7D7D',
-    opacity: 0.5,
-  },
-  itemDotActive: {
-    width: 21,
-    backgroundColor: '#1A1B20',
-    opacity: 1,
-  },
-  expandButton: {
-    alignSelf: 'center',
-    padding: 8,
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Rubik-SemiBold',
   },
   investmentGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
+    marginBottom: 20,
+    justifyContent: 'space-between',
   },
   investmentItem: {
-    width: '31%',
-    height: 99,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    width: '30%',
+    height: 110,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#FFF',
-    padding: 10,
-    shadowColor: '#8F31F9',
+    borderColor: '#FFFFFF',
+    padding: 12,
+    shadowColor: 'rgba(143, 49, 249, 0.1)',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 1,
     shadowRadius: 10,
     elevation: 2,
+    justifyContent: 'space-between',
+  },
+  investmentIconContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 5,
+  },
+  investmentIcon: {
+    width: 70,
+    height: 70,
+  },
+  investmentDownArrow: {
+    alignSelf: 'center',
+    top:16,
+    padding: 8,
   },
   loansGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
+    marginBottom: 20,
+    justifyContent: 'flex-start',
   },
   loanItem: {
-    width: '47%',
-    height: 99,
+    width: '30%',
+    height: 110,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#FFF',
-    padding: 10,
+    padding: 12,
     shadowColor: '#8F31F9',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 2,
+    justifyContent: 'space-between',
+  },
+  loanIconContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 5,
+  },
+  loanIcon: {
+    width: 70,
+    height: 70,
+  },
+  loansDownArrow: {
+    alignSelf: 'center',
+    top: 16,
+    padding: 8,
   },
   taxCard: {
     backgroundColor: '#FBFBFB',
-    borderRadius: 10,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#FFF',
-    padding: 18,
+    padding: 0,
     shadowColor: '#8F31F9',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 3,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 450,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  taxContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 110,
+  },
+  taxTextSection: {
+    flex: 1,
+    padding: 20,
+  },
+  taxTitle: {
+    color: '#1A1B20',
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 6,
+    fontFamily: 'Rubik-SemiBold',
+  },
+  taxSubtitle: {
+    color: '#7D7D7D',
+    fontSize: 13,
+    fontWeight: '400',
+    lineHeight: 18,
+    paddingRight: 10,
+    fontFamily: 'Rubik-Regular',
+  },
+  taxImageSection: {
+    width: 120,
+    height: 100,
+  },
+  taxImageBackground: {
+    flex: 1,
+    borderTopRightRadius: 20,
+    borderBottomRightRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  taxIconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+  },
+  taxVectorBackground: {
+    width: 150,
+    height: 120,
+    position: 'absolute',
+    opacity: 0.6,
+    left: -25,
+    top: -10,
+    bottom: -10,
+  },
+  taxMainIcon: {
+    width: 80,
+    height: 80,
+    position: 'absolute',
+    zIndex: 2,
+    right:30
+  },
+  taxArrow: {
+    position: 'absolute',
+    top: -5,
+    right: 10,
+    // backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    // borderRadius: 12,
+    padding: 4,
+    // elevation: 1,
+    zIndex: 3,
   },
   travelCard: {
     backgroundColor: '#FBFBFB',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#FFF',
-    padding: 12,
-    shadowColor: '#8F31F9',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  travelOptions: {
-    flexDirection: 'row',
-    gap: 15,
-    marginTop: 20,
-  },
-  travelOption: {
-    flex: 1,
-    height: 160,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  travelOptionGradient: {
-    flex: 1,
-    padding: 12,
-    justifyContent: 'flex-end',
-  },
-  travelOptionTitle: {
-    color: '#1A1B20',
-    fontSize: 18,
-    fontWeight: '500',
-  },
-  statsCard: {
-    backgroundColor: '#FBFBFB',
-    borderRadius: 10,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#FFF',
     padding: 20,
@@ -866,13 +1773,169 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 3,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  travelOptions: {
+    flexDirection: 'row',
+    gap: 15,
+    marginTop: 20,
+  },
+  travelOption: {
+    flex: 1,
+    height: 200,
+    borderRadius: 10,
+    overflow: 'hidden',
+    shadowColor: 'rgba(143, 49, 249, 0.1)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  travelOptionGradient: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'space-between',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    borderRadius: 10,
+  },
+  travelArrow: {
+    alignSelf: 'flex-end',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 8,
+  },
+  travelIconContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 5,
+    marginBottom: 15,
+  },
+  travelIcon: {
+    width: 90,
+    height: 90,
+  },
+  internationalTravelIcon: {
+    position: 'relative',
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  globe: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  globeGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  globePattern: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    top: 8,
+    left: 8,
+  },
+  airplane: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  airplaneGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    transform: [{ rotate: '45deg' }],
+  },
+  domesticTravelIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  suitcaseGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    padding: 8,
+  },
+  suitcaseBody: {
+    width: 30,
+    height: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 3,
+    marginBottom: 2,
+  },
+  suitcaseHandle: {
+    width: 12,
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 3,
+    position: 'absolute',
+    top: 6,
+    alignSelf: 'center',
+  },
+  suitcaseLines: {
+    position: 'absolute',
+    top: 14,
+    left: 13,
+    gap: 2,
+  },
+  suitcaseLine: {
+    width: 16,
+    height: 1,
+    backgroundColor: 'rgba(245, 158, 11, 0.6)',
+  },
+  travelOptionTitle: {
+    color: '#1A1B20',
+    fontSize: 16,
+    fontWeight: '600',
+    lineHeight: 20,
+    textAlign: 'left',
+    marginTop: 5,
+    fontFamily: 'Rubik-SemiBold',
+  },
+  statsCard: {
+    backgroundColor: '#FBFBFB',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FFF',
+    padding: 20,
+    shadowColor: '#8F31F9',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   statsTitle: {
     color: '#1A1B20',
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: '600',
     textAlign: 'left',
     marginBottom: 20,
+    fontFamily: 'Rubik-SemiBold',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -882,12 +1945,128 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  statIconContainer: {
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statIcon: {
+    width: 50,
+    height: 50,
+  },
+  usersIcon: {
+    width: 45,
+    height: 32,
+    position: 'relative',
+  },
+  userCircleBlue1: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  userCircleBlue2: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  userCircleYellow: {
+    position: 'absolute',
+    top: 0,
+    left: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    overflow: 'hidden',
+    zIndex: 2,
+  },
+  userCircleOrange: {
+    position: 'absolute',
+    top: 0,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    overflow: 'hidden',
+    zIndex: 1,
+  },
+  userGradient: {
+    flex: 1,
+    borderRadius: 8,
+  },
+  trophyIcon: {
+    width: 32,
+    height: 36,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  trophyGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  trophyBody: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 6,
+    marginBottom: 2,
+    paddingVertical: 4,
+    width: '80%',
+  },
+  trophyStar: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    padding: 3,
+  },
+  trophyBase: {
+    width: 20,
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    borderRadius: 2,
+    marginBottom: 1,
+  },
+  trophyStand: {
+    width: 12,
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 1,
+  },
+  handshakeIcon: {
+    width: 32,
+    height: 20,
+    flexDirection: 'row',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  handGradient1: {
+    flex: 1,
+    borderTopLeftRadius: 4,
+    borderBottomLeftRadius: 4,
+  },
+  handGradient2: {
+    flex: 1,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+  },
   statNumber: {
     color: '#1A1B20',
     fontSize: 20,
     fontWeight: '500',
     textAlign: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
+    fontFamily: 'Rubik-Medium',
   },
   statLabel: {
     color: '#7D7D7D',
@@ -895,6 +2074,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     textAlign: 'center',
     lineHeight: 12,
+    fontFamily: 'Rubik-Regular',
   },
   bottomImage: {
     width: '100%',
@@ -904,10 +2084,10 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 120,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    bottom: 40,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     shadowColor: '#1187FE',
     shadowOffset: { width: 0, height: 3.077 },
     shadowOpacity: 0.5,
@@ -917,9 +2097,15 @@ const styles = StyleSheet.create({
   fabIcon: {
     flex: 1,
     backgroundColor: '#1187FE',
-    borderRadius: 20,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  fabImage: {
+    width: 70,
+    height: 70,
+    resizeMode: 'contain',
+    marginTop: 5
   },
 });
 
