@@ -649,6 +649,41 @@ const HomeScreen = () => {
             </View>
           </View>
 
+          {/* Tax Section */}
+          <View style={styles.taxCard}>
+            <View style={styles.taxContent}>
+              <View style={styles.taxTextSection}>
+                <Text style={styles.taxTitle}>Tax</Text>
+                <Text style={styles.taxSubtitle}>Get expert help to file your taxes on time and save more.</Text>
+              </View>
+              
+              <View style={styles.taxImageSection}>
+                <View style={styles.taxImageBackground}>
+                  <View style={styles.taxIconContainer}>
+                    {/* Vector Tax as Background Pattern */}
+                    <Image 
+                      source={require('../../assets/Icons/vector_tax.png')} 
+                      style={styles.taxVectorBackground}
+                      resizeMode="cover"
+                    />
+                    
+                    {/* Tax PNG Icon - Main foreground element */}
+                    <Image 
+                      source={require('../../assets/Icons/tax.png')} 
+                      style={styles.taxMainIcon}
+                      resizeMode="contain"
+                    />
+                    
+                    {/* Arrow */}
+                    <View style={styles.taxArrow}>
+                      <Ionicons name="arrow-forward" size={16} color="#6B7280" />
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+
           {/* Investment Section */}
           <View style={styles.sectionCard}>
             <Image 
@@ -682,45 +717,45 @@ const HomeScreen = () => {
                 ]}
               >
                 {/* Always visible first row */}
-                {/* Trading Card */}
+                {/* Mutual Fund Card */}
                 <LinearGradient
                   colors={['#FBFBFB', '#FFF4E6']}
                   style={styles.investmentItem}
                 >
-                  <Text style={styles.itemTitle}>Trading</Text>
+                  <Text style={styles.itemTitle}>Mutual Fund</Text>
                   <View style={styles.investmentIconContainer}>
                     <Image 
-                      source={require('../../assets/Icons/investmentsTrading.png')} 
+                      source={require('../../assets/Icons/mutualFund.png')} 
                       style={styles.investmentIcon}
                       resizeMode="contain"
                     />
                   </View>
                 </LinearGradient>
 
-                {/* NPS Card */}
+                {/* Fixed Card */}
                 <LinearGradient
                   colors={['#FBFBFB', '#FFF4E6']}
                   style={styles.investmentItem}
                 >
-                  <Text style={styles.itemTitle}>NPS</Text>
+                  <Text style={styles.itemTitle}>Fixed</Text>
                   <View style={styles.investmentIconContainer}>
                     <Image 
-                      source={require('../../assets/Icons/npsInsurance.png')} 
+                      source={require('../../assets/Icons/fixedInv.png')} 
                       style={styles.investmentIcon}
                       resizeMode="contain"
                     />
                   </View>
                 </LinearGradient>
 
-                {/* LAS Card */}
+                {/* BOND Card */}
                 <LinearGradient
                   colors={['#FBFBFB', '#FFF4E6']}
                   style={styles.investmentItem}
                 >
-                  <Text style={styles.itemTitle}>LAS</Text>
+                  <Text style={styles.itemTitle}>BOND</Text>
                   <View style={styles.investmentIconContainer}>
                     <Image 
-                      source={require('../../assets/Icons/LASInvestments.png')} 
+                      source={require('../../assets/Icons/bondInv.png')} 
                       style={styles.investmentIcon}
                       resizeMode="contain"
                     />
@@ -770,7 +805,7 @@ const HomeScreen = () => {
                       </View>
                     </AnimatedLinearGradient>
 
-                    {/* BOND Card */}
+                    {/* LAS Card */}
                     <AnimatedLinearGradient
                       colors={['#FBFBFB', '#FFF4E6']}
                       style={[
@@ -800,17 +835,17 @@ const HomeScreen = () => {
                         }
                       ]}
                     >
-                      <Text style={styles.itemTitle}>BOND</Text>
+                      <Text style={styles.itemTitle}>LAS</Text>
                       <View style={styles.investmentIconContainer}>
                         <Image 
-                          source={require('../../assets/Icons/bondInv.png')} 
+                          source={require('../../assets/Icons/LASInvestments.png')} 
                           style={styles.investmentIcon}
                           resizeMode="contain"
                         />
                       </View>
                     </AnimatedLinearGradient>
 
-                    {/* Fixed Card */}
+                    {/* NPS Card */}
                     <AnimatedLinearGradient
                       colors={['#FBFBFB', '#FFF4E6']}
                       style={[
@@ -840,17 +875,17 @@ const HomeScreen = () => {
                         }
                       ]}
                     >
-                      <Text style={styles.itemTitle}>Fixed</Text>
+                      <Text style={styles.itemTitle}>NPS</Text>
                       <View style={styles.investmentIconContainer}>
                         <Image 
-                          source={require('../../assets/Icons/fixedInv.png')} 
+                          source={require('../../assets/Icons/npsInsurance.png')} 
                           style={styles.investmentIcon}
                           resizeMode="contain"
                         />
                       </View>
                     </AnimatedLinearGradient>
 
-                    {/* Mutual Fund Card */}
+                    {/* Trading Card */}
                     <AnimatedLinearGradient
                       colors={['#FBFBFB', '#FFF4E6']}
                       style={[
@@ -880,10 +915,10 @@ const HomeScreen = () => {
                         }
                       ]}
                     >
-                      <Text style={styles.itemTitle}>Mutual Fund</Text>
+                      <Text style={styles.itemTitle}>Trading</Text>
                       <View style={styles.investmentIconContainer}>
                         <Image 
-                          source={require('../../assets/Icons/mutualFund.png')} 
+                          source={require('../../assets/Icons/investmentsTrading.png')} 
                           style={styles.investmentIcon}
                           resizeMode="contain"
                         />
@@ -949,30 +984,15 @@ const HomeScreen = () => {
                 ]}
               >
                 {/* Always visible first row (3 items) */}
-                {/* Business Loan Card */}
+                {/* Home Loan Card */}
                 <LinearGradient
                   colors={['#FBFBFB', '#FCE4EC']}
                   style={styles.loanItem}
                 >
-                  <Text style={styles.itemTitle}>Business Loan</Text>
+                  <Text style={styles.itemTitle}>Home Loan</Text>
                   <View style={styles.loanIconContainer}>
                     <Image 
-                      source={require('../../assets/Icons/businessLoans.png')} 
-                      style={styles.loanIcon}
-                      resizeMode="contain"
-                    />
-                  </View>
-                </LinearGradient>
-
-                {/* Mortgage Loan Card */}
-                <LinearGradient
-                  colors={['#FBFBFB', '#FCE4EC']}
-                  style={styles.loanItem}
-                >
-                  <Text style={styles.itemTitle}>Mortgage Loan</Text>
-                  <View style={styles.loanIconContainer}>
-                    <Image 
-                      source={require('../../assets/Icons/loansSection.png')} 
+                      source={require('../../assets/Icons/propertyLoans.png')} 
                       style={styles.loanIcon}
                       resizeMode="contain"
                     />
@@ -994,9 +1014,24 @@ const HomeScreen = () => {
                   </View>
                 </LinearGradient>
 
+                {/* Mortgage Loan Card */}
+                <LinearGradient
+                  colors={['#FBFBFB', '#FCE4EC']}
+                  style={styles.loanItem}
+                >
+                  <Text style={styles.itemTitle}>Mortgage Loan</Text>
+                  <View style={styles.loanIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/loansSection.png')} 
+                      style={styles.loanIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </LinearGradient>
+
                 {/* Animated additional item - only visible when expanded */}
                 {isLoansExpanded && (
-                  /* Home Loan Card */
+                  /* Business Loan Card */
                   <AnimatedLinearGradient
                     colors={['#FBFBFB', '#FCE4EC']}
                     style={[
@@ -1026,10 +1061,10 @@ const HomeScreen = () => {
                       }
                     ]}
                   >
-                    <Text style={styles.itemTitle}>Home Loan</Text>
+                    <Text style={styles.itemTitle}>Business Loan</Text>
                     <View style={styles.loanIconContainer}>
                       <Image 
-                        source={require('../../assets/Icons/propertyLoans.png')} 
+                        source={require('../../assets/Icons/businessLoans.png')} 
                         style={styles.loanIcon}
                         resizeMode="contain"
                       />
@@ -1061,70 +1096,12 @@ const HomeScreen = () => {
             </View>
           </View>
 
-          {/* Tax Section */}
-          <View style={styles.taxCard}>
-            <View style={styles.taxContent}>
-              <View style={styles.taxTextSection}>
-                <Text style={styles.taxTitle}>Tax</Text>
-                <Text style={styles.taxSubtitle}>Get expert help to file your taxes on time and save more.</Text>
-              </View>
-              
-              <View style={styles.taxImageSection}>
-                <View style={styles.taxImageBackground}>
-                  <View style={styles.taxIconContainer}>
-                    {/* Vector Tax as Background Pattern */}
-                    <Image 
-                      source={require('../../assets/Icons/vector_tax.png')} 
-                      style={styles.taxVectorBackground}
-                      resizeMode="cover"
-                    />
-                    
-                    {/* Tax PNG Icon - Main foreground element */}
-                    <Image 
-                      source={require('../../assets/Icons/tax.png')} 
-                      style={styles.taxMainIcon}
-                      resizeMode="contain"
-                    />
-                    
-                    {/* Arrow */}
-                    <View style={styles.taxArrow}>
-                      <Ionicons name="arrow-forward" size={16} color="#6B7280" />
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-
           {/* Travel Section */}
           <View style={styles.travelCard}>
             <Text style={styles.sectionTitle}>Travel</Text>
             <Text style={styles.sectionSubtitle}>Share the best travel deals and earn when someone books through your link.</Text>
             
             <View style={styles.travelOptions}>
-              {/* International Travel */}
-              <TouchableOpacity style={styles.travelOption} activeOpacity={0.8}>
-                <LinearGradient
-                  colors={['#FBFBFB', '#FBFBFB', '#F0E2FF']}
-                  locations={[0, 0.7, 1]}
-                  style={styles.travelOptionGradient}
-                >
-                  <View style={styles.travelArrow}>
-                    <Ionicons name="arrow-forward" size={16} color="#1A1B20" />
-                  </View>
-                  
-                  <View style={styles.travelIconContainer}>
-                    <Image 
-                      source={require('../../assets/Icons/internationalTravel.png')} 
-                      style={styles.travelIcon}
-                      resizeMode="contain"
-                    />
-                  </View>
-                  
-                  <Text style={styles.travelOptionTitle}>International{'\n'}Travel</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
               {/* Domestic Travel */}
               <TouchableOpacity style={styles.travelOption} activeOpacity={0.8}>
                 <LinearGradient
@@ -1145,6 +1122,29 @@ const HomeScreen = () => {
                   </View>
                   
                   <Text style={styles.travelOptionTitle}>Domestic{'\n'}Travel</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* International Travel */}
+              <TouchableOpacity style={styles.travelOption} activeOpacity={0.8}>
+                <LinearGradient
+                  colors={['#FBFBFB', '#FBFBFB', '#F0E2FF']}
+                  locations={[0, 0.7, 1]}
+                  style={styles.travelOptionGradient}
+                >
+                  <View style={styles.travelArrow}>
+                    <Ionicons name="arrow-forward" size={16} color="#1A1B20" />
+                  </View>
+                  
+                  <View style={styles.travelIconContainer}>
+                    <Image 
+                      source={require('../../assets/Icons/internationalTravel.png')} 
+                      style={styles.travelIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  
+                  <Text style={styles.travelOptionTitle}>International{'\n'}Travel</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
