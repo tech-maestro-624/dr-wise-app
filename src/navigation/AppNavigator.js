@@ -2,7 +2,10 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+
+// Components
+import CustomTabBar from '../components/CustomTabBar';
+import { TAB_BAR_CONFIG } from '../constants/tabBarConfig';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
@@ -14,7 +17,6 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import DetailScreen from '../screens/DetailScreen';
-// import CategoriesScreen from '../screens/CategoriesScreen';
 import InsurancesScreen from '../screens/InsurancesScreen';
 
 const Tab = createBottomTabNavigator();
@@ -24,31 +26,19 @@ function MainTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Credits') {
-            iconName = focused ? 'card' : 'card-outline';
-          } else if (route.name === 'Referral') {
-            iconName = focused ? 'people' : 'people-outline';
-          } else if (route.name === 'My Referral') {
-            iconName = focused ? 'person-add' : 'person-add-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person-circle' : 'person-circle-outline';
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: 'tomato',
-        tabBarInactiveTintColor: 'gray',
-        headerShown: false,
+        tabBarIcon: ({ focused }) => (
+          <CustomTabBar route={route} focused={focused} />
+        ),
+        ...TAB_BAR_CONFIG.screenOptions,
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Credits" component={CreditsScreen} />
-      <Tab.Screen name="Referral" component={ReferralScreen} />
+      <Tab.Screen 
+        name="Referral" 
+        component={ReferralScreen}
+        options={TAB_BAR_CONFIG.referralTabOptions}
+      />
       <Tab.Screen name="My Referral" component={MyReferralScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
@@ -64,7 +54,6 @@ export default function AppNavigator() {
                 <Stack.Screen name="Signup" component={SignupScreen} />
                 <Stack.Screen name="Main" component={MainTabNavigator} />
                 <Stack.Screen name="Details" component={DetailScreen} />
-                {/* <Stack.Screen name="Categories" component={CategoriesScreen} /> */}
                 <Stack.Screen name="Insurances" component={InsurancesScreen} />
             </Stack.Navigator>
         </NavigationContainer>
