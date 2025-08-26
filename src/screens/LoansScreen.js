@@ -3,19 +3,16 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar,
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path } from 'react-native-svg';
 
-// --- Data for the Insurance Categories ---
-// ** IMPORTANT: Ensure these image paths are correct for your project structure **
-const insuranceCategories = [
-  { name: 'Travel', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Health', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Life', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Motor', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'General', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
+// --- Data for the Loan Categories ---
+const loanCategories = [
+  { name: 'Business Loan', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
+  { name: 'Mortgage Loan', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
+  { name: 'Personal Loans', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
+  { name: 'Home Loan', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
 ];
 
-const InsurancesScreen = () => {
+const LoansScreen = () => {
   const navigation = useNavigation();
   const { width: screenWidth } = Dimensions.get('window');
   
@@ -28,12 +25,12 @@ const InsurancesScreen = () => {
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <SafeAreaView style={styles.safeArea}>
 
-        {/* --- Header Section --- */}
+        {/* --- Header Section with Pink Gradient --- */}
         <LinearGradient
-          colors={['#1D8C7C', '#2AA795', '#197366']}
-          locations={[0.0415, 0.3387, 0.9769]} // Exact Figma color stops
-          start={{ x: 0.1, y: 0.1 }}   // Approximates 115.06deg angle
-          end={{ x: 0.9, y: 0.9 }}     // Approximates 115.06deg angle
+          colors={['#A5236A', '#D03A8C', '#952261']}
+          locations={[0.0306, 0.3616, 0.9764]} // Exact Figma color stops
+          start={{ x: 0.1, y: 0.1 }}   // Approximates 123.58deg angle
+          end={{ x: 0.9, y: 0.9 }}     // Approximates 123.58deg angle
           style={styles.header}
         >
           {/* Decorative Background Vector - Vector 5.png */}
@@ -50,7 +47,7 @@ const InsurancesScreen = () => {
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
               <Ionicons name="chevron-back-outline" size={20} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Insurances</Text>
+            <Text style={styles.headerTitle}>Loans</Text>
             <View style={{ width: 40 }} /> 
           </View>
           
@@ -59,7 +56,7 @@ const InsurancesScreen = () => {
             <View style={styles.promoTextContainer}>
               <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>Popular</Text></View>
               <Text style={styles.promoTitle}>Earn While You Refer</Text>
-              <Text style={styles.promoSubtitle}>Share services you trust and{'\n'}get paid for every referral</Text>
+              <Text style={styles.promoSubtitle}>Share services you trust and {'\n'}get paid for every referral</Text>
               <TouchableOpacity style={styles.referButton}><Text style={styles.referButtonText}>Refer Now</Text></TouchableOpacity>
             </View>
             <Image 
@@ -76,15 +73,19 @@ const InsurancesScreen = () => {
             <Text style={styles.contentHeaderSubtitle}>Share services you trust and get paid for every referral</Text>
             
             <View style={[styles.gridContainer, { gap }]}>
-              {insuranceCategories.map((item, index) => (
-                <TouchableOpacity key={index} style={[styles.gridItemWrapper, { width: cardWidth }]}>
-                    <LinearGradient
-                        colors={['#FBFBFB', '#E6FFF1']}
-                        style={styles.gridItem}
-                    >
-                        <Text style={styles.gridItemText}>{item.name}</Text>
-                        <Image source={item.icon} style={styles.gridItemIcon} />
-                    </LinearGradient>
+              {loanCategories.map((item, index) => (
+                <TouchableOpacity 
+                  key={index} 
+                  style={[styles.gridItemWrapper, { width: cardWidth }]}
+                  onPress={() => navigation.navigate('Detail', { categoryName: item.name })}
+                >
+                  <LinearGradient
+                    colors={['#FBFBFB', '#F6DCDD']}
+                    style={styles.gridItem}
+                  >
+                    <Text style={styles.gridItemText}>{item.name}</Text>
+                    <Image source={item.icon} style={styles.gridItemIcon} />
+                  </LinearGradient>
                 </TouchableOpacity>
               ))}
             </View>
@@ -103,18 +104,18 @@ const InsurancesScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E7D9FD',
+    backgroundColor: '#F6DCDD', // Match content container background
   },
   safeArea: {
     flex: 1,
   },
   header: {
-    width: '100%',
     height: 300,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     overflow: 'hidden',
+    zIndex: 10,
   },
   headerVector: {
     position: 'absolute',
@@ -124,28 +125,26 @@ const styles = StyleSheet.create({
     left: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
+    zIndex: 10,
   },
   vectorImage: {
     width: '100%',
-    // height: '100%',
     opacity: 0.9,
     marginTop: 80,
-    // transform: [{ rotate: '1deg' }], // Subtle opacity for background decoration
   },
   topNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    height: 56, // Standard header height for safe spacing
-    zIndex: 2,
+    height: 56, // Standard header height
+    zIndex: 11,
   },
   backButton: {
-    backgroundColor: '#52B4A6',
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 26,
+    height: 26,
+    borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -159,7 +158,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: 20,
     marginTop: 10,
-    zIndex: 1,
+    zIndex: 12,
   },
   promoTextContainer: {
     flex: 1,
@@ -206,23 +205,23 @@ const styles = StyleSheet.create({
   promoImage: {
     position: 'absolute',
     right: -30,
-    bottom: -20,
+    bottom: -2,
     width: 194,
     height: 220,
     resizeMode: 'contain',
   },
   contentContainer: {
     flex: 1,
-    zIndex: 2,
-    backgroundColor: '#C9EBE9',
+    backgroundColor: '#F6DCDD',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    marginTop: -20,
+    marginTop: 0,
     paddingTop: 20,
+    zIndex: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 100, // Space for FAB and nav bar
   },
   contentHeaderTitle: {
     fontFamily: 'Rubik-SemiBold',
@@ -239,34 +238,41 @@ const styles = StyleSheet.create({
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
+    alignContent: 'flex-start',
     justifyContent: 'space-between',
+    padding: 0,
+    width: '100%',
+    minHeight: 712.16,
   },
   gridItemWrapper: {
-    width: '48%',
-    height: 163,
-    marginBottom: 20,
-    borderRadius: 16,
+    height: 163.2,
+    borderRadius: 16.4851,
     shadowColor: 'rgba(143, 49, 249, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 10,
+    shadowRadius: 16.4851,
     elevation: 5,
+    marginBottom: 0,
   },
   gridItem: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 16.4851,
     padding: 16,
     justifyContent: 'space-between',
-    borderWidth: 1.5,
+    borderWidth: 1.64851,
     borderColor: '#FFFFFF',
   },
   gridItemText: {
-    fontFamily: 'Rubik-Medium',
-    fontSize: 16,
+    fontFamily: 'Rubik',
+    fontStyle: 'normal',
+    fontWeight: '500',
+    fontSize: 16.4851,
+    lineHeight: 20,
     color: '#1A1B20',
   },
   gridItemIcon: {
-    width: 99,
+    width: 98.91,
     height: 80,
     alignSelf: 'center',
     resizeMode: 'contain',
@@ -289,4 +295,6 @@ const styles = StyleSheet.create({
   },
 });
 
-export default InsurancesScreen;
+export default LoansScreen;
+
+

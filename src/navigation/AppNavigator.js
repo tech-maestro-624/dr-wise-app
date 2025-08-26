@@ -6,6 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
+import AffiliateHomeScreen from '../screens/AffiliateHomeScreen';
+import LeadsScreen from '../screens/LeadsScreen';
+import CalculatorScreen from '../screens/CalculatorScreen';
+import TermInsuranceCalculatorScreen from '../screens/TermInsuranceCalculatorScreen';
 import CreditsScreen from '../screens/CreditsScreen';
 import ReferralScreen from '../screens/ReferralScreen';
 import MyReferralScreen from '../screens/MyReferralScreen';
@@ -16,6 +20,10 @@ import SignupScreen from '../screens/SignupScreen';
 import DetailScreen from '../screens/DetailScreen';
 // import CategoriesScreen from '../screens/CategoriesScreen';
 import InsurancesScreen from '../screens/InsurancesScreen';
+import InvestmentsScreen from '../screens/InvestmentsScreen';
+import LoansScreen from '../screens/LoansScreen';
+import TransactionsHistoryScreen from '../screens/TransactionsHistoryScreen';
+import RedeemScreen from '../screens/RedeemScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -63,9 +71,17 @@ export default function AppNavigator() {
                 <Stack.Screen name="Login" component={LoginScreen} />
                 <Stack.Screen name="Signup" component={SignupScreen} />
                 <Stack.Screen name="Main" component={MainTabNavigator} />
+                <Stack.Screen name="AffiliateHome" component={AffiliateHomeScreen} />
+                <Stack.Screen name="Leads" component={LeadsScreen} />
+                <Stack.Screen name="Calculator" component={CalculatorScreen} />
+                <Stack.Screen name="TermInsuranceCalculator" component={TermInsuranceCalculatorScreen} />
                 <Stack.Screen name="Details" component={DetailScreen} />
                 {/* <Stack.Screen name="Categories" component={CategoriesScreen} /> */}
                 <Stack.Screen name="Insurances" component={InsurancesScreen} />
+                <Stack.Screen name="Investments" component={InvestmentsScreen} />
+                <Stack.Screen name="Loans" component={LoansScreen} />
+                <Stack.Screen name="TransactionsHistory" component={TransactionsHistoryScreen} />
+                <Stack.Screen name="Redeem" component={RedeemScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

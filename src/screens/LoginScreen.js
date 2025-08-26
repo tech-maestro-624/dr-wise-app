@@ -50,7 +50,12 @@ const LoginScreen = ({ navigation }) => {
   const handleLogin = () => {
     // Mock OTP validation
     if (isPhoneValid && otp === '1234') {
-      navigation.navigate('Main');
+      // Check if it's the affiliate phone number
+      if (phoneNumber === '9986914266') {
+        navigation.navigate('AffiliateHome');
+      } else {
+        navigation.navigate('Main');
+      }
     } else {
       alert('Invalid OTP');
     }
