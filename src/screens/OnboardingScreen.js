@@ -22,11 +22,8 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 // DATA FOR THE ENTIRE ONBOARDING FLOW (with corrected paths)
 // ========================================================================
 const ONBOARDING_SCREENS = [
-  { image: null, title: 'All-in-One Financial Hub', subtitle: 'From insurance to travel — access 10+ services in one app.' },
   { image: require('../../assets/Icons/financial_hub.png'), title: 'All-in-One Financial Hub', subtitle: 'From insurance to travel — access 10+ services in one app.' },
-  { image: null, title: 'Refer People, Earn Cash', subtitle: 'Invite others and earn every time they use a service.' },
-  { image: require('../../assets/Icons/cash.png'), title: 'Refer People, Earn Cash', subtitle: 'Invite others and earn every time they use a service.' },
-  { image: null, title: 'Start Earning Your Way', subtitle: 'Become an affiliate or ambassador and grow your income.' },
+  { image: require('../../assets/Icons/referFriend.png'), title: 'Refer People, Earn Cash', subtitle: 'Invite others and earn every time they use a service.' },
   { image: require('../../assets/Icons/earning.png'), title: 'Start Earning Your Way', subtitle: 'Become an affiliate or ambassador and grow your income.' },
 ];
 
@@ -39,8 +36,8 @@ const SplashScreen = () => (
   <View style={styles.container}>
     <StatusBar barStyle="light-content" />
     <LinearGradient colors={['#8F31F9', '#521B90']} style={styles.gradient}>
-      {/* Screen-relative background decoration */}
-      <BackgroundDecoration opacity={0.95} />
+      {/* Screen-relative background decoration with logo */}
+      <BackgroundDecoration opacity={0.95} showLogo={true} />
       {/* Bottom vector pattern */}
       <Image
         source={require('../../assets/Icons/vector.png')}
@@ -196,8 +193,8 @@ const OnboardingContentScreenComponent = ({ onNext, onBack, currentIndex, isLast
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <LinearGradient colors={['#F3ECFE', '#F6F6FE']} locations={[0, 0.49]} style={styles.gradient}>
-        <BackgroundDecoration opacity={0.8} />
-        <FaintTrianglePattern />
+        <BackgroundDecoration opacity={0.8} showLogo={false} />
+        <Image source={require('../../assets/Icons/onboardingVector.png')} style={styles.onboardingVectorPattern} resizeMode="cover" />
         <SafeAreaView style={styles.mainSafeArea}>
           <View style={styles.topNav}>
             <TouchableOpacity onPress={onBack} style={styles.navButton}><Ionicons name="chevron-back" size={24} color="#1A1B20" /></TouchableOpacity>
@@ -206,7 +203,16 @@ const OnboardingContentScreenComponent = ({ onNext, onBack, currentIndex, isLast
 
           {displayedImage && (
             <Animated.View style={[styles.imageContainer, { transform: [{ translateY: imageAnim }] }]}>
-              <Image source={displayedImage} style={styles.image} resizeMode="contain" />
+              <Image 
+                source={displayedImage} 
+                style={[
+                  styles.image,
+                  currentIndex === 0 ? styles.financialHubImage :
+                  currentIndex === 1 ? styles.cashImage :
+                  styles.earningImage
+                ]} 
+                resizeMode="contain" 
+              />
             </Animated.View>
           )}
 
@@ -259,14 +265,53 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: screenHeight * 0.45,
-    opacity: 0.85,
+    opacity: 1,
+  },
+  onboardingVectorPattern: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0, // Start from the top instead of bottom
+    width: '100%',
+    height: screenHeight * 0.75, // Cover 3/4 of the screen (top portion only)
+    opacity: 1, // Make it fully visible
+    tintColor: '#6B21A8', // Darker purple tint for better visibility
   },
   mainSafeArea: { flex: 1 },
   topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 10, height: 44, zIndex: 10 },
   navButton: { padding: 5 },
   skipText: { fontFamily: 'Rubik-Medium', fontSize: 16, color: '#1A1B20' },
-  imageContainer: { position: 'absolute', top: 130, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', height: 280, zIndex: 0 },
-  image: { width: '90%', height: '100%' },
+  imageContainer: { position: 'absolute', top: 100, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', height: 400, zIndex: 0 },
+  image: { width: '80%', height: '90%' }, // Base style for all images
+  
+  // Individual image styles - customize each image separately
+  financialHubImage: {
+    width: '85%',           // Adjust width (percentage of container)
+    height: '95%',          // Adjust height (percentage of container) 
+    marginTop: 0,           // Adjust vertical position within container
+    marginLeft: 0,          // Adjust horizontal position within container
+    transform: [{ scale: 1 }], // Scale the image (1 = normal size, 1.2 = 20% bigger, 0.8 = 20% smaller)
+    opacity: 1,             // Image opacity (0-1)
+    tintColor: undefined,   // Optional color tint (use hex color or undefined for no tint)
+  },
+  cashImage: {
+    width: '100%' ,           // Different size for cash image
+    height: '100%',
+    marginTop: 280,          // Push down slightly
+    marginLeft: 0,
+    transform: [{ scale: 1.1 }], // Make it 10% bigger
+    opacity: 1,
+    tintColor: undefined,
+  },
+  earningImage: {
+    width: '75%',           // Smaller width for earning image
+    height: '100%',
+    marginTop: -10,         // Pull up slightly
+    marginLeft: 5,          // Push right slightly
+    transform: [{ scale: 1.2 }], // Make it 10% smaller
+    opacity: 1,
+    tintColor: undefined,
+  },
   card: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: '#FBFBFB',

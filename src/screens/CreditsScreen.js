@@ -93,7 +93,10 @@ const CreditsScreen = () => {
                 <Ionicons name="lock-closed" size={18} color="#1A1B20" />
               </View>
             </View>
-            <TouchableOpacity style={styles.redeemButton}>
+            <TouchableOpacity 
+              style={styles.redeemButton}
+              onPress={() => navigation.navigate('Redeem')}
+            >
               <Text style={styles.redeemButtonText}>Redeem</Text>
             </TouchableOpacity>
           </View>

@@ -9,11 +9,11 @@ import CategoryModal from '../components/CategoryModal';
 // --- Data for the Insurance Categories ---
 // ** IMPORTANT: Ensure these image paths are correct for your project structure **
 const insuranceCategories = [
-  { name: 'Travel', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Health', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Life', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Motor', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'General', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
+  { name: 'Travel', icon: require('../../assets/Icons/planeInsurance.png') },
+  { name: 'Health', icon: require('../../assets/Icons/heartInsurance.png') },
+  { name: 'Life', icon: require('../../assets/Icons/umbrella.png') },
+  { name: 'Motor', icon: require('../../assets/Icons/steeringwheel.png') },
+  { name: 'General', icon: require('../../assets/Icons/generalInsurance.png') },
 ];
 
 const InsurancesScreen = () => {

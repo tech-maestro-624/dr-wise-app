@@ -31,6 +31,10 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import TermsConditionsScreen from '../screens/TermsConditionsScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import CategoryDetailScreen from '../screens/CategoryDetailScreen';
+import VerificationMainScreen from '../screens/verification/VerificationMainScreen';
+import GovernmentIDScreen from '../screens/verification/GovernmentIDScreen';
+import SelfiePhotoScreen from '../screens/verification/SelfiePhotoScreen';
+import BankDetailsScreen from '../screens/verification/BankDetailsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -82,6 +86,10 @@ export default function AppNavigator() {
                 <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
                 <Stack.Screen name="Categories" component={CategoriesScreen} />
                 <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
+                  <Stack.Screen name="Verification" component={VerificationMainScreen} />
+                <Stack.Screen name="GovernmentIDScreen" component={GovernmentIDScreen} />
+                <Stack.Screen name="SelfiePhotoScreen" component={SelfiePhotoScreen} />
+                <Stack.Screen name="BankDetailsScreen" component={BankDetailsScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

@@ -7,10 +7,10 @@ import CategoryModal from '../components/CategoryModal';
 
 // --- Data for the Loan Categories ---
 const loanCategories = [
-  { name: 'Business Loan', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Mortgage Loan', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Personal Loans', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Home Loan', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
+  { name: 'Home Loan', icon: require('../../assets/Icons/propertyLoans.png') },
+  { name: 'Personal Loans', icon: require('../../assets/Icons/personalLoans.png') },
+  { name: 'Mortgage Loan', icon: require('../../assets/Icons/loansSection.png') },
+  { name: 'Business Loan', icon: require('../../assets/Icons/businessLoans.png') },
 ];
 
 const LoansScreen = () => {

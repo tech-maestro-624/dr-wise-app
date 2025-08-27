@@ -11,12 +11,14 @@ import { View, Image, StyleSheet, useWindowDimensions } from 'react-native';
  * - sizePercent: number -> size relative to the smaller screen dimension
  * - opacity: number (0..1)
  * - style: ViewStyle override for the wrapper
+ * - showLogo: boolean -> controls whether to show the logo (default: false)
  */
 const BackgroundDecoration = ({
   topPercent = 0.25,
   sizePercent = 0.75,
   opacity = 0.9,
   style,
+  showLogo = false,
 }) => {
   const { width, height } = useWindowDimensions();
   const base = Math.min(width, height);
@@ -28,18 +30,20 @@ const BackgroundDecoration = ({
 
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, style]}>
-      <Image
-        source={require('../../assets/background_image.png')}
-        style={{ 
-          position: 'absolute', 
-          width: size, 
-          height: size, 
-          top, 
-          left, 
-          opacity 
-        }}
-        resizeMode="contain"
-      />
+      {showLogo && (
+        <Image
+          source={require('../../assets/background_image.png')}
+          style={{ 
+            position: 'absolute', 
+            width: size, 
+            height: size, 
+            top, 
+            left, 
+            opacity 
+          }}
+          resizeMode="contain"
+        />
+      )}
     </View>
   );
 };

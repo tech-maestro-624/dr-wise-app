@@ -98,21 +98,28 @@ const SignupScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#F3F0FF" />
       
-      {/* Vector Image at absolute top right of screen */}
-      <View style={styles.vectorContainer}>
-        <Image 
-          source={require('../../assets/Icons/vectorLogin.png')} 
-          style={styles.vectorImage}
-          resizeMode="contain"
-        />
-      </View>
-      
-      {/* Background with gradient */}
+      {/* Background with vectorLogin.png pattern */}
       <View style={styles.backgroundContainer}>
         <LinearGradient
           colors={['#F3F0FF', '#FAF9FC', '#FFFFFF']}
           style={styles.gradientBackground}
         />
+        
+        {/* Vector Pattern Background - using vectorLogin.png as repeating pattern */}
+        <Image 
+          source={require('../../assets/Icons/vectorLogin.png')} 
+          style={styles.backgroundPattern}
+          resizeMode="repeat"
+        />
+        
+        {/* Vector Image at top right */}
+        <View style={styles.vectorContainer}>
+          <Image 
+            source={require('../../assets/Icons/vectorLogin.png')} 
+            style={styles.vectorImage}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
       <ScrollView style={styles.contentSection} showsVerticalScrollIndicator={false}>
@@ -258,16 +265,25 @@ const styles = StyleSheet.create({
   gradientBackground: {
     flex: 1,
   },
+  backgroundPattern: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0.1,
+  },
   vectorContainer: {
     position: 'absolute',
-    top: -50, // Negative value to go above SafeArea
-    right: 0,
-    zIndex: 10, // Higher z-index to be on top
+    top: 20,
+    right: 10,
+    zIndex: 1,
   },
   vectorImage: {
-    width: 300,
-    height: 300,
-    transform: [{ scale: 1.7 }], // Scale it up even more
+    width: 150,
+    height: 150,
   },
   contentSection: {
     flex: 1,
@@ -276,28 +292,24 @@ const styles = StyleSheet.create({
   formContainer: {
     paddingHorizontal: 24,
     paddingTop: 60,
-    paddingBottom: 20, // Reduced from 40 to bring content up
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
     color: '#1F2937',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
-    marginBottom: 24, // Reduced from 48 to save space
+    marginBottom: 48,
   },
   inputContainer: {
-    marginBottom: 16, // Reduced from 24 to save space
+    marginBottom: 24,
   },
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'Rubik-SemiBold',
     color: '#1F2937',
     marginBottom: 8,
   },
@@ -314,17 +326,15 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Rubik-Regular',
     color: '#1F2937',
   },
   errorText: {
     fontSize: 12,
-    fontFamily: 'Rubik-Regular',
     color: '#EF4444',
     marginTop: 4,
   },
   termsContainer: {
-    marginBottom: 16, // Reduced from 24 to save space
+    marginBottom: 24,
   },
   checkboxContainer: {
     flexDirection: 'row',
@@ -346,19 +356,17 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
     flex: 1,
   },
   termsLink: {
-    fontFamily: 'Rubik-Regular',
     color: '#8B5CF6',
     textDecorationLine: 'underline',
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16, // Reduced from 32 to save space
+    marginBottom: 32,
   },
   divider: {
     flex: 1,
@@ -367,7 +375,6 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
     paddingHorizontal: 16,
   },
@@ -375,7 +382,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 20,
-    marginBottom: 16, // Reduced from 32 to save space
+    marginBottom: 32,
   },
   socialButton: {
     width: 60,
@@ -395,28 +402,24 @@ const styles = StyleSheet.create({
   googleText: {
     fontSize: 20,
     fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
     color: '#EA4335',
   },
   facebookText: {
     fontSize: 22,
     fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
     color: '#1877F2',
   },
   promoContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 16, // Reduced from 24 to save more space
+    marginBottom: 32,
   },
   promoText: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
   },
   promoLink: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#1F2937',
     textDecorationLine: 'underline',
   },
@@ -425,7 +428,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 8, // Reduced from 16 to bring login link closer
+    marginBottom: 24,
     shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -439,24 +442,20 @@ const styles = StyleSheet.create({
   signupButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    fontFamily: 'Rubik-SemiBold',
     color: '#FFFFFF',
   },
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingBottom: 5, // Minimal padding at bottom
-    marginTop: 4, // Minimal gap from signup button
+    paddingBottom: 40,
   },
   loginText: {
-    fontSize: 16, // Increased font size
-    fontFamily: 'Rubik-Regular',
+    fontSize: 14,
     color: '#6B7280',
     marginRight: 4,
   },
   loginLink: {
-    fontSize: 16, // Increased font size
-    fontFamily: 'Rubik-SemiBold',
+    fontSize: 14,
     color: '#8B5CF6',
     fontWeight: '600',
     textDecorationLine: 'underline',

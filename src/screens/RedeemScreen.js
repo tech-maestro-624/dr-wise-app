@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, StatusBar, Image, Dimensions, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import CircularSlider from '../components/CircularSlider';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const RedeemScreen = () => {
   const navigation = useNavigation();
   const balance = 1200;
+  const [selectedAmount, setSelectedAmount] = useState(0);
   
   // Responsive dimensions based on screen size
   const scale = Math.min(screenWidth / 375, screenHeight / 812);
@@ -40,12 +42,16 @@ const RedeemScreen = () => {
             <Text style={styles.subtitle}>Redeem tour coins into cash 1 Coin = 1 Rupee</Text>
           </View>
 
-          {/* --- Circular Progress Image --- */}
-          <View style={styles.imageContainer}>
-            <Image 
-              source={require('../../assets/Icons/coin.png')} 
-              style={[styles.circularImage, { width: imageSize, height: imageSize }]} 
-              resizeMode="contain"
+          {/* --- Circular Slider --- */}
+          <View style={styles.sliderContainer}>
+            <CircularSlider
+              size={imageSize}
+              strokeWidth={20}
+              minValue={0}
+              maxValue={balance}
+              initialValue={selectedAmount}
+              onValueChange={setSelectedAmount}
+              step={10}
             />
           </View>
           
@@ -57,13 +63,21 @@ const RedeemScreen = () => {
 
         {/* --- Redeem Button --- */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={[styles.redeemButton, { 
-            width: 335 * scale, 
-            height: 47 * scale, 
-            borderRadius: 8 * scale 
-          }]}>
-            <Text style={[styles.redeemButtonText, { fontSize: 16 * scale, lineHeight: 19 * scale }]}>
-              Redeem Now
+          <TouchableOpacity 
+            style={[styles.redeemButton, { 
+              width: 335 * scale, 
+              height: 47 * scale, 
+              borderRadius: 8 * scale,
+              backgroundColor: selectedAmount > 0 ? '#8F31F9' : '#D1D5DB',
+            }]}
+            disabled={selectedAmount === 0}
+          >
+            <Text style={[styles.redeemButtonText, { 
+              fontSize: 16 * scale, 
+              lineHeight: 19 * scale,
+              color: selectedAmount > 0 ? '#FBFBFB' : '#9CA3AF',
+            }]}>
+              {selectedAmount > 0 ? `Redeem ₹${selectedAmount.toLocaleString()}` : 'Redeem Now'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -133,13 +147,10 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     letterSpacing: 0.2,
   },
-  imageContainer: {
+  sliderContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 40,
-  },
-  circularImage: {
-    // The image will contain the complete circular design
   },
   availableCoinsText: {
     fontFamily: 'Rubik-Medium',
@@ -154,7 +165,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   redeemButton: {
-    backgroundColor: '#8F31F9',
     justifyContent: 'center',
     alignItems: 'center',
   },

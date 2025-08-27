@@ -14,57 +14,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 const SignupScreen = ({ navigation }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [nameError, setNameError] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [otp, setOtp] = useState('');
+  const [showOtp, setShowOtp] = useState(false);
   const [phoneError, setPhoneError] = useState('');
-  const [isNameValid, setIsNameValid] = useState(false);
-  const [isEmailValid, setIsEmailValid] = useState(false);
   const [isPhoneValid, setIsPhoneValid] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
-
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
 
   const validatePhoneNumber = (number) => {
     const phoneRegex = /^\d{10}$/;
     return phoneRegex.test(number);
-  };
-
-  const handleNameChange = (text) => {
-    setName(text);
-    if (text.length > 0) {
-      if (text.length >= 2) {
-        setNameError('');
-        setIsNameValid(true);
-      } else {
-        setNameError('Name must be at least 2 characters');
-        setIsNameValid(false);
-      }
-    } else {
-      setNameError('');
-      setIsNameValid(false);
-    }
-  };
-
-  const handleEmailChange = (text) => {
-    setEmail(text);
-    if (text.length > 0) {
-      if (validateEmail(text)) {
-        setEmailError('');
-        setIsEmailValid(true);
-      } else {
-        setEmailError('Please enter a valid email address');
-        setIsEmailValid(false);
-      }
-    } else {
-      setEmailError('');
-      setIsEmailValid(false);
-    }
   };
 
   const handlePhoneChange = (text) => {
@@ -83,75 +43,69 @@ const SignupScreen = ({ navigation }) => {
     }
   };
 
+  const handleSendOtp = () => {
+    if (isPhoneValid) {
+      console.log('OTP Sent to', phoneNumber);
+      setOtpSent(true);
+    }
+  };
+
   const handleSignup = () => {
-    if (isNameValid && isEmailValid && isPhoneValid && agreeToTerms) {
-      // Handle signup logic
+    // Mock OTP validation
+    if (isPhoneValid && otp === '1234' && agreeToTerms) {
       navigation.navigate('Verification');
     } else if (!agreeToTerms) {
       alert('Please agree to terms and conditions');
     } else {
-      alert('Please fill all fields correctly');
+      alert('Invalid OTP');
     }
   };
+
+  const PatternBackground = () => (
+    <View style={styles.patternContainer}>
+      {/* Create a pattern of small triangles */}
+      {Array.from({ length: 50 }).map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.triangle,
+            {
+              left: `${(index * 23) % 100}%`,
+              top: `${Math.floor(index / 4) * 15}%`,
+              opacity: 0.1 + (index % 3) * 0.05,
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#F3F0FF" />
       
-      {/* Vector Image at absolute top right of screen */}
-      <View style={styles.vectorContainer}>
-        <Image 
-          source={require('../../assets/Icons/vectorLogin.png')} 
-          style={styles.vectorImage}
-          resizeMode="contain"
-        />
-      </View>
-      
-      {/* Background with gradient */}
+      {/* Background Pattern */}
       <View style={styles.backgroundContainer}>
         <LinearGradient
           colors={['#F3F0FF', '#FAF9FC', '#FFFFFF']}
           style={styles.gradientBackground}
         />
+        <PatternBackground />
+        
+        {/* Vector Image at top right */}
+        <View style={styles.vectorContainer}>
+          <Image 
+            source={require('../../assets/Icons/vectorLogin.png')} 
+            style={styles.vectorImage}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
       <ScrollView style={styles.contentSection} showsVerticalScrollIndicator={false}>
         <View style={styles.formContainer}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Fill in your details to get started</Text>
-
-          {/* Name Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Full Name</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter your full name"
-                placeholderTextColor="#9CA3AF"
-                value={name}
-                onChangeText={handleNameChange}
-                autoCapitalize="words"
-              />
-            </View>
-            {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
-          </View>
-
-          {/* Email Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Email</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter your email"
-                placeholderTextColor="#9CA3AF"
-                value={email}
-                onChangeText={handleEmailChange}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-          </View>
+          <Text style={styles.title}>Sign Up with Phone</Text>
+          <Text style={styles.subtitle}>Create your new account</Text>
 
           {/* Phone Number Input */}
           <View style={styles.inputContainer}>
@@ -170,23 +124,54 @@ const SignupScreen = ({ navigation }) => {
             {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
           </View>
 
-          {/* Terms and Conditions */}
-          <View style={styles.termsContainer}>
-            <TouchableOpacity
-              style={styles.checkboxContainer}
-              onPress={() => setAgreeToTerms(!agreeToTerms)}
-            >
-              <View style={[styles.checkbox, agreeToTerms && styles.checkboxChecked]}>
-                {agreeToTerms && (
-                  <Ionicons name="checkmark" size={14} color="#FFFFFF" />
-                )}
+          {/* OTP Input - Show only after OTP is sent */}
+          {otpSent && (
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>OTP</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter OTP"
+                  placeholderTextColor="#9CA3AF"
+                  value={otp}
+                  onChangeText={setOtp}
+                  secureTextEntry={!showOtp}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowOtp(!showOtp)}
+                  style={styles.eyeIcon}
+                >
+                  <Ionicons 
+                    name={showOtp ? "eye-off" : "eye"} 
+                    size={20} 
+                    color="#9CA3AF" 
+                  />
+                </TouchableOpacity>
               </View>
-              <Text style={styles.termsText}>
-                I agree to the{' '}
-                <Text style={styles.termsLink}>Terms and Conditions</Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          )}
+
+          {/* Terms and Conditions */}
+          {otpSent && (
+            <View style={styles.termsContainer}>
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => setAgreeToTerms(!agreeToTerms)}
+              >
+                <View style={[styles.checkbox, agreeToTerms && styles.checkboxChecked]}>
+                  {agreeToTerms && (
+                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                  )}
+                </View>
+                <Text style={styles.termsText}>
+                  I agree to the{' '}
+                  <Text style={styles.termsLink}>Terms and Conditions</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Divider */}
           <View style={styles.dividerContainer}>
@@ -220,13 +205,13 @@ const SignupScreen = ({ navigation }) => {
           <TouchableOpacity 
             style={[
               styles.signupButton,
-              (!isNameValid || !isEmailValid || !isPhoneValid || !agreeToTerms) && styles.signupButtonDisabled
+              (!isPhoneValid || (otpSent && !agreeToTerms)) && styles.signupButtonDisabled
             ]} 
-            onPress={handleSignup}
-            disabled={!isNameValid || !isEmailValid || !isPhoneValid || !agreeToTerms}
+            onPress={otpSent ? handleSignup : handleSendOtp}
+            disabled={!isPhoneValid || (otpSent && !agreeToTerms)}
           >
             <Text style={styles.signupButtonText}>
-              Sign Up
+              {otpSent ? 'Sign Up' : 'Send OTP'}
             </Text>
           </TouchableOpacity>
 
@@ -258,16 +243,35 @@ const styles = StyleSheet.create({
   gradientBackground: {
     flex: 1,
   },
+  patternContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  triangle: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 14,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#8B5CF6',
+  },
   vectorContainer: {
     position: 'absolute',
-    top: -50, // Negative value to go above SafeArea
-    right: 0,
-    zIndex: 10, // Higher z-index to be on top
+    top: 60,
+    right: 20,
+    zIndex: 1,
   },
   vectorImage: {
-    width: 300,
-    height: 300,
-    transform: [{ scale: 1.7 }], // Scale it up even more
+    width: 80,
+    height: 80,
   },
   contentSection: {
     flex: 1,
@@ -276,28 +280,24 @@ const styles = StyleSheet.create({
   formContainer: {
     paddingHorizontal: 24,
     paddingTop: 60,
-    paddingBottom: 20, // Reduced from 40 to bring content up
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
     color: '#1F2937',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
-    marginBottom: 24, // Reduced from 48 to save space
+    marginBottom: 48,
   },
   inputContainer: {
-    marginBottom: 16, // Reduced from 24 to save space
+    marginBottom: 24,
   },
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'Rubik-SemiBold',
     color: '#1F2937',
     marginBottom: 8,
   },
@@ -314,17 +314,18 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Rubik-Regular',
     color: '#1F2937',
+  },
+  eyeIcon: {
+    padding: 4,
   },
   errorText: {
     fontSize: 12,
-    fontFamily: 'Rubik-Regular',
     color: '#EF4444',
     marginTop: 4,
   },
   termsContainer: {
-    marginBottom: 16, // Reduced from 24 to save space
+    marginBottom: 24,
   },
   checkboxContainer: {
     flexDirection: 'row',
@@ -346,19 +347,17 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
     flex: 1,
   },
   termsLink: {
-    fontFamily: 'Rubik-Regular',
     color: '#8B5CF6',
     textDecorationLine: 'underline',
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16, // Reduced from 32 to save space
+    marginBottom: 32,
   },
   divider: {
     flex: 1,
@@ -367,7 +366,6 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
     paddingHorizontal: 16,
   },
@@ -375,7 +373,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 20,
-    marginBottom: 16, // Reduced from 32 to save space
+    marginBottom: 32,
   },
   socialButton: {
     width: 60,
@@ -395,28 +393,24 @@ const styles = StyleSheet.create({
   googleText: {
     fontSize: 20,
     fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
     color: '#EA4335',
   },
   facebookText: {
     fontSize: 22,
     fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
     color: '#1877F2',
   },
   promoContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 16, // Reduced from 24 to save more space
+    marginBottom: 32,
   },
   promoText: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
   },
   promoLink: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#1F2937',
     textDecorationLine: 'underline',
   },
@@ -425,7 +419,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 8, // Reduced from 16 to bring login link closer
+    marginBottom: 24,
     shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -439,24 +433,20 @@ const styles = StyleSheet.create({
   signupButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    fontFamily: 'Rubik-SemiBold',
     color: '#FFFFFF',
   },
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingBottom: 5, // Minimal padding at bottom
-    marginTop: 4, // Minimal gap from signup button
+    paddingBottom: 40,
   },
   loginText: {
-    fontSize: 16, // Increased font size
-    fontFamily: 'Rubik-Regular',
+    fontSize: 14,
     color: '#6B7280',
     marginRight: 4,
   },
   loginLink: {
-    fontSize: 16, // Increased font size
-    fontFamily: 'Rubik-SemiBold',
+    fontSize: 14,
     color: '#8B5CF6',
     fontWeight: '600',
     textDecorationLine: 'underline',

@@ -63,39 +63,59 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
+  const PatternBackground = () => (
+    <View style={styles.patternContainer}>
+      {/* Create a pattern of small triangles */}
+      {Array.from({ length: 50 }).map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.triangle,
+            {
+              left: `${(index * 23) % 100}%`,
+              top: `${Math.floor(index / 4) * 15}%`,
+              opacity: 0.1 + (index % 3) * 0.05,
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#F3F0FF" />
       
-      {/* Vector Image at absolute top right of screen */}
-      <View style={styles.vectorContainer}>
-        <Image 
-          source={require('../../assets/Icons/vectorLogin.png')} 
-          style={styles.vectorImage}
-          resizeMode="contain"
-        />
-      </View>
-      
-      {/* Background with gradient */}
+      {/* Background Pattern */}
       <View style={styles.backgroundContainer}>
         <LinearGradient
           colors={['#F3F0FF', '#FAF9FC', '#FFFFFF']}
           style={styles.gradientBackground}
         />
+        <PatternBackground />
+        
+        {/* Vector Image at top right */}
+        <View style={styles.vectorContainer}>
+          <Image 
+            source={require('../../assets/Icons/vectorLogin.png')} 
+            style={styles.vectorImage}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
       <ScrollView style={styles.contentSection} showsVerticalScrollIndicator={false}>
         <View style={styles.formContainer}>
-          <Text style={styles.title}>Login with Phone</Text>
-          <Text style={styles.subtitle}>Enter your phone number to get OTP</Text>
+          <Text style={styles.title}>Login with Email</Text>
+          <Text style={styles.subtitle}>Login with one of the following</Text>
 
           {/* Phone Number Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Phone Number</Text>
+            <Text style={styles.inputLabel}>Email</Text>
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.textInput}
-                placeholder="Enter your phone number"
+                placeholder="Enter your email"
                 placeholderTextColor="#9CA3AF"
                 value={phoneNumber}
                 onChangeText={handlePhoneChange}
@@ -109,11 +129,11 @@ const LoginScreen = ({ navigation }) => {
           {/* OTP Input - Show only after OTP is sent */}
           {otpSent && (
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>OTP</Text>
+              <Text style={styles.inputLabel}>Password</Text>
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.textInput}
-                  placeholder="Enter 4-digit OTP"
+                  placeholder="Enter your password"
                   placeholderTextColor="#9CA3AF"
                   value={otp}
                   onChangeText={setOtp}
@@ -170,15 +190,12 @@ const LoginScreen = ({ navigation }) => {
 
           {/* Login Button */}
           <TouchableOpacity 
-            style={[
-              styles.loginButton,
-              !isPhoneValid && styles.loginButtonDisabled
-            ]} 
+            style={styles.loginButton} 
             onPress={otpSent ? handleLogin : handleSendOtp}
             disabled={!isPhoneValid}
           >
             <Text style={styles.loginButtonText}>
-              {otpSent ? 'Login' : 'Send OTP'}
+              {otpSent ? 'Login' : 'Login'}
             </Text>
           </TouchableOpacity>
 
@@ -210,16 +227,35 @@ const styles = StyleSheet.create({
   gradientBackground: {
     flex: 1,
   },
+  patternContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  triangle: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 14,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#8B5CF6',
+  },
   vectorContainer: {
     position: 'absolute',
-    top: -50, // Negative value to go above SafeArea
-    right: 0,
-    zIndex: 10, // Higher z-index to be on top
+    top: 60,
+    right: 20,
+    zIndex: 1,
   },
   vectorImage: {
-    width: 300,
-    height: 300,
-    transform: [{ scale: 1.7 }], // Scale it up even more
+    width: 80,
+    height: 80,
   },
   contentSection: {
     flex: 1,
@@ -232,13 +268,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
     color: '#1F2937',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
     marginBottom: 48,
   },
@@ -248,7 +282,6 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'Rubik-SemiBold',
     color: '#1F2937',
     marginBottom: 8,
   },
@@ -265,7 +298,6 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Rubik-Regular',
     color: '#1F2937',
   },
   eyeIcon: {
@@ -273,7 +305,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    fontFamily: 'Rubik-Regular',
     color: '#EF4444',
     marginTop: 4,
   },
@@ -283,7 +314,6 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#1F2937',
     textDecorationLine: 'underline',
   },
@@ -299,7 +329,6 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
     paddingHorizontal: 16,
   },
@@ -327,13 +356,11 @@ const styles = StyleSheet.create({
   googleText: {
     fontSize: 20,
     fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
     color: '#EA4335',
   },
   facebookText: {
     fontSize: 22,
     fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
     color: '#1877F2',
   },
   promoContainer: {
@@ -343,12 +370,10 @@ const styles = StyleSheet.create({
   },
   promoText: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
   },
   promoLink: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#1F2937',
     textDecorationLine: 'underline',
   },
@@ -364,14 +389,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  loginButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-    shadowOpacity: 0,
-  },
   loginButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    fontFamily: 'Rubik-SemiBold',
     color: '#FFFFFF',
   },
   signupContainer: {
@@ -381,13 +401,11 @@ const styles = StyleSheet.create({
   },
   signupText: {
     fontSize: 14,
-    fontFamily: 'Rubik-Regular',
     color: '#6B7280',
     marginRight: 4,
   },
   signupLink: {
     fontSize: 14,
-    fontFamily: 'Rubik-SemiBold',
     color: '#8B5CF6',
     fontWeight: '600',
     textDecorationLine: 'underline',

@@ -7,13 +7,13 @@ import CategoryModal from '../components/CategoryModal';
 
 // --- Data for the Investment Categories ---
 const investmentCategories = [
-  { name: 'Trading', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'NPS', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'LAS', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Gold', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'BOND', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Fixed', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
-  { name: 'Mutual Fund', icon: require('/Users/bhoomika/Desktop/drwise_b_a/drwise-app/assets/Icons/Cancer.png') },
+  { name: 'Mutual Fund', icon: require('../../assets/Icons/mutualFund.png') },
+  { name: 'Fixed', icon: require('../../assets/Icons/fixedInv.png') },
+  { name: 'BOND', icon: require('../../assets/Icons/bondInv.png') },
+  { name: 'Gold', icon: require('../../assets/Icons/goldInv.png') },
+  { name: 'LAS', icon: require('../../assets/Icons/LASInvestments.png') },
+  { name: 'NPS', icon: require('../../assets/Icons/npsInsurance.png') },
+  { name: 'Trading', icon: require('../../assets/Icons/investmentsTrading.png') },
 ];
 
 const InvestmentsScreen = () => {
