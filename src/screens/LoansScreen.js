@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Platform, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import CategoryModal from '../components/CategoryModal';
 
 // --- Data for the Loan Categories ---
 const loanCategories = [
@@ -16,9 +17,24 @@ const LoansScreen = () => {
   const navigation = useNavigation();
   const { width: screenWidth } = Dimensions.get('window');
   
+  // State for category modal
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  
   // Calculate responsive card width
   const cardWidth = Math.min(156.61, (screenWidth - 60) / 2); // 60 = padding + gap
   const gap = 19.78;
+
+  // Category modal functions
+  const handleCategoryPress = (category) => {
+    setSelectedCategory(category);
+    setShowCategoryModal(true);
+  };
+
+  const closeCategoryModal = () => {
+    setShowCategoryModal(false);
+    setSelectedCategory('');
+  };
 
   return (
     <View style={styles.container}>
@@ -77,7 +93,8 @@ const LoansScreen = () => {
                 <TouchableOpacity 
                   key={index} 
                   style={[styles.gridItemWrapper, { width: cardWidth }]}
-                  onPress={() => navigation.navigate('Detail', { categoryName: item.name })}
+                  onPress={() => handleCategoryPress(item.name)}
+                  activeOpacity={0.8}
                 >
                   <LinearGradient
                     colors={['#FBFBFB', '#F6DCDD']}
@@ -96,6 +113,13 @@ const LoansScreen = () => {
         <TouchableOpacity style={styles.fab}>
           <Ionicons name="calculator-outline" size={18} color="#FFFFFF" />
         </TouchableOpacity>
+
+        {/* Category Modal */}
+        <CategoryModal 
+          visible={showCategoryModal}
+          onClose={closeCategoryModal}
+          category={selectedCategory}
+        />
       </SafeAreaView>
     </View>
   );

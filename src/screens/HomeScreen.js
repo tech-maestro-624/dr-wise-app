@@ -15,10 +15,12 @@ import {
   FlatList,
   Easing
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radii, type } from '../theme/tokens';
 import BottomBar from '../components/BottomBar';
+import CategoryModal from '../components/CategoryModal';
 
 const { width: W } = Dimensions.get('window');
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
@@ -89,11 +91,14 @@ const sliderCards = [
 ];
 
 const HomeScreen = () => {
+  const navigation = useNavigation();
   const [active, setActive] = useState('all');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isInsuranceExpanded, setIsInsuranceExpanded] = useState(false);
   const [isInvestmentExpanded, setIsInvestmentExpanded] = useState(false);
   const [isLoansExpanded, setIsLoansExpanded] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const scrollY = useRef(new Animated.Value(0)).current;
   const sliderRef = useRef(null);
   
@@ -309,6 +314,28 @@ const HomeScreen = () => {
     }
   };
 
+  const handleCategoryPress = (category) => {
+    setSelectedCategory(category);
+    setShowCategoryModal(true);
+  };
+
+  const closeCategoryModal = () => {
+    setShowCategoryModal(false);
+    setSelectedCategory('');
+  };
+
+  const navigateToInsurances = () => {
+    navigation.navigate('Insurances');
+  };
+
+  const navigateToInvestments = () => {
+    navigation.navigate('Investments');
+  };
+
+  const navigateToLoans = () => {
+    navigation.navigate('Loans');
+  };
+
   const renderSliderCard = ({ item, index }) => (
     <View style={styles.heroCard}>
       <LinearGradient
@@ -473,7 +500,7 @@ const HomeScreen = () => {
                   <Text style={styles.sectionTitle}>Insurances</Text>
                   <Text style={styles.sectionSubtitle}>Explore insurance plans tailored to your needs.</Text>
                 </View>
-                <TouchableOpacity style={styles.sectionArrow}>
+                <TouchableOpacity style={styles.sectionArrow} onPress={navigateToInsurances} activeOpacity={0.7}>
                   <View style={[styles.arrowOuterCircle, { backgroundColor: 'rgba(29, 140, 124, 0.3)' }]}>
                     <View style={[styles.arrowCircle, { backgroundColor: '#1D8C7C' }]}>
                       <Ionicons name="arrow-up-outline" size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
@@ -494,6 +521,22 @@ const HomeScreen = () => {
                   }
                 ]}
               >
+                {/* Invisible touch overlays for category cards */}
+                <TouchableOpacity 
+                  onPress={() => handleCategoryPress('Life')} 
+                  style={[styles.categoryOverlay, { top: 0, left: 0, width: '33.33%', height: 120 }]}
+                  activeOpacity={1}
+                />
+                <TouchableOpacity 
+                  onPress={() => handleCategoryPress('Health')} 
+                  style={[styles.categoryOverlay, { top: 0, left: '33.33%', width: '33.33%', height: 120 }]}
+                  activeOpacity={1}
+                />
+                <TouchableOpacity 
+                  onPress={() => handleCategoryPress('Motor')} 
+                  style={[styles.categoryOverlay, { top: 0, left: '66.66%', width: '33.33%', height: 120 }]}
+                  activeOpacity={1}
+                />
                 {/* Always visible first row */}
                 {/* Life Card */}
                 <LinearGradient
@@ -540,6 +583,21 @@ const HomeScreen = () => {
                   </View>
                 </LinearGradient>
 
+                {/* Invisible touch overlays for expanded insurance cards */}
+                {isInsuranceExpanded && (
+                  <>
+                    <TouchableOpacity 
+                      onPress={() => handleCategoryPress('General')} 
+                      style={[styles.categoryOverlay, { top: 120, left: 0, width: '33.33%', height: 120 }]}
+                      activeOpacity={1}
+                    />
+                    <TouchableOpacity 
+                      onPress={() => handleCategoryPress('Travel')} 
+                      style={[styles.categoryOverlay, { top: 120, left: '33.33%', width: '33.33%', height: 120 }]}
+                      activeOpacity={1}
+                    />
+                  </>
+                )}
                 {/* Animated second row - only visible when expanded */}
                 {isInsuranceExpanded && (
                   <>
@@ -573,14 +631,20 @@ const HomeScreen = () => {
                         }
                       ]}
                     >
-                      <Text style={styles.itemTitle}>General</Text>
-                      <View style={styles.insuranceIconContainer}>
-                        <Image 
-                          source={require('../../assets/Icons/generalInsurance.png')} 
-                          style={styles.insuranceIcon}
-                          resizeMode="contain"
-                        />
-                      </View>
+                      <TouchableOpacity 
+                        onPress={() => handleCategoryPress('General')} 
+                        style={styles.categoryTouchable}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.itemTitle}>General</Text>
+                        <View style={styles.insuranceIconContainer}>
+                          <Image 
+                            source={require('../../assets/Icons/generalInsurance.png')} 
+                            style={styles.insuranceIcon}
+                            resizeMode="contain"
+                          />
+                        </View>
+                      </TouchableOpacity>
                     </AnimatedLinearGradient>
 
                     {/* Travel Card */}
@@ -651,6 +715,12 @@ const HomeScreen = () => {
 
           {/* Tax Section */}
           <View style={styles.taxCard}>
+            {/* Invisible touch overlay for tax section */}
+            <TouchableOpacity 
+              onPress={() => handleCategoryPress('Tax')} 
+              style={[styles.categoryOverlay, { top: 0, left: 0, width: '100%', height: '100%' }]}
+              activeOpacity={1}
+            />
             <View style={styles.taxContent}>
               <View style={styles.taxTextSection}>
                 <Text style={styles.taxTitle}>Tax</Text>
@@ -696,7 +766,7 @@ const HomeScreen = () => {
                   <Text style={styles.sectionTitle}>Investments</Text>
                   <Text style={styles.sectionSubtitle}>Explore top investment options and share them to earn with every new join.</Text>
                 </View>
-                <TouchableOpacity style={styles.sectionArrow}>
+                <TouchableOpacity style={styles.sectionArrow} onPress={navigateToInvestments} activeOpacity={0.7}>
                   <View style={[styles.arrowOuterCircle, { backgroundColor: 'rgba(246, 172, 17, 0.3)' }]}>
                     <View style={[styles.arrowCircle, { backgroundColor: '#F6AC11' }]}>
                       <Ionicons name="arrow-up-outline" size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
@@ -716,6 +786,22 @@ const HomeScreen = () => {
                   }
                 ]}
               >
+                {/* Invisible touch overlays for investment category cards */}
+                <TouchableOpacity 
+                  onPress={() => handleCategoryPress('Mutual Fund')} 
+                  style={[styles.categoryOverlay, { top: 0, left: 0, width: '33.33%', height: 120 }]}
+                  activeOpacity={1}
+                />
+                <TouchableOpacity 
+                  onPress={() => handleCategoryPress('Fixed')} 
+                  style={[styles.categoryOverlay, { top: 0, left: '33.33%', width: '33.33%', height: 120 }]}
+                  activeOpacity={1}
+                />
+                <TouchableOpacity 
+                  onPress={() => handleCategoryPress('BOND')} 
+                  style={[styles.categoryOverlay, { top: 0, left: '66.66%', width: '33.33%', height: 120 }]}
+                  activeOpacity={1}
+                />
                 {/* Always visible first row */}
                 {/* Mutual Fund Card */}
                 <LinearGradient
@@ -762,6 +848,31 @@ const HomeScreen = () => {
                   </View>
                 </LinearGradient>
 
+                {/* Anvisible touch overlays for expanded investment cards */}
+                {isInvestmentExpanded && (
+                  <>
+                    <TouchableOpacity 
+                      onPress={() => handleCategoryPress('Gold')} 
+                      style={[styles.categoryOverlay, { top: 120, left: 0, width: '33.33%', height: 120 }]}
+                      activeOpacity={1}
+                    />
+                    <TouchableOpacity 
+                      onPress={() => handleCategoryPress('LAS')} 
+                      style={[styles.categoryOverlay, { top: 120, left: '33.33%', width: '33.33%', height: 120 }]}
+                      activeOpacity={1}
+                    />
+                    <TouchableOpacity 
+                      onPress={() => handleCategoryPress('NPS')} 
+                      style={[styles.categoryOverlay, { top: 120, left: '66.66%', width: '33.33%', height: 120 }]}
+                      activeOpacity={1}
+                    />
+                    <TouchableOpacity 
+                      onPress={() => handleCategoryPress('Trading')} 
+                      style={[styles.categoryOverlay, { top: 240, left: 0, width: '33.33%', height: 120 }]}
+                      activeOpacity={1}
+                    />
+                  </>
+                )}
                 {/* Animated additional items - only visible when expanded */}
                 {isInvestmentExpanded && (
                   <>
@@ -963,7 +1074,7 @@ const HomeScreen = () => {
                   <Text style={styles.sectionTitle}>Loans</Text>
                   <Text style={styles.sectionSubtitle}>Select the right loan offers and share them to earn when someone applies.</Text>
                 </View>
-                <TouchableOpacity style={styles.sectionArrow}>
+                <TouchableOpacity style={styles.sectionArrow} onPress={navigateToLoans} activeOpacity={0.7}>
                   <View style={[styles.arrowOuterCircle, { backgroundColor: 'rgba(199, 91, 122, 0.3)' }]}>
                     <View style={[styles.arrowCircle, { backgroundColor: '#C75B7A' }]}>
                       <Ionicons name="arrow-up-outline" size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
@@ -983,6 +1094,22 @@ const HomeScreen = () => {
                   }
                 ]}
               >
+                {/* Invisible touch overlays for loan category cards */}
+                <TouchableOpacity 
+                  onPress={() => handleCategoryPress('Home Loan')} 
+                  style={[styles.categoryOverlay, { top: 0, left: 0, width: '33.33%', height: 120 }]}
+                  activeOpacity={1}
+                />
+                <TouchableOpacity 
+                  onPress={() => handleCategoryPress('Personal Loans')} 
+                  style={[styles.categoryOverlay, { top: 0, left: '33.33%', width: '33.33%', height: 120 }]}
+                  activeOpacity={1}
+                />
+                <TouchableOpacity 
+                  onPress={() => handleCategoryPress('Mortgage Loan')} 
+                  style={[styles.categoryOverlay, { top: 0, left: '66.66%', width: '33.33%', height: 120 }]}
+                  activeOpacity={1}
+                />
                 {/* Always visible first row (3 items) */}
                 {/* Home Loan Card */}
                 <LinearGradient
@@ -1029,6 +1156,14 @@ const HomeScreen = () => {
                   </View>
                 </LinearGradient>
 
+                {/* Invisible touch overlay for expanded loan card */}
+                {isLoansExpanded && (
+                  <TouchableOpacity 
+                    onPress={() => handleCategoryPress('Business Loan')} 
+                    style={[styles.categoryOverlay, { top: 120, left: 0, width: '33.33%', height: 120 }]}
+                    activeOpacity={1}
+                  />
+                )}
                 {/* Animated additional item - only visible when expanded */}
                 {isLoansExpanded && (
                   /* Business Loan Card */
@@ -1102,6 +1237,17 @@ const HomeScreen = () => {
             <Text style={styles.sectionSubtitle}>Share the best travel deals and earn when someone books through your link.</Text>
             
             <View style={styles.travelOptions}>
+              {/* Invisible touch overlays for travel options */}
+              <TouchableOpacity 
+                onPress={() => handleCategoryPress('Domestic Travel')} 
+                style={[styles.categoryOverlay, { top: 0, left: 0, width: '50%', height: 120 }]}
+                activeOpacity={1}
+              />
+              <TouchableOpacity 
+                onPress={() => handleCategoryPress('International Travel')} 
+                style={[styles.categoryOverlay, { top: 0, left: '50%', width: '50%', height: 120 }]}
+                activeOpacity={1}
+              />
               {/* Domestic Travel */}
               <TouchableOpacity style={styles.travelOption} activeOpacity={0.8}>
                 <LinearGradient
@@ -1211,6 +1357,13 @@ const HomeScreen = () => {
           />
         </View>
       </TouchableOpacity>
+
+      {/* Category Modal */}
+      <CategoryModal 
+        visible={showCategoryModal}
+        onClose={closeCategoryModal}
+        category={selectedCategory}
+      />
 
       {/* <BottomBar /> */}
     </LinearGradient>
@@ -2115,6 +2268,11 @@ const styles = StyleSheet.create({
     height: 70,
     resizeMode: 'contain',
     marginTop: 5
+  },
+  categoryOverlay: {
+    position: 'absolute',
+    backgroundColor: 'transparent',
+    zIndex: 10,
   },
 });
 

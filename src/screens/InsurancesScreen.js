@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Platform, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
+import CategoryModal from '../components/CategoryModal';
 
 // --- Data for the Insurance Categories ---
 // ** IMPORTANT: Ensure these image paths are correct for your project structure **
@@ -19,9 +20,24 @@ const InsurancesScreen = () => {
   const navigation = useNavigation();
   const { width: screenWidth } = Dimensions.get('window');
   
+  // State for category modal
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  
   // Calculate responsive card width
   const cardWidth = Math.min(156.61, (screenWidth - 60) / 2); // 60 = padding + gap
   const gap = 19.78;
+
+  // Category modal functions
+  const handleCategoryPress = (category) => {
+    setSelectedCategory(category);
+    setShowCategoryModal(true);
+  };
+
+  const closeCategoryModal = () => {
+    setShowCategoryModal(false);
+    setSelectedCategory('');
+  };
 
   return (
     <View style={styles.container}>
@@ -77,9 +93,14 @@ const InsurancesScreen = () => {
             
             <View style={[styles.gridContainer, { gap }]}>
               {insuranceCategories.map((item, index) => (
-                <TouchableOpacity key={index} style={[styles.gridItemWrapper, { width: cardWidth }]}>
+                <TouchableOpacity 
+                  key={index} 
+                  style={[styles.gridItemWrapper, { width: cardWidth }]}
+                  onPress={() => handleCategoryPress(item.name)}
+                  activeOpacity={0.8}
+                >
                     <LinearGradient
-                        colors={['#FBFBFB', '#E6FFF1']}
+                        colors={['#FFFFFF', '#E6FFF1']}
                         style={styles.gridItem}
                     >
                         <Text style={styles.gridItemText}>{item.name}</Text>
@@ -95,6 +116,13 @@ const InsurancesScreen = () => {
         <TouchableOpacity style={styles.fab}>
           <Ionicons name="calculator-outline" size={18} color="#FFFFFF" />
         </TouchableOpacity>
+
+        {/* Category Modal */}
+        <CategoryModal 
+          visible={showCategoryModal}
+          onClose={closeCategoryModal}
+          category={selectedCategory}
+        />
       </SafeAreaView>
     </View>
   );
@@ -103,10 +131,11 @@ const InsurancesScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E7D9FD',
+    backgroundColor: '#C9EBE9',
   },
   safeArea: {
     flex: 1,
+    backgroundColor: '#C9EBE9',
   },
   header: {
     width: '100%',
@@ -139,7 +168,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     height: 56, // Standard header height for safe spacing
-    zIndex: 2,
+    zIndex: 11,
   },
   backButton: {
     backgroundColor: '#52B4A6',
@@ -159,7 +188,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: 20,
     marginTop: 10,
-    zIndex: 1,
+    zIndex: 12,
   },
   promoTextContainer: {
     flex: 1,
@@ -206,19 +235,20 @@ const styles = StyleSheet.create({
   promoImage: {
     position: 'absolute',
     right: -30,
-    bottom: -20,
+    bottom: -2,
     width: 194,
     height: 220,
     resizeMode: 'contain',
   },
   contentContainer: {
     flex: 1,
-    zIndex: 2,
     backgroundColor: '#C9EBE9',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    marginTop: -20,
+    marginTop: 0,
     paddingTop: 20,
+    zIndex: 1,
+    width: '100%',
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -239,10 +269,14 @@ const styles = StyleSheet.create({
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
+    alignContent: 'flex-start',
     justifyContent: 'space-between',
+    padding: 0,
+    width: '100%',
+    minHeight: 712.16,
   },
   gridItemWrapper: {
-    width: '48%',
     height: 163,
     marginBottom: 20,
     borderRadius: 16,

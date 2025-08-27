@@ -29,6 +29,8 @@ import RedeemScreen from '../screens/RedeemScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import TermsConditionsScreen from '../screens/TermsConditionsScreen';
+import CategoriesScreen from '../screens/CategoriesScreen';
+import CategoryDetailScreen from '../screens/CategoryDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -78,6 +80,8 @@ export default function AppNavigator() {
                 <Stack.Screen name="EditProfile" component={EditProfileScreen} />
                 <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
                 <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+                <Stack.Screen name="Categories" component={CategoriesScreen} />
+                <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );
