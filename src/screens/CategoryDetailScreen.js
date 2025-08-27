@@ -194,7 +194,10 @@ const CategoryDetailScreen = () => {
 
                         {/* Referral Card */}
             <View style={styles.referralCard}>
-              <View style={styles.referralCardBackground} />
+              <Image 
+                source={require('../../assets/Icons/vectorCategoryDetails.png')} 
+                style={styles.referralCardBackground} 
+              />
               <View style={styles.iconContainer}>
                 <Image source={require('../../assets/Icons/money_2656371 1.png')} style={styles.referralIcon} />
               </View>
@@ -406,15 +409,10 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     height: 65,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#E8E9FF',
+    borderColor: '#e9e5ebff', 
     borderRadius: 12,
-    shadowColor: 'rgba(143, 49, 249, 0.1)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 5,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
@@ -422,30 +420,25 @@ const styles = StyleSheet.create({
   },
   referralCardBackground: {
     position: 'absolute',
-    width: 107,
-    height: 93,
-    left: -13,
-    top: -18,
-    backgroundColor: 'rgba(150, 61, 251, 0.1)',
-    borderRadius: 50,
+    width: 120,
+    height: 100,
+    left: -20,
+    top: -20,
+    resizeMode: 'contain',
+    
   },
   iconContainer: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginRight: 20,
   },
   referralIcon: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     resizeMode: 'contain',
   },
   referralText: {
@@ -454,7 +447,9 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: '#1A1B20',
     flex: 1,
-          textAlign: 'left',
+    textAlign: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
     },
     referButton: {
       backgroundColor: '#1A1B20',
