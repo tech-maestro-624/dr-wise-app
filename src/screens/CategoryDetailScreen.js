@@ -68,10 +68,10 @@ const CategoryDetailScreen = () => {
     }
   };
 
-  // Get background color based on category
-  const getBackgroundColor = (category) => {
-    return '#FFFFFF'; // White background for all categories
-  };
+      // Get background color based on category
+    const getBackgroundColor = (category) => {
+      return '#F6F5FD'; // Pure white background for all categories
+    };
 
   // Get back button background color based on category
   const getBackButtonColor = (category) => {
@@ -192,14 +192,21 @@ const CategoryDetailScreen = () => {
               </View>
             </View>
 
-            {/* Referral Card */}
+                        {/* Referral Card */}
             <View style={styles.referralCard}>
               <View style={styles.referralCardBackground} />
-              <Image source={require('../../assets/Icons/Group.png')} style={styles.referralIcon} />
-              <Text style={styles.referralText}>Earn upto $120.00 for your referral</Text>
+              <View style={styles.iconContainer}>
+                <Image source={require('../../assets/Icons/money_2656371 1.png')} style={styles.referralIcon} />
+              </View>
+              <Text style={styles.referralText}>Earn upto $120.00 for{'\n'}your referral</Text>
             </View>
 
-          </ScrollView>
+            {/* Refer a Friend Button */}
+            <TouchableOpacity style={styles.referFriendButton}>
+              <Text style={styles.referFriendButtonText}>Refer a friend</Text>
+            </TouchableOpacity>
+
+            </ScrollView>
         </View>
 
         {/* --- Floating Action Button --- */}
@@ -334,11 +341,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
-  keyBenefitsSection: {
-    marginBottom: 20,
-  },
+      keyBenefitsSection: {
+      marginTop: 10,
+      marginBottom: 20,
+    },
   keyBenefitsTitle: {
     fontFamily: 'Rubik-Medium',
     fontSize: 24,
@@ -389,23 +397,23 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginLeft: 20,
   },
-  groupIcon: {
-    width: 80,
-    height: 90,
-    resizeMode: 'contain',
-  },
+      groupIcon: {
+      width: 100,
+      height: 110,
+      resizeMode: 'contain',
+    },
   referralCard: {
     position: 'relative',
     width: '100%',
-    height: 57,
-    backgroundColor: '#F8F9FF',
+    height: 65,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E8E9FF',
-    borderRadius: 10,
+    borderRadius: 12,
     shadowColor: 'rgba(143, 49, 249, 0.1)',
-    shadowOffset: { width: 0, height: 0 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
-    shadowRadius: 10,
+    shadowRadius: 8,
     elevation: 5,
     flexDirection: 'row',
     alignItems: 'center',
@@ -421,11 +429,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(150, 61, 251, 0.1)',
     borderRadius: 50,
   },
-  referralIcon: {
-    width: 52,
-    height: 52,
-    resizeMode: 'contain',
+  iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  referralIcon: {
+    width: 40,
+    height: 40,
+    resizeMode: 'contain',
   },
   referralText: {
     fontFamily: 'Rubik-Medium',
@@ -433,7 +454,41 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: '#1A1B20',
     flex: 1,
-  },
+          textAlign: 'left',
+    },
+    referButton: {
+      backgroundColor: '#1A1B20',
+      borderRadius: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 16,
+      alignSelf: 'flex-start',
+      marginTop: 10,
+    },
+    referButtonText: {
+      fontFamily: 'Rubik-SemiBold',
+      fontSize: 12,
+      lineHeight: 14,
+      letterSpacing: 0.2,
+      color: '#FBFBFB',
+    },
+    referFriendButton: {
+      width: '100%',
+      height: 47,
+      backgroundColor: '#8F31F9',
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 40,
+      marginBottom: 30,
+      marginHorizontal: 0,
+    },
+    referFriendButtonText: {
+      fontFamily: 'Rubik-SemiBold',
+      fontSize: 16,
+      lineHeight: 19,
+      letterSpacing: 0.2,
+      color: '#FBFBFB',
+    },
   fab: {
     position: 'absolute',
     bottom: 40,
