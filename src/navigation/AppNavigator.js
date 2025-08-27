@@ -2,10 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
-// Components
-import CustomTabBar from '../components/CustomTabBar';
-import { TAB_BAR_CONFIG } from '../constants/tabBarConfig';
+import { Ionicons } from '@expo/vector-icons';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
@@ -19,13 +16,19 @@ import MyReferralScreen from '../screens/MyReferralScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import LoginScreen from '../screens/LoginScreen';
+import CustomTabBar from '../components/CustomTabBar';
+import { TAB_BAR_CONFIG } from '../constants/tabBarConfig';
 import SignupScreen from '../screens/SignupScreen';
 import DetailScreen from '../screens/DetailScreen';
+// import CategoriesScreen from '../screens/CategoriesScreen';
 import InsurancesScreen from '../screens/InsurancesScreen';
 import InvestmentsScreen from '../screens/InvestmentsScreen';
 import LoansScreen from '../screens/LoansScreen';
 import TransactionsHistoryScreen from '../screens/TransactionsHistoryScreen';
 import RedeemScreen from '../screens/RedeemScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import TermsConditionsScreen from '../screens/TermsConditionsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -42,8 +45,8 @@ function MainTabNavigator() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Credits" component={CreditsScreen} />
-      <Tab.Screen 
-        name="Referral" 
+      <Tab.Screen
+        name="Referral"
         component={ReferralScreen}
         options={TAB_BAR_CONFIG.referralTabOptions}
       />
@@ -66,11 +69,15 @@ export default function AppNavigator() {
                 <Stack.Screen name="Calculator" component={CalculatorScreen} />
                 <Stack.Screen name="TermInsuranceCalculator" component={TermInsuranceCalculatorScreen} />
                 <Stack.Screen name="Details" component={DetailScreen} />
+                {/* <Stack.Screen name="Categories" component={CategoriesScreen} /> */}
                 <Stack.Screen name="Insurances" component={InsurancesScreen} />
                 <Stack.Screen name="Investments" component={InvestmentsScreen} />
                 <Stack.Screen name="Loans" component={LoansScreen} />
                 <Stack.Screen name="TransactionsHistory" component={TransactionsHistoryScreen} />
                 <Stack.Screen name="Redeem" component={RedeemScreen} />
+                <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+                <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+                <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

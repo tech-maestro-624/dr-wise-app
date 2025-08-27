@@ -17,7 +17,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, radii, type } from '../theme/tokens';
 import BottomBar from '../components/BottomBar';
 
@@ -90,7 +89,6 @@ const sliderCards = [
 ];
 
 const HomeScreen = () => {
-  const navigation = useNavigation();
   const [active, setActive] = useState('all');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isInsuranceExpanded, setIsInsuranceExpanded] = useState(false);
@@ -476,8 +474,10 @@ const HomeScreen = () => {
                   <Text style={styles.sectionSubtitle}>Explore insurance plans tailored to your needs.</Text>
                 </View>
                 <TouchableOpacity style={styles.sectionArrow}>
-                  <View style={styles.arrowCircle}>
-                    <Ionicons name="arrow-up-outline" size={20} color="#1D8C7C" style={{ transform: [{ rotate: '45deg' }] }} />
+                  <View style={[styles.arrowOuterCircle, { backgroundColor: 'rgba(29, 140, 124, 0.3)' }]}>
+                    <View style={[styles.arrowCircle, { backgroundColor: '#1D8C7C' }]}>
+                      <Ionicons name="arrow-up-outline" size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
+                    </View>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -697,8 +697,10 @@ const HomeScreen = () => {
                   <Text style={styles.sectionSubtitle}>Explore top investment options and share them to earn with every new join.</Text>
                 </View>
                 <TouchableOpacity style={styles.sectionArrow}>
-                  <View style={[styles.arrowCircle, { backgroundColor: '#F6AC11' }]}>
-                    <Ionicons name="arrow-up-outline" size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
+                  <View style={[styles.arrowOuterCircle, { backgroundColor: 'rgba(246, 172, 17, 0.3)' }]}>
+                    <View style={[styles.arrowCircle, { backgroundColor: '#F6AC11' }]}>
+                      <Ionicons name="arrow-up-outline" size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
+                    </View>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -961,6 +963,13 @@ const HomeScreen = () => {
                   <Text style={styles.sectionTitle}>Loans</Text>
                   <Text style={styles.sectionSubtitle}>Select the right loan offers and share them to earn when someone applies.</Text>
                 </View>
+                <TouchableOpacity style={styles.sectionArrow}>
+                  <View style={[styles.arrowOuterCircle, { backgroundColor: 'rgba(199, 91, 122, 0.3)' }]}>
+                    <View style={[styles.arrowCircle, { backgroundColor: '#C75B7A' }]}>
+                      <Ionicons name="arrow-up-outline" size={20} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
+                    </View>
+                  </View>
+                </TouchableOpacity>
               </View>
               
               <Animated.View 

@@ -1,8 +1,8 @@
 // Tab bar configuration constants
 export const TAB_BAR_CONFIG = {
   screenOptions: {
-    tabBarActiveTintColor: '#000000',
-    tabBarInactiveTintColor: '#9CA3AF',
+    tabBarActiveTintColor: '#1A1B20',
+    tabBarInactiveTintColor: '#7D7D7D',
     tabBarLabelStyle: {
       fontSize: 12,
       fontWeight: '400',

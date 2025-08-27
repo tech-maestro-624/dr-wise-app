@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,17 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Dimensions,
+  Platform,
+  StatusBar,
 } from 'react-native';
-import {Ionicons} from '@expo/vector-icons'; // Assuming you are using Expo for icons
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
-// Placeholder for design system colors
-const Colors = {
-  background: '#F7F2FE',
-  textDark: '#1A1B20',
-  textGray: '#7D7D7D',
-  primaryPurple: '#8F31F9',
-  cardBackground: '#FFFFFF',
-  pendingText: '#FFA500', // Orange color for pending status
-  borderColor: '#EAEAEA',
-};
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const scale = Math.min(screenWidth / 375, screenHeight / 812);
 
-// Mock data for demonstration purposes
+// --- Mock data for demonstration purposes ---
 const referralData = [
   {
     id: '1',
@@ -41,205 +37,260 @@ const referralData = [
     product: 'Goa',
     status: 'Pending',
   },
-  {
-    id: '3',
-    statusTitle: 'Status 3',
-    name: 'Jane Doe',
-    phone: '9876543210',
-    category: 'Electronics',
-    product: 'Laptop',
-    status: 'Approved',
-  },
 ];
 
-const StatusCard = ({data}) => (
-  <View style={styles.card}>
-    <Text style={styles.cardTitle}>{data.statusTitle}</Text>
-    <View style={styles.divider} />
-    <View style={styles.row}>
-      <Text style={styles.label}>Name</Text>
-      <Text style={styles.value}>{data.name}</Text>
-    </View>
-    <View style={styles.row}>
-      <Text style={styles.label}>Phone</Text>
-      <Text style={styles.value}>{data.phone}</Text>
-    </View>
-    <View style={styles.row}>
-      <Text style={styles.label}>Category</Text>
-      <Text style={styles.value}>{data.category}</Text>
-    </View>
-    <View style={styles.row}>
-      <Text style={styles.label}>Product</Text>
-      <Text style={styles.value}>{data.product}</Text>
-    </View>
-    <View style={styles.row}>
-      <Text style={styles.label}>Status</Text>
+// Reusable component for each row in the status card
+const InfoRow = ({ label, value, isStatus = false }) => (
+  <View style={styles.row}>
+    <Text style={styles.label}>{label}</Text>
+    {isStatus ? (
       <View style={styles.statusContainer}>
-        <Ionicons name="time-outline" size={16} color={Colors.pendingText} />
-        <Text style={[styles.value, {color: Colors.pendingText}]}>
-          {data.status}
-        </Text>
+        <Ionicons name="time-outline" size={16 * scale} color="#F6AC11" />
+        <Text style={styles.statusText}>{value}</Text>
       </View>
-    </View>
+    ) : (
+      <Text style={styles.value}>{value}</Text>
+    )}
   </View>
 );
 
 const ReferralStatusScreen = () => {
-  const [activeTab, setActiveTab] = useState('Pending'); // 'Pending' or 'Approved'
+  const [activeTab, setActiveTab] = useState('Pending');
 
+  // Filter data based on the active tab
   const filteredData = referralData.filter(item => item.status === activeTab);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Referral Status</Text>
-      </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F3ECFE" />
+      <LinearGradient
+        colors={['#F3ECFE', '#F6F6FE']}
+        locations={[0, 0.4917]}
+        style={styles.background}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Referral Status</Text>
+        </View>
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={Colors.textGray} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search.."
-          placeholderTextColor={Colors.textGray}
-        />
-      </View>
+        {/* Filter Tabs */}
+        <View style={styles.filterWrapper}>
+          <View style={styles.filterContainer}>
+            <TouchableOpacity
+              style={[styles.filterTab, activeTab === 'Pending' && styles.activeFilterTab]}
+              onPress={() => setActiveTab('Pending')}
+            >
+              <Ionicons name="time" size={15 * scale} color={activeTab === 'Pending' ? '#FBFBFB' : '#7D7D7D'} />
+              <Text style={[styles.filterText, activeTab === 'Pending' && styles.activeFilterText]}>Pending</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterTab, activeTab === 'Approved' && styles.activeFilterTab]}
+              onPress={() => setActiveTab('Approved')}
+            >
+              <Ionicons name="checkmark-circle" size={15 * scale} color={activeTab === 'Approved' ? '#FBFBFB' : '#7D7D7D'} />
+              <Text style={[styles.filterText, activeTab === 'Approved' && styles.activeFilterText]}>Approved</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'Pending' && styles.activeTab]}
-          onPress={() => setActiveTab('Pending')}>
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'Pending' && styles.activeTabText,
-            ]}>
-            Pending
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'Approved' && styles.activeTab]}
-          onPress={() => setActiveTab('Approved')}>
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'Approved' && styles.activeTabText,
-            ]}>
-            Approved
-          </Text>
-        </TouchableOpacity>
-      </View>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={22 * scale} color="#1A1B20" />
+          <TextInput
+            placeholder="Search.."
+            placeholderTextColor="#7D7D7D"
+            style={styles.searchInput}
+          />
+        </View>
 
-      <ScrollView contentContainerStyle={styles.container}>
-        {filteredData.map(item => (
-          <StatusCard key={item.id} data={item} />
-        ))}
-      </ScrollView>
-    </SafeAreaView>
+        {/* Status Cards */}
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}>
+          {filteredData.map(item => (
+            <View key={item.id} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>{item.statusTitle}</Text>
+              </View>
+              <View style={styles.cardBody}>
+                <InfoRow label="Name" value={item.name} />
+                <InfoRow label="Phone" value={item.phone} />
+                <InfoRow label="Category" value={item.category} />
+                <InfoRow label="Product" value={item.product} />
+                <InfoRow label="Status" value={item.status} isStatus={true} />
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F3ECFE',
+    borderRadius: 40 * scale,
+    overflow: 'hidden',
+  },
+  background: { 
     flex: 1,
-    backgroundColor: Colors.background,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
-    padding: 20,
+    height: 80 * scale,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: 28 * scale,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: Colors.textDark,
+    fontFamily: 'Rubik',
+    fontSize: 24 * scale,
+    fontWeight: '600',
+    color: '#1A1B20',
+    lineHeight: 28 * scale,
+    textAlign: 'center',
+  },
+  filterWrapper: {
+    paddingHorizontal: 20 * scale,
+    marginBottom: 10 * scale,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FBFBFB',
+    borderRadius: 10 * scale,
+    padding: 4 * scale,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    shadowColor: 'rgba(143, 49, 249, 0.1)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  filterTab: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8 * scale,
+    paddingHorizontal: 14 * scale,
+    borderRadius: 6 * scale,
+    gap: 6 * scale,
+  },
+  activeFilterTab: {
+    backgroundColor: '#8F31F9',
+  },
+  filterText: {
+    fontFamily: 'Rubik',
+    fontSize: 14 * scale,
+    fontWeight: '400',
+    color: '#7D7D7D',
+    lineHeight: 17 * scale,
+    letterSpacing: 0.2,
+  },
+  activeFilterText: {
+    color: '#FBFBFB',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    marginHorizontal: 20,
-    marginBottom: 20,
+    backgroundColor: '#FBFBFB',
+    borderRadius: 10 * scale,
+    paddingHorizontal: 12 * scale,
+    marginHorizontal: 20 * scale,
+    marginBottom: 10 * scale,
+    height: 40 * scale,
     borderWidth: 1,
-    borderColor: Colors.borderColor,
+    borderColor: '#FFFFFF',
+    shadowColor: 'rgba(143, 49, 249, 0.1)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 3,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 12,
-    marginLeft: 10,
-    fontSize: 16,
-    color: Colors.textDark,
+    marginLeft: 10 * scale,
+    fontFamily: 'Rubik',
+    fontSize: 13 * scale,
+    color: '#1A1B20',
+    lineHeight: 15 * scale,
+    letterSpacing: 0.2,
   },
-  tabContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    backgroundColor: '#E8DAFA',
-    borderRadius: 12,
-    padding: 4,
-  },
-  tab: {
+  scrollView: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
   },
-  activeTab: {
-    backgroundColor: Colors.primaryPurple,
-  },
-  tabText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.textDark,
-  },
-  activeTabText: {
-    color: '#FFFFFF',
-  },
-  container: {
-    paddingHorizontal: 20,
+  scrollContent: {
+    paddingHorizontal: 20 * scale,
+    paddingTop: 10 * scale,
+    paddingBottom: 20 * scale,
   },
   card: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    backgroundColor: '#FBFBFB',
+    borderRadius: 10 * scale,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    shadowColor: 'rgba(143, 49, 249, 0.1)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
     elevation: 3,
+    marginBottom: 10 * scale,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    backgroundColor: 'rgba(125, 125, 125, 0.05)',
+    paddingVertical: 10 * scale,
+    paddingHorizontal: 12 * scale,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.textDark,
-    marginBottom: 10,
+    fontFamily: 'Rubik',
+    fontSize: 16 * scale,
+    fontWeight: '500',
+    color: '#1A1B20',
+    lineHeight: 19 * scale,
   },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.borderColor,
-    marginBottom: 10,
+  cardBody: {
+    paddingHorizontal: 12 * scale,
+    paddingVertical: 20 * scale,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    marginBottom: 10 * scale,
   },
   label: {
-    fontSize: 14,
-    color: Colors.textGray,
+    fontFamily: 'Rubik',
+    fontSize: 14 * scale,
+    fontWeight: '400',
+    color: '#1A1B20',
+    lineHeight: 17 * scale,
   },
   value: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.textDark,
+    fontFamily: 'Rubik',
+    fontSize: 14 * scale,
+    fontWeight: '400',
+    color: '#7D7D7D',
+    lineHeight: 17 * scale,
+    letterSpacing: 0.2,
+    textAlign: 'right',
   },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 6 * scale,
+  },
+  statusText: {
+    fontFamily: 'Rubik',
+    fontSize: 14 * scale,
+    fontWeight: '400',
+    color: '#F6AC11',
+    lineHeight: 17 * scale,
+    letterSpacing: 0.2,
   },
 });
 
