@@ -39,6 +39,16 @@ import BankDetailsScreen from '../screens/verification/BankDetailsScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+function HomeStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen name="Calculator" component={CalculatorScreen} />
+      <Stack.Screen name="TermInsuranceCalculator" component={TermInsuranceCalculatorScreen} />
+    </Stack.Navigator>
+  );
+}
+
 function MainTabNavigator() {
   return (
     <Tab.Navigator
@@ -49,7 +59,30 @@ function MainTabNavigator() {
         ...TAB_BAR_CONFIG.screenOptions,
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Home" component={HomeStack} />
+      <Tab.Screen name="Credits" component={CreditsScreen} />
+      <Tab.Screen
+        name="Referral"
+        component={ReferralScreen}
+        options={TAB_BAR_CONFIG.referralTabOptions}
+      />
+      <Tab.Screen name="My Referral" component={MyReferralScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+}
+
+function AffiliateTabNavigator() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused }) => (
+          <CustomTabBar route={route} focused={focused} />
+        ),
+        ...TAB_BAR_CONFIG.screenOptions,
+      })}
+    >
+      <Tab.Screen name="Home" component={AffiliateHomeScreen} />
       <Tab.Screen name="Credits" component={CreditsScreen} />
       <Tab.Screen
         name="Referral"
@@ -70,7 +103,7 @@ export default function AppNavigator() {
                 <Stack.Screen name="Login" component={LoginScreen} />
                 <Stack.Screen name="Signup" component={SignupScreen} />
                 <Stack.Screen name="Main" component={MainTabNavigator} />
-                <Stack.Screen name="AffiliateHome" component={AffiliateHomeScreen} />
+                <Stack.Screen name="AffiliateHome" component={AffiliateTabNavigator} />
                 <Stack.Screen name="Leads" component={LeadsScreen} />
                 <Stack.Screen name="Calculator" component={CalculatorScreen} />
                 <Stack.Screen name="TermInsuranceCalculator" component={TermInsuranceCalculatorScreen} />

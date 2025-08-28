@@ -1,357 +1,248 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, StatusBar, Dimensions, Image } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+  Image,
+  Platform,
+  Dimensions,
+} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const scale = Math.min(screenWidth / 375, screenHeight / 812);
 
-// Mock leads data
-const leads = [
+// Lead data - you can replace this with actual data
+const leadsData = [
   {
     id: 1,
     name: 'Kumar',
-    product: 'Individual Plan Insurence',
+    type: 'Individual Plan Insurance',
     date: '25-03-2025, 10:43 PM',
     status: 'Converted',
-    icon: 'medical',
-    iconColor: '#FF6B6B'
+    icon: require('../../assets/Icons/image.png'),
   },
   {
     id: 2,
     name: 'Kiran',
-    product: 'Car-Private Vehicle Insurence',
+    type: 'Car-Private Vehicle Insurance',
     date: '25-03-2025, 10:43 PM',
     status: 'Converted',
-    icon: 'car',
-    iconColor: '#4ECDC4'
+    icon: require('../../assets/Icons/Group 9167.png'),
   },
   {
     id: 3,
-    name: 'Kumar',
-    product: 'Home Loan',
+    name: 'Rahul',
+    type: 'Home Loan',
     date: '25-03-2025, 10:43 PM',
     status: 'Converted',
-    icon: 'home',
-    iconColor: '#45B7D1'
+    icon: require('../../assets/Icons/Group 9167 (1).png'),
   },
   {
     id: 4,
-    name: 'Kumar',
-    product: 'GOld Investments',
+    name: 'Priya',
+    type: 'Gold Investments',
     date: '25-03-2025, 10:43 PM',
     status: 'Converted',
-    icon: 'cash',
-    iconColor: '#FFD93D'
+    icon: require('../../assets/Icons/profile-avatar-social-media-icon-3d 1.png'),
   },
   {
     id: 5,
-    name: 'Kumar',
-    product: 'Individual Plan Insurence',
+    name: 'Amit',
+    type: 'Individual Plan Insurance',
     date: '25-03-2025, 10:43 PM',
     status: 'Converted',
-    icon: 'medical',
-    iconColor: '#FF6B6B'
-  }
+    icon: require('../../assets/Icons/image.png'),
+  },
 ];
+
+const LeadItem = ({ lead }) => (
+  <View style={styles.leadItem}>
+    <View style={styles.leadIconContainer}>
+      <Image 
+        source={lead.icon}
+        style={styles.leadIcon}
+        resizeMode="contain"
+      />
+    </View>
+    
+    <View style={styles.leadInfo}>
+      <Text style={styles.leadName}>{lead.name}</Text>
+      <Text style={styles.leadType}>{lead.type}</Text>
+    </View>
+    
+    <View style={styles.leadRight}>
+      <Text style={styles.leadDate}>{lead.date}</Text>
+      <View style={styles.statusContainer}>
+        <Text style={styles.statusText}>{lead.status}</Text>
+        <Ionicons name="checkmark-circle" size={16} color="#38D552" />
+      </View>
+    </View>
+  </View>
+);
 
 const LeadsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const affiliateName = route.params?.affiliateName || 'Dhananjaya J';
 
-  const getIconName = (iconType) => {
-    switch (iconType) {
-      case 'medical':
-        return 'medical-outline';
-      case 'car':
-        return 'car-outline';
-      case 'home':
-        return 'home-outline';
-      case 'cash':
-        return 'cash-outline';
-      default:
-        return 'document-outline';
-    }
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#1A1B20" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Leads</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <ScrollView style={styles.mainScroll} showsVerticalScrollIndicator={false}>
-        {/* Affiliate Name Section */}
-        <View style={styles.affiliateSection}>
-          <Text style={styles.affiliateName}>{affiliateName}</Text>
+    <LinearGradient
+      colors={['#F3ECFE', '#F6F6FE']}
+      locations={[0, 0.4917]}
+      style={styles.container}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor="#FBFBFB" />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="chevron-back-outline" size={24} color="#1A1B20" />
+          </TouchableOpacity>
+          
+          <Text style={styles.headerTitle}>Leads</Text>
+          
+          <View style={styles.placeholder} />
         </View>
+
+        {/* Affiliate Name */}
+        <Text style={styles.affiliateName}>{affiliateName}</Text>
 
         {/* Leads List */}
-        <View style={styles.leadsContainer}>
-          {leads.map((lead) => (
-            <TouchableOpacity 
-              key={lead.id} 
-              style={styles.leadItem}
-              onPress={() => navigation.navigate('Calculator', { leadName: lead.name })}
-            >
-              <View style={styles.leadIconContainer}>
-                <View style={[styles.leadIcon, { backgroundColor: lead.iconColor }]}>
-                  <Ionicons name={getIconName(lead.icon)} size={24} color="#FFFFFF" />
-                </View>
-              </View>
-              
-              <View style={styles.leadInfo}>
-                <Text style={styles.leadName}>{lead.name}</Text>
-                <Text style={styles.leadProduct}>{lead.product}</Text>
-              </View>
-              
-              <View style={styles.leadStatusContainer}>
-                <Text style={styles.leadDate}>{lead.date}</Text>
-                <View style={styles.statusContainer}>
-                  <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                  <Text style={styles.statusText}>{lead.status}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+        <ScrollView 
+          style={styles.leadsContainer}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.leadsContent}
+        >
+          {leadsData.map((lead, index) => (
+            <View key={lead.id}>
+              <LeadItem lead={lead} />
+              {index < leadsData.length - 1 && <View style={styles.separator} />}
+            </View>
           ))}
-        </View>
-      </ScrollView>
-
-      {/* Bottom Navigation Bar */}
-      <View style={styles.bottomNavContainer}>
-        <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navItem}>
-            <Ionicons name="home" size={24} color="#1A1B20" />
-            <Text style={styles.navTextActive}>Home</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.navItem}>
-            <Ionicons name="wallet-outline" size={24} color="#7D7D7D" />
-            <Text style={styles.navText}>Credits</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.navItem} />
-          
-          <TouchableOpacity style={styles.navItem}>
-            <Ionicons name="people-outline" size={24} color="#7D7D7D" />
-            <Text style={styles.navText}>My Referral</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.navItem}>
-            <Ionicons name="person-outline" size={24} color="#7D7D7D" />
-            <Text style={styles.navText}>Profile</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <TouchableOpacity style={styles.addButton}>
-          <Ionicons name="add" size={30} color="#FFFFFF" />
-        </TouchableOpacity>
-        
-        <View style={styles.homeIndicator}>
-          <View style={styles.homeIndicatorLine} />
-        </View>
-      </View>
-    </SafeAreaView>
+        </ScrollView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6F6FE',
   },
-  
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingHorizontal: 20 * scale,
+    paddingTop: Platform.OS === 'ios' ? 50 * scale : 20 * scale,
+    paddingBottom: 20 * scale,
   },
-  
   backButton: {
-    padding: 5,
+    width: 26 * scale,
+    height: 26 * scale,
+    borderRadius: 4 * scale,
+    backgroundColor: 'rgba(150, 61, 251, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  
   headerTitle: {
-    fontFamily: 'Rubik',
-    fontSize: 18,
+    fontSize: 24 * scale,
     fontWeight: '600',
     color: '#1A1B20',
+    fontFamily: 'Rubik-SemiBold',
   },
-  
-  headerSpacer: {
-    width: 34, // Same width as back button for centering
+  placeholder: {
+    width: 26 * scale,
   },
-  
-  mainScroll: {
+  affiliateName: {
+    fontSize: 24 * scale,
+    fontWeight: '500',
+    color: '#1A1B20',
+    fontFamily: 'Rubik-Medium',
+    paddingHorizontal: 20 * scale,
+    marginBottom: 20 * scale,
+  },
+  leadsContainer: {
     flex: 1,
   },
-  
-  affiliateSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+  leadsContent: {
+    paddingBottom: 100 * scale,
   },
-  
-  affiliateName: {
-    fontFamily: 'Rubik',
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1B20',
-    lineHeight: 28,
-  },
-  
-  leadsContainer: {
-    paddingHorizontal: 20,
-  },
-  
   leadItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: 'rgba(0, 0, 0, 0.05)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 2,
+    paddingVertical: 15 * scale,
+    paddingHorizontal: 20 * scale,
+    height: 67 * scale,
   },
-  
   leadIconContainer: {
-    marginRight: 16,
-  },
-  
-  leadIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 46 * scale,
+    height: 46 * scale,
+    borderRadius: 8 * scale,
+    backgroundColor: 'rgba(150, 61, 251, 0.00)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 16 * scale,
+    flexShrink: 0,
   },
-  
+  leadIcon: {
+    width: 46 * scale,
+    height: 46 * scale,
+  },
   leadInfo: {
     flex: 1,
+    marginRight: 16 * scale,
+    minWidth: 0,
   },
-  
   leadName: {
-    fontFamily: 'Rubik',
-    fontSize: 16,
+    fontSize: 16 * scale,
     fontWeight: '600',
     color: '#1A1B20',
-    lineHeight: 19,
-    marginBottom: 4,
+    fontFamily: 'Rubik-SemiBold',
+    marginBottom: 4 * scale,
   },
-  
-  leadProduct: {
-    fontFamily: 'Rubik',
-    fontSize: 14,
+  leadType: {
+    fontSize: 12 * scale,
+    fontWeight: '400',
     color: '#7D7D7D',
-    lineHeight: 17,
+    fontFamily: 'Rubik-Regular',
+    letterSpacing: 0.2,
   },
-  
-  leadStatusContainer: {
+  leadRight: {
     alignItems: 'flex-end',
+    flexShrink: 0,
+    minWidth: 120 * scale,
   },
-  
   leadDate: {
-    fontFamily: 'Rubik',
-    fontSize: 12,
-    color: '#7D7D7D',
-    lineHeight: 14,
-    marginBottom: 4,
+    fontSize: 12 * scale,
+    fontWeight: '400',
+    color: '#1A1B20',
+    fontFamily: 'Rubik-Regular',
+    marginBottom: 4 * scale,
   },
-  
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 4 * scale,
   },
-  
   statusText: {
-    fontFamily: 'Rubik',
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#10B981',
-    lineHeight: 14,
+    fontSize: 12 * scale,
+    fontWeight: '400',
+    color: '#38D552',
+    fontFamily: 'Rubik-Regular',
   },
-  
-  bottomNavContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  
-  bottomNav: {
-    flexDirection: 'row',
-    height: 60,
-    backgroundColor: '#FBFBFB',
-    borderTopWidth: 1,
-    borderColor: '#F0F0F0',
-    alignItems: 'center',
-    paddingBottom: 20,
-  },
-  
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  
-  navText: {
-    fontFamily: 'Rubik',
-    fontSize: 12,
-    color: '#7D7D7D',
-    lineHeight: 16,
-  },
-  
-  navTextActive: {
-    fontFamily: 'Rubik',
-    fontSize: 12,
-    color: '#1A1B20',
-    lineHeight: 16,
-  },
-  
-  addButton: {
-    position: 'absolute',
-    alignSelf: 'center',
-    top: -26,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#8F31F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#8F31F9',
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  
-  homeIndicator: {
-    height: 34,
-    backgroundColor: '#FBFBFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
-  homeIndicatorLine: {
-    width: 135,
-    height: 5,
-    backgroundColor: '#1A1B20',
-    borderRadius: 100,
+  separator: {
+    height: 1,
+    backgroundColor: 'rgba(125, 125, 125, 0.1)',
+    marginLeft: 58 * scale,
   },
 });
 

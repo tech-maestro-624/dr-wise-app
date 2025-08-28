@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     zIndex: 1,
     width: '100%',
-    backgroundColor: 'transparent', // Ensure no default background
+    backgroundColor: '#F6F5FD', // Ensure no default background
   },
   scrollContent: {
     paddingHorizontal: 20,

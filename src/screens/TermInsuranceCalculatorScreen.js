@@ -6,136 +6,90 @@ import {
   SafeAreaView,
   StatusBar,
   StyleSheet,
+  Dimensions,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const scale = Math.min(screenWidth / 375, screenHeight / 812);
+
 const TermInsuranceCalculatorScreen = ({ navigation, route }) => {
-  const [numberOfReferrals, setNumberOfReferrals] = useState(0);
+  const { serviceName, leadName } = route.params || {};
+  const [referralCount, setReferralCount] = useState(0);
   const [coins, setCoins] = useState(0);
 
-  const incrementReferrals = () => {
-    setNumberOfReferrals(prev => prev + 1);
+  const incrementReferral = () => {
+    setReferralCount(referralCount + 1);
   };
 
-  const decrementReferrals = () => {
-    if (numberOfReferrals > 0) {
-      setNumberOfReferrals(prev => prev - 1);
+  const decrementReferral = () => {
+    if (referralCount > 0) {
+      setReferralCount(referralCount - 1);
     }
   };
 
   const handleRedeem = () => {
     // Handle redeem functionality
-    console.log('Redeem coins:', coins);
+    console.log('Redeem pressed');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FBFBFB" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       
       {/* Background Gradient */}
       <LinearGradient
-        colors={['rgba(243, 236, 254, 1)', 'rgba(246, 246, 254, 1)']}
+        colors={['#F3ECFE', '#F6F6FE']}
         style={styles.backgroundGradient}
       />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#1A1B20" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Calculator</Text>
-        <View style={styles.headerSpacer} />
       </View>
 
       {/* Main Content */}
-      <View style={styles.mainContent}>
-        {/* 3D Icon */}
+      <View style={styles.mainContainer}>
+        {/* Term Insurance Icon */}
         <View style={styles.iconContainer}>
-          <View style={styles.calendarIcon}>
-            <View style={styles.calendarRings}>
-              <View style={styles.ring1} />
-              <View style={styles.ring2} />
-            </View>
-            <View style={styles.calendarBody}>
-              <View style={styles.calendarLines}>
-                <View style={styles.line1} />
-                <View style={styles.line2} />
-                <View style={styles.line3} />
-              </View>
-            </View>
-            <View style={styles.addButton}>
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-            </View>
-          </View>
+          <Image 
+            source={require('../../assets/Icons/TERM 1.png')}
+            style={styles.termIcon}
+            resizeMode="contain"
+          />
         </View>
 
-        {/* Service Title */}
-        <Text style={styles.serviceTitle}>Term Insurance</Text>
-        
+        {/* Term Insurance Title */}
+        <Text style={styles.termInsuranceTitle}>Term Insurance</Text>
+
         {/* Description */}
         <Text style={styles.description}>
-          Great You've selected Term Insurance Now add the members you want to include
+          Great You've selected Term Insurance Now{'\n'}add the members you want to include
         </Text>
 
         {/* Number of Referrals Section */}
         <View style={styles.referralsSection}>
-          <Text style={styles.sectionLabel}>Number of referrals</Text>
-          <View style={styles.referralsControl}>
-            <TouchableOpacity 
-              style={styles.controlButton} 
-              onPress={decrementReferrals}
-            >
-              <Ionicons name="remove" size={24} color="#FFFFFF" />
+          <Text style={styles.referralsLabel}>Number of referrals</Text>
+          <View style={styles.counterContainer}>
+            <TouchableOpacity style={[styles.counterButton, styles.leftButton]} onPress={decrementReferral}>
+              <Text style={styles.counterButtonText}>-</Text>
             </TouchableOpacity>
-            <View style={styles.numberDisplay}>
-              <Text style={styles.numberText}>
-                {numberOfReferrals.toString().padStart(2, '0')}
-              </Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.controlButton} 
-              onPress={incrementReferrals}
-            >
-              <Ionicons name="add" size={24} color="#FFFFFF" />
+            <Text style={styles.counterValue}>{referralCount.toString().padStart(2, '0')}</Text>
+            <TouchableOpacity style={[styles.counterButton, styles.rightButton]} onPress={incrementReferral}>
+              <Text style={styles.counterButtonText}>+</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Your Coins Section */}
-        <View style={styles.coinsSection}>
-          <Text style={styles.sectionLabel}>Your Coins</Text>
-          <Text style={styles.coinsAmount}>
-            {coins.toString().padStart(2, '0')}
-          </Text>
+        {/* Your Coins Card */}
+        <View style={styles.coinsCard}>
+          <Text style={styles.coinsLabel}>Your Coins</Text>
+          <Text style={styles.coinsValue}>{coins.toString().padStart(2, '0')}</Text>
           <TouchableOpacity style={styles.redeemButton} onPress={handleRedeem}>
             <Text style={styles.redeemButtonText}>Redeem</Text>
           </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <View style={styles.navItem}>
-          <Ionicons name="home" size={24} color="#8F31F9" />
-          <Text style={[styles.navText, { color: '#8F31F9' }]}>Home</Text>
-        </View>
-        <View style={styles.navItem}>
-          <Ionicons name="card" size={24} color="#7D7D7D" />
-          <Text style={styles.navText}>Credits</Text>
-        </View>
-        <View style={styles.navItem}>
-          <View style={styles.plusButton}>
-            <Ionicons name="add" size={24} color="#FBFBFB" />
-          </View>
-        </View>
-        <View style={styles.navItem}>
-          <Ionicons name="people" size={24} color="#7D7D7D" />
-          <Text style={styles.navText}>My Referral</Text>
-        </View>
-        <View style={styles.navItem}>
-          <Ionicons name="person" size={24} color="#7D7D7D" />
-          <Text style={styles.navText}>Profile</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -155,279 +109,169 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    paddingTop: 44,
-  },
-  backButton: {
-    padding: 4,
+    justifyContent: 'center',
+    paddingVertical: 15 * scale,
+    paddingTop: 44 * scale,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 24 * scale,
+    fontWeight: '700',
     color: '#1A1B20',
     fontFamily: 'Rubik',
   },
-  headerSpacer: {
-    width: 32,
-  },
-  mainContent: {
+  mainContainer: {
     flex: 1,
+    paddingHorizontal: 20 * scale,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingTop: 20 * scale,
   },
   iconContainer: {
-    marginBottom: 30,
-  },
-  calendarIcon: {
-    width: 120,
-    height: 120,
-    backgroundColor: '#8F31F9',
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  calendarRings: {
-    position: 'absolute',
-    top: -8,
-    left: '50%',
-    transform: [{ translateX: -15 }],
-  },
-  ring1: {
-    width: 30,
-    height: 8,
-    backgroundColor: '#C0C0C0',
-    borderRadius: 4,
-    marginBottom: 2,
-  },
-  ring2: {
-    width: 30,
-    height: 8,
-    backgroundColor: '#C0C0C0',
-    borderRadius: 4,
-  },
-  calendarBody: {
-    width: 80,
-    height: 60,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    justifyContent: 'center',
+    marginTop: 20 * scale,
+    marginBottom: 20 * scale,
     alignItems: 'center',
   },
-  calendarLines: {
-    width: 60,
-    gap: 4,
+  termIcon: {
+    width: 103 * scale,
+    height: 109 * scale,
   },
-  line1: {
-    width: '100%',
-    height: 2,
-    backgroundColor: '#E0E0E0',
-  },
-  line2: {
-    width: '80%',
-    height: 2,
-    backgroundColor: '#E0E0E0',
-  },
-  line3: {
-    width: '60%',
-    height: 2,
-    backgroundColor: '#E0E0E0',
-  },
-  addButton: {
-    position: 'absolute',
-    bottom: -10,
-    right: -10,
-    width: 30,
-    height: 30,
-    backgroundColor: '#4CAF50',
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#4CAF50',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  serviceTitle: {
-    fontSize: 28,
+  termInsuranceTitle: {
+    fontSize: 24 * scale,
     fontWeight: '700',
     color: '#1A1B20',
     fontFamily: 'Rubik',
-    marginBottom: 15,
+    lineHeight: 28 * scale,
     textAlign: 'center',
+    marginBottom: 7 * scale,
   },
   description: {
-    fontSize: 16,
-    color: '#7D7D7D',
-    fontFamily: 'Rubik',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 40,
-    paddingHorizontal: 20,
-  },
-  referralsSection: {
-    width: '100%',
-    marginBottom: 30,
-  },
-  sectionLabel: {
-    fontSize: 16,
-    color: '#7D7D7D',
-    fontFamily: 'Rubik',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  referralsControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 0,
-  },
-  controlButton: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#8F31F9',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  numberDisplay: {
-    width: 120,
-    height: 60,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  numberText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1A1B20',
-    fontFamily: 'Rubik',
-  },
-  coinsSection: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 25,
-    alignItems: 'center',
-    shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  coinsAmount: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1A1B20',
-    fontFamily: 'Rubik',
-    marginBottom: 20,
-  },
-  redeemButton: {
-    width: '100%',
-    height: 50,
-    backgroundColor: '#8F31F9',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  redeemButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: 'Rubik',
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#FBFBFB',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  navItem: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  navText: {
-    fontSize: 12,
+    fontSize: 14 * scale,
     fontWeight: '400',
     color: '#7D7D7D',
     fontFamily: 'Rubik',
+    lineHeight: 20 * scale,
+    textAlign: 'center',
+    letterSpacing: 0.2 * scale,
+    marginBottom: 110 * scale,
+    paddingHorizontal: 20 * scale,
   },
-  plusButton: {
-    backgroundColor: '#8F31F9',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  referralsSection: {
+    width: '100%',
+    alignItems: 'flex-start',
+    marginBottom: 30 * scale,
+  },
+  referralsLabel: {
+    fontSize: 14 * scale,
+    fontWeight: '400',
+    color: '#7D7D7D',
+    fontFamily: 'Rubik',
+    lineHeight: 17 * scale,
+    letterSpacing: 0.2 * scale,
+    marginBottom: 12 * scale,
+    marginLeft: 20 * scale,
+  },
+  counterContainer: {
+    backgroundColor: '#FBFBFB',
+    borderWidth:0,
+    borderColor: '#FFFFFF',
+    borderRadius: 15 * scale,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: 335 * scale,
+    height: 60 * scale,
+    shadowColor: '#8F31F9',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 10 * scale,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  counterButton: {
+    width: 69 * scale,
+    height: 60 * scale,
+    backgroundColor: 'rgba(143, 49, 249, 0.1)',
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leftButton: {
+    borderTopLeftRadius: 15 * scale,
+    borderBottomLeftRadius: 15 * scale,
+  },
+  rightButton: {
+    borderTopRightRadius: 15 * scale,
+    borderBottomRightRadius: 15 * scale,
+  },
+  counterButtonText: {
+    fontSize: 28 * scale,
+    fontWeight: '700',
+    color: '#8F31F9',
+    fontFamily: 'Rubik',
+  },
+  counterValue: {
+    fontSize: 22 * scale,
+    fontWeight: '700',
+    color: '#1A1B20',
+    fontFamily: 'Rubik',
+    lineHeight: 26 * scale,
+    textAlign: 'center',
+  },
+  coinsCard: {
+    backgroundColor: '#FBFBFB',
+    borderWidth: 1,
+    borderColor: '#FBFBFB',
+    borderRadius: 20 * scale,
+    paddingVertical: 20 * scale,
+    paddingHorizontal: 16 * scale,
+    width: 335 * scale,
+    height: 170 * scale,
     alignItems: 'center',
     shadowColor: '#8F31F9',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 0,
     },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 10 * scale,
+    elevation: 5,
+  },
+  coinsLabel: {
+    fontSize: 14 * scale,
+    fontWeight: '400',
+    color: '#7D7D7D',
+    fontFamily: 'Rubik',
+    lineHeight: 17 * scale,
+    textAlign: 'center',
+    letterSpacing: 0.2 * scale,
+    marginBottom: 4 * scale,
+  },
+  coinsValue: {
+    fontSize: 32 * scale,
+    fontWeight: '700',
+    color: '#1A1B20',
+    fontFamily: 'Rubik',
+    lineHeight: 38 * scale,
+    textAlign: 'center',
+    marginBottom: 24 * scale,
+  },
+  redeemButton: {
+    backgroundColor: '#8F31F9',
+    borderRadius: 8 * scale,
+    paddingVertical: 14 * scale,
+    paddingHorizontal: 16 * scale,
+    width: 303 * scale,
+    alignItems: 'center',
+  },
+  redeemButtonText: {
+    fontSize: 16 * scale,
+    fontWeight: '600',
+    color: '#FBFBFB',
+    fontFamily: 'Rubik',
+    lineHeight: 19 * scale,
+    letterSpacing: 0.2 * scale,
   },
 });
 

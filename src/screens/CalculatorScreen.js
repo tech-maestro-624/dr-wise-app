@@ -8,203 +8,186 @@ import {
   StatusBar,
   Dimensions,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const { width, height } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const scale = Math.min(screenWidth / 375, screenHeight / 812);
 
 const CalculatorScreen = ({ navigation, route }) => {
   const { leadName } = route.params || {};
-  const [selectedService, setSelectedService] = useState('Select Your Service');
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [showSubCategory, setShowSubCategory] = useState(null);
 
-  const insuranceServices = [
-    {
-      id: 1,
-      title: 'INSURANCE',
-      subServices: [
-        'Term Insurance',
-        'ULIPs',
-        'Children Plan',
-        'Retirement Plan',
-        'Savings Plan',
-        'Investment Plan',
-        'Endowment / Guranteed Plan',
-        'Income / Money back Plan',
-        'Whole Life Plan'
-      ]
-    },
-    {
-      id: 2,
-      title: 'INSURANCE',
-      subServices: [
-        'Term Insurance',
-        'ULIPs',
-        'Children Plan',
-        'Retirement Plan',
-        'Savings Plan',
-        'Investment Plan',
-        'Endowment / Guranteed Plan',
-        'Income / Money back Plan',
-        'Whole Life Plan'
-      ]
-    },
-    {
-      id: 3,
-      title: 'INSURANCE',
-      subServices: [
-        'Term Insurance',
-        'ULIPs',
-        'Children Plan',
-        'Retirement Plan',
-        'Savings Plan',
-        'Investment Plan',
-        'Endowment / Guranteed Plan',
-        'Income / Money back Plan',
-        'Whole Life Plan'
-      ]
-    },
-    {
-      id: 4,
-      title: 'INSURANCE',
-      subServices: [
-        'Term Insurance',
-        'ULIPs',
-        'Children Plan',
-        'Retirement Plan',
-        'Savings Plan',
-        'Investment Plan',
-        'Endowment / Guranteed Plan',
-        'Income / Money back Plan',
-        'Whole Life Plan'
-      ]
-    },
-    {
-      id: 5,
-      title: 'INSURANCE',
-      subServices: [
-        'Term Insurance',
-        'ULIPs',
-        'Children Plan',
-        'Retirement Plan',
-        'Savings Plan',
-        'Investment Plan',
-        'Endowment / Guranteed Plan',
-        'Income / Money back Plan',
-        'Whole Life Plan'
-      ]
-    }
+  const mainCategories = [
+    'INSURANCE',
+    'TAX', 
+    'INVESTMENTS',
+    'TRAVEL',
+    'LOAN'
   ];
 
-  const renderInsuranceCard = (service, index) => (
-    <View key={service.id} style={styles.insuranceCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardTitleContainer}>
-          <Text style={styles.cardTitle}>{service.title}</Text>
-        </View>
-        <TouchableOpacity style={styles.arrowButton}>
-          <Ionicons name="chevron-down" size={20} color="#1A1B20" />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.subServicesContainer}>
-        <View style={styles.subServicesList}>
-          {service.subServices.map((subService, subIndex) => (
-            <TouchableOpacity 
-              key={subIndex} 
-              style={styles.subServiceItem}
-              onPress={() => {
-                if (subService === 'Term Insurance') {
-                  navigation.navigate('TermInsuranceCalculator', { 
-                    serviceName: subService,
-                    leadName: leadName 
-                  });
-                }
-                // Add more service navigation logic here as needed
-              }}
-            >
-              <Text style={styles.subServiceText}>{subService}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    </View>
-  );
+  const subCategories = {
+    'INSURANCE': ['Travel', 'Health', 'Life', 'Motor', 'General'],
+    'TAX': ['Income Tax', 'GST', 'TDS', 'Property Tax'],
+    'INVESTMENTS': ['Mutual Funds', 'Stocks', 'Bonds', 'Real Estate'],
+    'TRAVEL': ['International', 'Domestic', 'Business', 'Leisure'],
+    'LOAN': ['Home Loan', 'Personal Loan', 'Business Loan', 'Education Loan']
+  };
+
+  const insurancePlans = [
+    'Term Insurance',
+    'ULIPs',
+    'Children Plan',
+    'Retirement Plan',
+    'Savings Plan',
+    'Investment Plan',
+    'Endowment / Guranteed Plan',
+    'Income / Money back Plan',
+    'Whole Life Plan'
+  ];
+
+  const handleCategorySelect = (category) => {
+    if (selectedCategory === category) {
+      setSelectedCategory(null);
+      setShowSubCategory(null);
+    } else {
+      setSelectedCategory(category);
+      setShowSubCategory(null);
+    }
+  };
+
+  const handleSubCategorySelect = (subCategory) => {
+    if (showSubCategory === subCategory) {
+      setShowSubCategory(null);
+    } else {
+      setShowSubCategory(subCategory);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FBFBFB" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Background Gradient */}
       <LinearGradient
-        colors={['rgba(243, 236, 254, 1)', 'rgba(246, 246, 254, 1)']}
+        colors={['#F3ECFE', '#F6F6FE']}
         style={styles.backgroundGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 0.5 }}
       />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#1A1B20" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Calculator</Text>
-        <View style={styles.headerSpacer} />
       </View>
 
-      {/* Lead Name Section */}
-      {leadName && (
-        <View style={styles.leadSection}>
-          <Text style={styles.leadName}>{leadName}</Text>
+      {/* Main Content */}
+      <ScrollView style={styles.mainContainer} showsVerticalScrollIndicator={false}>
+        {/* Service Selection Dropdown */}
+        <View style={styles.serviceSelectionContainer}>
+          <TouchableOpacity 
+            style={styles.serviceDropdown}
+            onPress={() => setShowServiceDropdown(!showServiceDropdown)}
+          >
+            <Text style={styles.serviceDropdownText}>Select Your Service</Text>
+            <View style={styles.chevronIcon}>
+              <Ionicons 
+                name={showServiceDropdown ? "chevron-up" : "chevron-down"} 
+                size={20} 
+                color="#1A1B20" 
+              />
+            </View>
+          </TouchableOpacity>
         </View>
-      )}
 
-      {/* Service Selection */}
-      <View style={styles.serviceSelectionContainer}>
-        <TouchableOpacity 
-          style={styles.serviceDropdown}
-          onPress={() => setShowServiceDropdown(!showServiceDropdown)}
-        >
-          <Text style={styles.serviceDropdownText}>{selectedService}</Text>
-          <Ionicons name="chevron-down" size={20} color="#1A1B20" />
-        </TouchableOpacity>
-      </View>
+        {/* Main Categories - Only show when service dropdown is clicked */}
+        {showServiceDropdown && (
+          <View style={styles.categoriesContainer}>
+            {mainCategories.map((category, index) => (
+              <View key={index} style={styles.categoryCard}>
+                <TouchableOpacity 
+                  style={[
+                    styles.categoryHeader,
+                    selectedCategory === category && styles.selectedCategoryHeader
+                  ]}
+                  onPress={() => handleCategorySelect(category)}
+                >
+                  <Text style={[
+                    styles.categoryTitle,
+                    selectedCategory === category && styles.selectedCategoryTitle
+                  ]}>
+                    {category}
+                  </Text>
+                  <View style={styles.chevronIcon}>
+                    <Ionicons 
+                      name={selectedCategory === category ? "chevron-up" : "chevron-down"} 
+                      size={20} 
+                      color={selectedCategory === category ? "#FBFBFB" : "#1A1B20"} 
+                    />
+                  </View>
+                </TouchableOpacity>
 
-      {/* Insurance Services */}
-      <ScrollView 
-        style={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={styles.servicesContainer}>
-          {insuranceServices.map((service, index) => 
-            renderInsuranceCard(service, index)
-          )}
-        </View>
-      </ScrollView>
+                {/* Sub Categories - Only show when category is selected */}
+                {selectedCategory === category && (
+                  <View style={styles.subCategoriesContainer}>
+                    {subCategories[category].map((subCategory, subIndex) => (
+                      <View key={subIndex} style={styles.subCategoryCard}>
+                        <TouchableOpacity 
+                          style={[
+                            styles.subCategoryHeader,
+                            showSubCategory === subCategory && styles.selectedSubCategoryHeader
+                          ]}
+                          onPress={() => handleSubCategorySelect(subCategory)}
+                        >
+                          <Text style={[
+                            styles.subCategoryTitle,
+                            showSubCategory === subCategory && styles.selectedSubCategoryTitle
+                          ]}>
+                            {subCategory}
+                          </Text>
+                          <View style={styles.chevronIcon}>
+                            <Ionicons 
+                              name={showSubCategory === subCategory ? "chevron-up" : "chevron-down"} 
+                              size={20} 
+                              color={showSubCategory === subCategory ? "#1A1B20" : "#1A1B20"} 
+                            />
+                          </View>
+                        </TouchableOpacity>
 
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <View style={styles.navItem}>
-          <Ionicons name="home" size={24} color="#8F31F9" />
-          <Text style={[styles.navText, { color: '#8F31F9' }]}>Home</Text>
-        </View>
-        <View style={styles.navItem}>
-          <Ionicons name="card" size={24} color="#7D7D7D" />
-          <Text style={styles.navText}>Credits</Text>
-        </View>
-        <View style={styles.navItem}>
-          <View style={styles.plusButton}>
-            <Ionicons name="add" size={24} color="#FBFBFB" />
+                        {/* Insurance Plans - Only show when Travel subcategory is selected under INSURANCE */}
+                        {category === 'INSURANCE' && subCategory === 'Travel' && showSubCategory === subCategory && (
+                          <View style={styles.plansContainer}>
+                            {insurancePlans.map((plan, planIndex) => (
+                              <TouchableOpacity 
+                                key={planIndex} 
+                                style={styles.planItem}
+                                                                 onPress={() => {
+                                   navigation.navigate('TermInsuranceCalculator', { 
+                                     serviceName: plan,
+                                     leadName: leadName 
+                                   });
+                                 }}
+                              >
+                                <Text style={styles.planText}>{plan}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
           </View>
-        </View>
-        <View style={styles.navItem}>
-          <Ionicons name="people" size={24} color="#7D7D7D" />
-          <Text style={styles.navText}>My Referral</Text>
-        </View>
-        <View style={styles.navItem}>
-          <Ionicons name="person" size={24} color="#7D7D7D" />
-          <Text style={styles.navText}>Profile</Text>
-        </View>
-      </View>
+        )}
+
+
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -212,7 +195,7 @@ const CalculatorScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FBFBFB',
+    backgroundColor: '#F3ECFE',
   },
   backgroundGradient: {
     position: 'absolute',
@@ -222,52 +205,34 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   header: {
-    flexDirection: 'row',
+    height: 80 * scale,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    paddingTop: 44,
-  },
-  backButton: {
-    padding: 4,
+    paddingTop: Platform.OS === 'ios' ? 44 : 0,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 24 * scale,
+    fontWeight: '700',
     color: '#1A1B20',
     fontFamily: 'Rubik',
+    lineHeight: 28 * scale,
+    textAlign: 'center',
   },
-  headerSpacer: {
-    width: 32,
-  },
-  leadSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  leadName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1A1B20',
-    fontFamily: 'Rubik',
+  mainContainer: {
+    flex: 1,
+    paddingHorizontal: 20 * scale,
+    paddingTop: 12 * scale,
   },
   serviceSelectionContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 10,
+    marginBottom: 20 * scale,
   },
   serviceDropdown: {
     backgroundColor: '#FBFBFB',
     borderWidth: 1,
     borderColor: '#FFFFFF',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
+    borderRadius: 10 * scale,
+    paddingHorizontal: 16 * scale,
+    paddingVertical: 15 * scale,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -277,121 +242,126 @@ const styles = StyleSheet.create({
       height: 0,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowRadius: 10 * scale,
     elevation: 5,
   },
   serviceDropdownText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 14 * scale,
+    fontWeight: '700',
     color: '#000000',
     fontFamily: 'Rubik',
+    lineHeight: 17 * scale,
+    letterSpacing: 0.2 * scale,
   },
-  scrollContainer: {
-    flex: 1,
+  chevronIcon: {
+    transform: [{ rotate: '0deg' }],
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  categoriesContainer: {
+    marginBottom: 20 * scale,
   },
-  servicesContainer: {
-    gap: 7,
-  },
-  insuranceCard: {
+  categoryCard: {
     backgroundColor: '#FBFBFB',
     borderWidth: 1,
     borderColor: '#FFFFFF',
-    borderRadius: 10,
+    borderRadius: 10 * scale,
+    marginBottom: 7 * scale,
     shadowColor: '#8F31F9',
     shadowOffset: {
       width: 0,
       height: 0,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowRadius: 10 * scale,
     elevation: 5,
+    overflow: 'hidden',
   },
-  cardHeader: {
+  categoryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 12 * scale,
+    paddingVertical: 8 * scale,
+    height: 45 * scale,
+    borderTopLeftRadius: 10 * scale,
+    borderTopRightRadius: 10 * scale,
   },
-  cardTitleContainer: {
-    flex: 1,
+  selectedCategoryHeader: {
+    backgroundColor: '#8F31F9',
   },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1A1B20',
-    fontFamily: 'Rubik',
-  },
-  arrowButton: {
-    padding: 4,
-  },
-  subServicesContainer: {
-    paddingHorizontal: 7,
-    paddingBottom: 10,
-  },
-  subServicesList: {
-    backgroundColor: 'rgba(150, 61, 251, 0.05)',
-    borderRadius: 10,
-    paddingVertical: 6,
-  },
-  subServiceItem: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  subServiceText: {
-    fontSize: 12.6,
-    fontWeight: '500',
+  categoryTitle: {
+    fontSize: 14 * scale,
+    fontWeight: '700',
     color: '#000000',
     fontFamily: 'Rubik',
+    lineHeight: 17 * scale,
+    letterSpacing: 0.195 * scale,
   },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+  selectedCategoryTitle: {
+    color: '#FBFBFB',
+  },
+  subCategoriesContainer: {
     backgroundColor: '#FBFBFB',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    paddingVertical: 6 * scale,
+  },
+  subCategoryCard: {
+    backgroundColor: '#FBFBFB',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    borderRadius: 10 * scale,
+    marginBottom: 7 * scale,
+    marginHorizontal: 7 * scale,
     shadowColor: '#8F31F9',
     shadowOffset: {
       width: 0,
-      height: -2,
+      height: 0,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
+    shadowRadius: 10 * scale,
+    elevation: 5,
   },
-  navItem: {
+  subCategoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 6,
+    paddingHorizontal: 12 * scale,
+    paddingVertical: 8 * scale,
+    height: 40 * scale,
   },
-  navText: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#7D7D7D',
+  selectedSubCategoryHeader: {
+    backgroundColor: '#FBFBFB',
+    borderRadius: 5 * scale,
+    marginHorizontal: 7 * scale,
+  },
+  subCategoryTitle: {
+    fontSize: 12.63 * scale,
+    fontWeight: '700',
+    color: '#000000',
     fontFamily: 'Rubik',
+    lineHeight: 15 * scale,
+    letterSpacing: 0.176 * scale,
   },
-  plusButton: {
-    backgroundColor: '#8F31F9',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
+  selectedSubCategoryTitle: {
+    fontWeight: '600',
   },
+  plansContainer: {
+    backgroundColor: 'rgba(150, 61, 251, 0.05)',
+    borderRadius: 10 * scale,
+    marginHorizontal: 7 * scale,
+    marginBottom: 6 * scale,
+  },
+  planItem: {
+    paddingHorizontal: 10 * scale,
+    paddingVertical: 6 * scale,
+  },
+  planText: {
+    fontSize: 12.63 * scale,
+    fontWeight: '700',
+    color: '#000000',
+    fontFamily: 'Rubik',
+    lineHeight: 15 * scale,
+    letterSpacing: 0.176 * scale,
+  },
+
 });
 
 export default CalculatorScreen;

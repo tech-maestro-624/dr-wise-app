@@ -43,7 +43,13 @@ const ProfileScreen = () => {
       "Are you sure you want to logout?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Logout", style: "destructive", onPress: () => console.log("User logged out") }
+        { text: "OK", style: "destructive", onPress: () => {
+          // Navigate back to login screen
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+        }}
       ]
     );
   };
