@@ -10,6 +10,7 @@ import {
   Image,
   Animated,
   Easing,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
@@ -131,12 +132,13 @@ const OnboardingFlowWithAllComponents = ({ navigation }) => {
       onNext={handleNext}
       onBack={handleBack}
       isLastScreen={currentScreenIndex === ONBOARDING_SCREENS.length - 1}
+      navigation={navigation}
     />
   );
 };
 
 
-const OnboardingContentScreenComponent = ({ onNext, onBack, currentIndex, isLastScreen }) => {
+const OnboardingContentScreenComponent = ({ onNext, onBack, currentIndex, isLastScreen, navigation }) => {
   const [content, setContent] = useState(ONBOARDING_SCREENS[currentIndex]);
   const [displayedImage, setDisplayedImage] = useState(ONBOARDING_SCREENS[currentIndex].image);
 
@@ -191,14 +193,14 @@ const OnboardingContentScreenComponent = ({ onNext, onBack, currentIndex, isLast
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       <LinearGradient colors={['#F3ECFE', '#F6F6FE']} locations={[0, 0.49]} style={styles.gradient}>
         <BackgroundDecoration opacity={0.8} showLogo={false} />
         <Image source={require('../../assets/Icons/onboardingVector.png')} style={styles.onboardingVectorPattern} resizeMode="cover" />
         <SafeAreaView style={styles.mainSafeArea}>
           <View style={styles.topNav}>
             <TouchableOpacity onPress={onBack} style={styles.navButton}><Ionicons name="chevron-back" size={24} color="#1A1B20" /></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.skipText}>Skip &gt;</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}><Text style={styles.skipText}>Skip &gt;</Text></TouchableOpacity>
           </View>
 
           {displayedImage && (
@@ -278,8 +280,15 @@ const styles = StyleSheet.create({
     tintColor: '#6B21A8', // Darker purple tint for better visibility
   },
   mainSafeArea: { flex: 1 },
-  topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 10, height: 44, zIndex: 10 },
-  navButton: { padding: 5 },
+  topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 25, height: 44, zIndex: 10 },
+  navButton: { 
+    width: 26,
+    height: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(150, 61, 251, 0.05)',
+    borderRadius: 4,
+  },
   skipText: { fontFamily: 'Rubik-Medium', fontSize: 16, color: '#1A1B20' },
   imageContainer: { position: 'absolute', top: 100, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', height: 400, zIndex: 0 },
   image: { width: '80%', height: '90%' }, // Base style for all images

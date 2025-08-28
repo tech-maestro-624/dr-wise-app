@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  SafeAreaView, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
   StatusBar,
   Image,
   ActivityIndicator,
@@ -13,9 +13,11 @@ import {
   Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as MediaLibrary from 'expo-media-library';
+
 import { colors } from '../../theme/tokens';
 
 export default function GovernmentIDScreen({ navigation, route }) {
@@ -23,11 +25,7 @@ export default function GovernmentIDScreen({ navigation, route }) {
   const [capturedImage, setCapturedImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [isCameraVisible, setIsCameraVisible] = useState(true); // Camera opens immediately
   const [permission, requestPermission] = useCameraPermissions();
-  const [facing, setFacing] = useState('back');
-  const [flash, setFlash] = useState('off');
-  const cameraRef = useRef(null);
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   // Request permissions when component mounts
@@ -49,114 +47,145 @@ export default function GovernmentIDScreen({ navigation, route }) {
     requestInitialPermissions();
   }, [permission]);
 
-  const toggleCameraFacing = () => {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  };
 
-  const toggleFlash = () => {
-    setFlash(current => (current === 'off' ? 'on' : 'off'));
-  };
 
-  const handleCapturePhoto = async () => {
-    if (!permission) {
-      // Request permission for the first time
-      const { granted } = await requestPermission();
-      if (!granted) {
-        Alert.alert(
-          'Camera Permission Required',
-          'Camera access is needed to capture your government ID. Please allow camera permission to continue.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Allow Permission', 
-              onPress: () => requestPermission()
-            }
-          ]
-        );
-        return;
+
+
+    const takePicture = async () => {
+    try {
+      setIsCapturing(true);
+
+      // Request camera permission if needed
+      if (!permission) {
+        const { granted } = await requestPermission();
+        if (!granted) {
+          Alert.alert('Camera Permission Required', 'Camera access is needed to capture your government ID.');
+          setIsCapturing(false);
+          return;
+        }
       }
-    }
-    
-    if (!permission.granted) {
-      const { granted } = await requestPermission();
-      if (!granted) {
-        Alert.alert(
-          'Camera Permission Required',
-          'Camera access is needed to capture your government ID. Please go to Settings > Privacy & Security > Camera and enable access for this app.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Try Again', 
-              onPress: () => requestPermission()
-            }
-          ]
-        );
-        return;
-      }
-    }
-    
-    setIsCameraVisible(true);
-  };
 
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      try {
-        setIsCapturing(true);
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.8,
-          base64: false,
-          exif: false,
-        });
-        
-        console.log('Photo captured:', photo.uri);
-        setIsCameraVisible(false);
-        await cropAndProcessImage(photo.uri);
-      } catch (error) {
-        console.error('Error taking picture:', error);
-        Alert.alert('Error', 'Failed to capture photo. Please try again.');
+      if (!permission.granted) {
+        const { granted } = await requestPermission();
+        if (!granted) {
+          Alert.alert('Camera Permission Required', 'Camera access is needed to capture your government ID.');
+          setIsCapturing(false);
+          return;
+        }
+      }
+
+      // Use Expo's built-in camera with cropping enabled
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: false,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        console.log('Photo captured and cropped:', result.assets[0].uri);
+        // Camera view not used anymore
+        setCapturedImage(result.assets[0].uri);
+        setIsCapturing(false);
+
+        // Start fade in animation
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      } else {
         setIsCapturing(false);
       }
+    } catch (error) {
+      console.error('Error taking picture:', error);
+      Alert.alert('Error', 'Failed to capture photo. Please try again.');
+      setIsCapturing(false);
     }
   };
 
-  const cropAndProcessImage = async (imageUri) => {
+  const cropAndProcessImage = async (imageUri, isFromCamera = false) => {
     try {
       setIsLoading(true);
-      
-      // First, resize the image to a manageable size
+
+      // First resize to manage large images
       const resizedImage = await ImageManipulator.manipulateAsync(
         imageUri,
-        [{ resize: { width: 1000 } }], // Resize to max width of 1000px
+        [{ resize: { width: 1200 } }],
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
       );
 
-      // For now, we'll use the resized image as final
-      // In a real app, you'd implement a crop UI here
-      const finalImage = await ImageManipulator.manipulateAsync(
-        resizedImage.uri,
-        [
-          // Add any additional manipulations like rotation if needed
-        ],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-      );
+      if (isFromCamera && !imageUri.includes('edited')) {
+        // For camera images that haven't been edited, apply smart cropping for document aspect ratio
+        const { width, height } = await getImageDimensions(resizedImage.uri);
+        const targetAspectRatio = 4 / 3; // Standard document aspect ratio
+        let cropWidth = width;
+        let cropHeight = height;
 
-      setCapturedImage(finalImage.uri);
+        if (width / height > targetAspectRatio) {
+          // Image is wider than target ratio, crop width
+          cropWidth = height * targetAspectRatio;
+        } else {
+          // Image is taller than target ratio, crop height
+          cropHeight = width / targetAspectRatio;
+        }
+
+        const cropX = (width - cropWidth) / 2;
+        const cropY = (height - cropHeight) / 2;
+
+        const croppedImage = await ImageManipulator.manipulateAsync(
+          resizedImage.uri,
+          [
+            {
+              crop: {
+                originX: cropX,
+                originY: cropY,
+                width: cropWidth,
+                height: cropHeight,
+              },
+            },
+          ],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+
+        setCapturedImage(croppedImage.uri);
+      } else {
+        // For gallery images or edited camera images, just resize and compress
+        const finalImage = await ImageManipulator.manipulateAsync(
+          resizedImage.uri,
+          [],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+
+        setCapturedImage(finalImage.uri);
+      }
+
       setIsCapturing(false);
       setIsLoading(false);
-      
+
       // Start fade in animation when image is processed
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
       }).start();
-      
+
     } catch (error) {
       console.error('Error processing image:', error);
       Alert.alert('Error', 'Failed to process image. Please try again.');
       setIsCapturing(false);
       setIsLoading(false);
     }
+  };
+
+  const getImageDimensions = (uri) => {
+    return new Promise((resolve) => {
+      Image.getSize(uri, (width, height) => {
+        resolve({ width, height });
+      }, () => {
+        resolve({ width: 800, height: 600 }); // fallback
+      });
+    });
   };
 
   const handleSubmit = () => {
@@ -185,26 +214,23 @@ export default function GovernmentIDScreen({ navigation, route }) {
     fadeAnim.setValue(0); // Reset animation
   };
 
-  const closeCameraView = () => {
-    setIsCameraVisible(false);
-    setIsCapturing(false);
-  };
+
 
   const handleUpload = async () => {
     try {
       // Request media library permission first
       let { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-      
+
       if (status !== 'granted') {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permission.status !== 'granted') {
           Alert.alert(
-            'Gallery Permission Required', 
+            'Gallery Permission Required',
             'Gallery access is needed to select photos from your device. Please go to Settings > Privacy & Security > Photos and enable access for this app.',
             [
               { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Try Again', 
+              {
+                text: 'Try Again',
                 onPress: () => handleUpload()
               }
             ]
@@ -215,7 +241,6 @@ export default function GovernmentIDScreen({ navigation, route }) {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -223,7 +248,7 @@ export default function GovernmentIDScreen({ navigation, route }) {
 
       if (!result.canceled && result.assets[0]) {
         setIsLoading(true);
-        await cropAndProcessImage(result.assets[0].uri);
+        await cropAndProcessImage(result.assets[0].uri, false); // false indicates it's from gallery
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -242,22 +267,17 @@ export default function GovernmentIDScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
       
       {/* Full Screen Camera View */}
-      <View style={styles.fullScreenCameraContainer}>
-        <View style={styles.cameraHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="#FFFFFF" />
+      <View style={styles.captureScreenContainer}>
+        {/* Header with back button */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
-          <Text style={styles.cameraTitle}>Aadhaar Card</Text>
-          <TouchableOpacity onPress={toggleFlash} style={styles.flashButton}>
-            <Ionicons 
-              name={flash === 'on' ? "flash" : "flash-off"} 
-              size={24} 
-              color="#FFFFFF" 
-            />
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Government ID</Text>
+          <View style={styles.headerSpacer} />
         </View>
         
         {/* Camera View or Captured Image */}
@@ -275,34 +295,33 @@ export default function GovernmentIDScreen({ navigation, route }) {
             
             {/* Action buttons for captured image */}
             <View style={styles.capturedImageActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.retakeButton}
                 onPress={() => setCapturedImage(null)}
               >
                 <Ionicons name="camera" size={24} color="#FFFFFF" />
                 <Text style={styles.actionButtonText}>Retake</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.submitButton}
                 onPress={() => {
-                  // Get existing completed steps and add current one
+                  // Image is already cropped from launchCameraAsync, proceed directly
                   const existingCompleted = route.params?.completedSteps || [];
                   const updatedCompleted = [...existingCompleted];
                   if (!updatedCompleted.includes('governmentId')) {
                     updatedCompleted.push('governmentId');
                   }
-                  
-                  // Navigate back with updated completion status
                   navigation.navigate('Verification', { completedSteps: updatedCompleted });
                 }}
               >
+                <Ionicons name="checkmark" size={24} color="#FFFFFF" />
                 <Text style={styles.submitButtonText}>Use Photo</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
-          <View style={styles.cameraViewContainer}>
+          <View style={styles.captureScreenContainer}>
             {!permission ? (
               <View style={styles.permissionContainer}>
                 <ActivityIndicator size="large" color="#8B5CF6" />
@@ -321,55 +340,47 @@ export default function GovernmentIDScreen({ navigation, route }) {
                 </TouchableOpacity>
               </View>
             ) : (
-              <CameraView
-                ref={cameraRef}
-                style={styles.camera}
-                facing={facing}
-                flash={flash}
-              >
-                <View style={styles.cameraOverlay}>
-                  {/* Text above the camera frame */}
-                  <View style={styles.instructionTextContainer}>
-                    <Text style={styles.frameText}>Front of card</Text>
-                    <Text style={styles.frameSubText}>Position all 4 corners of the front clearly in the frame</Text>
-                  </View>
-                  
-                  {/* Camera frame with corner brackets */}
-                  <View style={styles.cameraFrame}>
-                    <View style={[styles.cornerBracket, styles.topLeft]} />
-                    <View style={[styles.cornerBracket, styles.topRight]} />
-                    <View style={[styles.cornerBracket, styles.bottomLeft]} />
-                    <View style={[styles.cornerBracket, styles.bottomRight]} />
-                  </View>
-                  
-                  <View style={styles.cameraControls}>
-                    <View style={styles.cameraActionButtons}>
-                      <TouchableOpacity onPress={handleUpload} style={styles.galleryButton}>
-                        <Ionicons name="images" size={28} color="#FFFFFF" />
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity 
-                        style={[styles.captureButton, isCapturing && styles.disabledCaptureButton]}
-                        onPress={takePicture}
-                        disabled={isCapturing}
-                      >
-                        {isCapturing ? (
-                          <ActivityIndicator size="large" color="#8B5CF6" />
-                        ) : (
-                          <View style={styles.captureButtonInner} />
-                        )}
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity onPress={toggleCameraFacing} style={styles.cameraSwitchButton}>
-                        <Ionicons name="camera-reverse" size={28} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+              <View style={styles.captureInterface}>
+                {/* Instructions */}
+                <View style={styles.instructionsContainer}>
+                  <Ionicons name="camera" size={64} color="#8B5CF6" />
+                  <Text style={styles.instructionsTitle}>Take Government ID Photo</Text>
+                  <Text style={styles.instructionsText}>
+                    Make sure all 4 corners of your ID card are visible and the text is clear
+                  </Text>
                 </View>
-              </CameraView>
+
+                {/* Action Buttons */}
+                <View style={styles.captureActions}>
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={handleUpload}
+                  >
+                    <Ionicons name="images" size={24} color="#8B5CF6" />
+                    <Text style={styles.uploadButtonText}>Upload from Gallery</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.cameraCaptureButton, isCapturing && styles.disabledCaptureButton]}
+                    onPress={takePicture}
+                    disabled={isCapturing}
+                  >
+                    {isCapturing ? (
+                      <ActivityIndicator size="large" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="camera" size={32} color="#FFFFFF" />
+                        <Text style={styles.cameraCaptureText}>Take Photo</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
             )}
           </View>
         )}
+
+
       </View>
     </SafeAreaView>
   );
@@ -378,145 +389,111 @@ export default function GovernmentIDScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#F8F9FA',
   },
-  fullScreenCameraContainer: {
-    flex: 1,
-  },
-  cameraHeader: {
+
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === 'ios' ? 10 : 20,
     paddingBottom: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    zIndex: 1000,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
   },
-  closeButton: {
+  backButton: {
     padding: 8,
   },
-  cameraTitle: {
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  captureScreenContainer: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  captureInterface: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  instructionsContainer: {
+    alignItems: 'center',
+    marginBottom: 60,
+  },
+  instructionsTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginTop: 20,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  instructionsText: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  captureActions: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  uploadButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8B5CF6',
+    marginLeft: 12,
+  },
+  cameraCaptureButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 32,
+    paddingVertical: 20,
+    borderRadius: 16,
+    shadowColor: '#8B5CF6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cameraCaptureText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
+    marginLeft: 12,
   },
-  flashButton: {
-    padding: 8,
-  },
-  cameraViewContainer: {
-    flex: 1,
-  },
-  camera: {
-    flex: 1,
-  },
-  cameraOverlay: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingTop: 40,
-    paddingBottom: 40,
-  },
-  instructionTextContainer: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  cameraFrame: {
-    flex: 1,
-    marginHorizontal: 40,
-    marginVertical: 40,
-    position: 'relative',
-  },
-  frameText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  frameSubText: {
-    fontSize: 14,
-    color: '#CCCCCC',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  cornerBracket: {
-    position: 'absolute',
-    width: 30,
-    height: 30,
-    borderColor: '#8B5CF6',
-    borderWidth: 4,
-  },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderBottomWidth: 0,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderTopWidth: 0,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
-  },
-  cameraControls: {
-    alignItems: 'center',
-    paddingBottom: 20,
-  },
-  cameraActionButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 60,
-    width: '100%',
-  },
-  galleryButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  captureButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  disabledCaptureButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  captureButtonInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
-  },
-  cameraSwitchButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
   permissionContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -578,11 +555,12 @@ const styles = StyleSheet.create({
   retakeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
     paddingVertical: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 25,
   },
+
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
@@ -590,14 +568,19 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   submitButton: {
-    paddingHorizontal: 40,
-    paddingVertical: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     backgroundColor: '#8B5CF6',
     borderRadius: 25,
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
+
+
 });

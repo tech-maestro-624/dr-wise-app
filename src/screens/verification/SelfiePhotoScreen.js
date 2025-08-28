@@ -13,7 +13,7 @@ import {
   Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { colors } from '../../theme/tokens';
@@ -24,9 +24,6 @@ export default function SelfiePhotoScreen({ navigation, route }) {
   const [isLoading, setIsLoading] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
-  const [facing, setFacing] = useState('front'); // Start with front camera for selfie
-  const [flash, setFlash] = useState('off');
-  const cameraRef = useRef(null);
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   // Request permissions when component mounts
@@ -48,141 +45,87 @@ export default function SelfiePhotoScreen({ navigation, route }) {
     requestInitialPermissions();
   }, [permission]);
 
-  const toggleCameraFacing = () => {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  };
-
-  const toggleFlash = () => {
-    setFlash(current => (current === 'off' ? 'on' : 'off'));
-  };
-
-  const handleCapturePhoto = async () => {
-    if (!permission) {
-      // Request permission for the first time
-      const { granted } = await requestPermission();
-      if (!granted) {
-        Alert.alert(
-          'Camera Permission Required',
-          'Camera access is needed to take your selfie photo. Please allow camera permission to continue.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Allow Permission', 
-              onPress: () => requestPermission()
-            }
-          ]
-        );
-        return;
-      }
-    }
-
-    if (!permission.granted) {
-      const { granted } = await requestPermission();
-      if (!granted) {
-        Alert.alert(
-          'Camera Permission Required',
-          'Camera access is needed to take your selfie photo. Please go to Settings > Privacy & Security > Camera and enable access for this app.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Try Again', 
-              onPress: () => requestPermission()
-            }
-          ]
-        );
-        return;
-      }
-    }
-
-    setIsCapturing(true);
-  };
-
   const takePicture = async () => {
-    if (!cameraRef.current || isCapturing) return;
-
     try {
       setIsCapturing(true);
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.8,
-        base64: false,
-        skipProcessing: false,
-      });
 
-      if (photo) {
-        await cropAndProcessImage(photo.uri);
-      }
-    } catch (error) {
-      console.error('Error taking picture:', error);
-      Alert.alert('Error', 'Failed to capture photo. Please try again.');
-      setIsCapturing(false);
-    }
-  };
-
-  const cropAndProcessImage = async (imageUri) => {
-    try {
-      setIsLoading(true);
-      
-      // For selfie, we want a square crop focused on the center
-      const manipResult = await ImageManipulator.manipulateAsync(
-        imageUri,
-        [
-          { resize: { width: 800, height: 800 } }, // Square format for selfie
-        ],
-        { 
-          compress: 0.8, 
-          format: ImageManipulator.SaveFormat.JPEG 
-        }
-      );
-      
-      setCapturedImage(manipResult.uri);
-      setIsLoading(false);
-      setIsCapturing(false);
-    } catch (error) {
-      console.error('Error processing image:', error);
-      Alert.alert('Error', 'Failed to process image. Please try again.');
-      setIsLoading(false);
-      setIsCapturing(false);
-    }
-  };
-
-  const handleUpload = async () => {
-    try {
-      // Request media library permission first
-      let { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (permission.status !== 'granted') {
-          Alert.alert(
-            'Gallery Permission Required', 
-            'Gallery access is needed to select photos from your device. Please go to Settings > Privacy & Security > Photos and enable access for this app.',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Try Again', 
-                onPress: () => handleUpload()
-              }
-            ]
-          );
+      // Request camera permission if needed
+      if (!permission) {
+        const { granted } = await requestPermission();
+        if (!granted) {
+          Alert.alert('Camera Permission Required', 'Camera access is needed to take your selfie photo.');
+          setIsCapturing(false);
           return;
         }
-        status = permission.status;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1], // Square aspect ratio for selfie
-        quality: 0.8,
-      });
+      if (!permission.granted) {
+        const { granted } = await requestPermission();
+        if (!granted) {
+          Alert.alert('Camera Permission Required', 'Camera access is needed to take your selfie photo.');
+          setIsCapturing(false);
+          return;
+        }
+      }
 
-      if (!result.canceled && result.assets[0]) {
-        setIsLoading(true);
-        await cropAndProcessImage(result.assets[0].uri);
+      // Use Expo's built-in camera with cropping enabled - FRONT CAMERA for selfies
+      console.log('Opening camera for selfie...');
+
+      // Check if front camera is available
+      try {
+        const result = await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          aspect: [1, 1], // Square aspect ratio for selfies
+          quality: 0.8,
+          base64: false,
+          exif: false,
+          // Try multiple ways to specify front camera
+          cameraType: ImagePicker.CameraType?.FRONT || 'front',
+        });
+        console.log('Camera result:', result);
+
+        if (!result.canceled && result.assets[0]) {
+          console.log('Selfie captured and cropped:', result.assets[0].uri);
+          setCapturedImage(result.assets[0].uri);
+          setIsCapturing(false);
+
+          // Start fade in animation
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start();
+        } else {
+          setIsCapturing(false);
+        }
+      } catch (error) {
+        console.error('Camera error:', error);
+        // Fallback: Try without specifying camera type
+        console.log('Trying fallback camera...');
+        try {
+          const fallbackResult = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+            base64: false,
+            exif: false,
+          });
+
+          if (!fallbackResult.canceled && fallbackResult.assets[0]) {
+            console.log('Fallback selfie captured:', fallbackResult.assets[0].uri);
+            setCapturedImage(fallbackResult.assets[0].uri);
+          }
+          setIsCapturing(false);
+        } catch (fallbackError) {
+          console.error('Fallback camera also failed:', fallbackError);
+          Alert.alert('Camera Error', 'Unable to open camera. Please check permissions.');
+          setIsCapturing(false);
+        }
       }
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to select image. Please try again.');
+      console.error('Error taking selfie:', error);
+      Alert.alert('Error', 'Failed to take selfie. Please try again.');
+      setIsCapturing(false);
     }
   };
 
@@ -195,24 +138,81 @@ export default function SelfiePhotoScreen({ navigation, route }) {
     }).start();
   };
 
+  const handleUpload = async () => {
+    try {
+      // Request media library permission first
+      let { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+
+      if (status !== 'granted') {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permission.status !== 'granted') {
+          Alert.alert(
+            'Gallery Permission Required',
+            'Gallery access is needed to select photos from your device. Please go to Settings > Privacy & Security > Photos and enable access for this app.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Try Again',
+                onPress: () => handleUpload()
+              }
+            ]
+          );
+          return;
+        }
+        status = permission.status;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1], // Square aspect ratio for selfie
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setIsLoading(true);
+        // For gallery images, they're already cropped by the picker
+        // Just process and display
+        await processGalleryImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
+    }
+  };
+
+  const processGalleryImage = async (imageUri) => {
+    try {
+      // For gallery images (already cropped), just resize and compress
+      const processedImage = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [
+          { resize: { width: 400, height: 400 } }
+        ],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      setCapturedImage(processedImage.uri);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error processing gallery image:', error);
+      Alert.alert('Error', 'Failed to process image. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
-      
-      {/* Full Screen Camera View */}
-      <View style={styles.fullScreenCameraContainer}>
-        <View style={styles.cameraHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="#FFFFFF" />
+
+      {/* Clean Capture Interface */}
+      <View style={styles.captureScreenContainer}>
+        {/* Header with back button */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
-          <Text style={styles.cameraTitle}>Selfie Photo</Text>
-          <TouchableOpacity onPress={toggleFlash} style={styles.flashButton}>
-            <Ionicons 
-              name={flash === 'on' ? "flash" : "flash-off"} 
-              size={24} 
-              color="#FFFFFF" 
-            />
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Selfie Photo</Text>
+          <View style={styles.headerSpacer} />
         </View>
         
         {/* Camera View or Captured Image */}
@@ -227,18 +227,18 @@ export default function SelfiePhotoScreen({ navigation, route }) {
               onLoad={handleImageLoad}
               resizeMode="contain"
             />
-            
+
             {/* Action buttons for captured image */}
             <View style={styles.capturedImageActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.retakeButton}
                 onPress={() => setCapturedImage(null)}
               >
                 <Ionicons name="camera" size={24} color="#FFFFFF" />
                 <Text style={styles.actionButtonText}>Retake</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.submitButton}
                 onPress={() => {
                   // Get existing completed steps and add current one
@@ -247,17 +247,18 @@ export default function SelfiePhotoScreen({ navigation, route }) {
                   if (!updatedCompleted.includes('selfiePhoto')) {
                     updatedCompleted.push('selfiePhoto');
                   }
-                  
+
                   // Navigate back with updated completion status
                   navigation.navigate('Verification', { completedSteps: updatedCompleted });
                 }}
               >
+                <Ionicons name="checkmark" size={24} color="#FFFFFF" />
                 <Text style={styles.submitButtonText}>Use Photo</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
-          <View style={styles.cameraViewContainer}>
+          <View style={styles.captureScreenContainer}>
             {!permission ? (
               <View style={styles.permissionContainer}>
                 <ActivityIndicator size="large" color="#8B5CF6" />
@@ -276,49 +277,43 @@ export default function SelfiePhotoScreen({ navigation, route }) {
                 </TouchableOpacity>
               </View>
             ) : (
-              <CameraView
-                ref={cameraRef}
-                style={styles.camera}
-                facing={facing}
-                flash={flash}
-              >
-                <View style={styles.cameraOverlay}>
-                  {/* Text above the camera frame */}
-                  <View style={styles.instructionTextContainer}>
-                    <Text style={styles.frameText}>Take your selfie</Text>
-                    <Text style={styles.frameSubText}>Position your face clearly in the circle</Text>
-                  </View>
-                  
-                  {/* Selfie frame with circle */}
-                  <View style={styles.selfieFrame}>
-                    <View style={styles.selfieCircle} />
-                  </View>
-                  
-                  <View style={styles.cameraControls}>
-                    <View style={styles.cameraActionButtons}>
-                      <TouchableOpacity onPress={handleUpload} style={styles.galleryButton}>
-                        <Ionicons name="images" size={28} color="#FFFFFF" />
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity 
-                        style={[styles.captureButton, isCapturing && styles.disabledCaptureButton]}
-                        onPress={takePicture}
-                        disabled={isCapturing}
-                      >
-                        {isCapturing ? (
-                          <ActivityIndicator size="large" color="#8B5CF6" />
-                        ) : (
-                          <View style={styles.captureButtonInner} />
-                        )}
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity onPress={toggleCameraFacing} style={styles.cameraSwitchButton}>
-                        <Ionicons name="camera-reverse" size={28} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+              <View style={styles.captureInterface}>
+                {/* Instructions */}
+                <View style={styles.instructionsContainer}>
+                  <Ionicons name="camera" size={64} color="#8B5CF6" />
+                  <Text style={styles.instructionsTitle}>Take Your Selfie</Text>
+                  <Text style={styles.instructionsText}>
+                    Make sure your face is clearly visible and well-lit for identity verification
+                  </Text>
                 </View>
-              </CameraView>
+
+                {/* Action Buttons */}
+                <View style={styles.captureActions}>
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={handleUpload}
+                  >
+                    <Ionicons name="images" size={24} color="#8B5CF6" />
+                    <Text style={styles.uploadButtonText}>Upload from Gallery</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.cameraCaptureButton, isCapturing && styles.disabledCaptureButton]}
+                    onPress={takePicture}
+                    disabled={isCapturing}
+                  >
+                    {isCapturing ? (
+                      <ActivityIndicator size="large" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="camera" size={32} color="#FFFFFF" />
+                        <Text style={styles.cameraCaptureText}>Take Selfie</Text>
+                        <Text style={styles.cameraCaptureSubtext}>Front Camera (Auto)</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
             )}
           </View>
         )}
@@ -330,7 +325,162 @@ export default function SelfiePhotoScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  captureScreenContainer: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 10 : 20,
+    paddingBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  captureInterface: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  instructionsContainer: {
+    alignItems: 'center',
+    marginBottom: 60,
+  },
+  instructionsTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginTop: 20,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  instructionsText: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  captureActions: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  uploadButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8B5CF6',
+    marginLeft: 12,
+  },
+  cameraCaptureButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 32,
+    paddingVertical: 20,
+    borderRadius: 16,
+    shadowColor: '#8B5CF6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cameraCaptureText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 12,
+  },
+  cameraCaptureSubtext: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginLeft: 12,
+  },
+  capturedImageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#000000',
+  },
+  capturedImage: {
+    width: '90%',
+    height: '70%',
+    borderRadius: 12,
+  },
+  capturedImageActions: {
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 40,
+  },
+  retakeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 25,
+  },
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#8B5CF6',
+    borderRadius: 25,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   fullScreenCameraContainer: {
     flex: 1,
@@ -359,11 +509,19 @@ const styles = StyleSheet.create({
   cameraViewContainer: {
     flex: 1,
   },
+  cameraContainer: {
+    flex: 1,
+    position: 'relative',
+  },
   camera: {
     flex: 1,
   },
   cameraOverlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'space-between',
     paddingTop: 40,
     paddingBottom: 40,
@@ -380,12 +538,71 @@ const styles = StyleSheet.create({
     marginHorizontal: 40,
     marginVertical: 40,
   },
+  overlayBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '30%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  overlayBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '30%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  overlayMiddle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: '40%',
+    width: '100%',
+  },
+  overlayLeft: {
+    flex: 1,
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  overlayRight: {
+    flex: 1,
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
   selfieCircle: {
     width: 280,
     height: 280,
     borderRadius: 140,
-    borderWidth: 4,
+    borderWidth: 3,
     borderColor: '#8B5CF6',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  selfieCircleInner: {
+    width: 270,
+    height: 270,
+    borderRadius: 135,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
     backgroundColor: 'transparent',
   },
   frameText: {
@@ -490,6 +707,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#000000',
+  },
+  circularImageContainer: {
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    overflow: 'hidden',
+    borderWidth: 4,
+    borderColor: '#8B5CF6',
+    shadowColor: '#8B5CF6',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 15,
+  },
+  capturedCircularImage: {
+    width: '100%',
+    height: '100%',
   },
   capturedImage: {
     width: '90%',

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -13,7 +13,9 @@ import {
   Animated, 
   Platform,
   FlatList,
-  Easing
+  Easing,
+  UIManager,
+  LayoutAnimation
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -102,6 +104,14 @@ const HomeScreen = () => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const sliderRef = useRef(null);
   
+  // Enable layout animations for iOS
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      UIManager.setLayoutAnimationEnabledExperimental && 
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
+  
   // Animation values for insurance items
   const generalAnimatedValue = useRef(new Animated.Value(0)).current;
   const travelAnimatedValue = useRef(new Animated.Value(0)).current;
@@ -131,32 +141,46 @@ const HomeScreen = () => {
   }).current;
 
   const toggleInsuranceExpansion = () => {
+    // Configure layout animation for smoother transitions on iOS
+    if (Platform.OS === 'ios') {
+      LayoutAnimation.configureNext({
+        duration: 600,
+        create: {
+          type: LayoutAnimation.Types.easeOut,
+          property: LayoutAnimation.Properties.opacity,
+        },
+        update: {
+          type: LayoutAnimation.Types.easeOut,
+        },
+      });
+    }
+    
     if (!isInsuranceExpanded) {
       // Expand animation
       setIsInsuranceExpanded(true);
       
-      // Animate container height
+      // Animate container height with platform-specific timing
       Animated.timing(insuranceHeightAnimated, {
         toValue: 1,
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
+        duration: Platform.OS === 'ios' ? 650 : 600,
+        easing: Platform.OS === 'ios' ? Easing.out(Easing.ease) : Easing.out(Easing.cubic),
         useNativeDriver: false,
       }).start();
       
-      // Animate General item from top-right
+      // Animate General item with improved iOS compatibility
       Animated.timing(generalAnimatedValue, {
         toValue: 1,
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
+        duration: Platform.OS === 'ios' ? 650 : 600,
+        easing: Platform.OS === 'ios' ? Easing.out(Easing.ease) : Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
       
-      // Animate Travel item from top-right with slight delay
+      // Animate Travel item with platform-specific delay
       Animated.timing(travelAnimatedValue, {
         toValue: 1,
-        duration: 600,
-        delay: 50,
-        easing: Easing.out(Easing.cubic),
+        duration: Platform.OS === 'ios' ? 650 : 600,
+        delay: Platform.OS === 'ios' ? 75 : 50,
+        easing: Platform.OS === 'ios' ? Easing.out(Easing.ease) : Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
     } else {
@@ -164,21 +188,21 @@ const HomeScreen = () => {
       Animated.parallel([
         Animated.timing(insuranceHeightAnimated, {
           toValue: 0,
-          duration: 400,
-          easing: Easing.in(Easing.cubic),
+          duration: Platform.OS === 'ios' ? 450 : 400,
+          easing: Platform.OS === 'ios' ? Easing.in(Easing.ease) : Easing.in(Easing.cubic),
           useNativeDriver: false,
         }),
         Animated.timing(generalAnimatedValue, {
           toValue: 0,
-          duration: 400,
-          easing: Easing.in(Easing.cubic),
+          duration: Platform.OS === 'ios' ? 450 : 400,
+          easing: Platform.OS === 'ios' ? Easing.in(Easing.ease) : Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(travelAnimatedValue, {
           toValue: 0,
-          duration: 400,
-          delay: 50,
-          easing: Easing.in(Easing.cubic),
+          duration: Platform.OS === 'ios' ? 450 : 400,
+          delay: Platform.OS === 'ios' ? 75 : 50,
+          easing: Platform.OS === 'ios' ? Easing.in(Easing.ease) : Easing.in(Easing.cubic),
           useNativeDriver: true,
         })
       ]).start(() => {
@@ -188,83 +212,103 @@ const HomeScreen = () => {
   };
 
   const toggleInvestmentExpansion = () => {
+    // Configure layout animation for iOS
+    if (Platform.OS === 'ios') {
+      LayoutAnimation.configureNext({
+        duration: 700,
+        create: {
+          type: LayoutAnimation.Types.easeOut,
+          property: LayoutAnimation.Properties.opacity,
+        },
+        update: {
+          type: LayoutAnimation.Types.easeOut,
+        },
+      });
+    }
+    
     if (!isInvestmentExpanded) {
       // Expand animation
       setIsInvestmentExpanded(true);
       
-      // Animate container height
+      // Animate container height with platform optimization
       Animated.timing(investmentHeightAnimated, {
         toValue: 1,
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
+        duration: Platform.OS === 'ios' ? 700 : 600,
+        easing: Platform.OS === 'ios' ? Easing.out(Easing.ease) : Easing.out(Easing.cubic),
         useNativeDriver: false,
       }).start();
       
-      // Animate items from top-right with staggered delays
+      // Animate items with platform-specific timing
+      const animationDuration = Platform.OS === 'ios' ? 700 : 600;
+      const easing = Platform.OS === 'ios' ? Easing.out(Easing.ease) : Easing.out(Easing.cubic);
+      
       Animated.timing(goldAnimatedValue, {
         toValue: 1,
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
+        duration: animationDuration,
+        easing,
         useNativeDriver: true,
       }).start();
       
       Animated.timing(bondAnimatedValue, {
         toValue: 1,
-        duration: 600,
-        delay: 100,
-        easing: Easing.out(Easing.cubic),
+        duration: animationDuration,
+        delay: Platform.OS === 'ios' ? 120 : 100,
+        easing,
         useNativeDriver: true,
       }).start();
       
       Animated.timing(fixedAnimatedValue, {
         toValue: 1,
-        duration: 600,
-        delay: 200,
-        easing: Easing.out(Easing.cubic),
+        duration: animationDuration,
+        delay: Platform.OS === 'ios' ? 240 : 200,
+        easing,
         useNativeDriver: true,
       }).start();
       
       Animated.timing(mutualFundAnimatedValue, {
         toValue: 1,
-        duration: 600,
-        delay: 300,
-        easing: Easing.out(Easing.cubic),
+        duration: animationDuration,
+        delay: Platform.OS === 'ios' ? 360 : 300,
+        easing,
         useNativeDriver: true,
       }).start();
     } else {
       // Collapse animation
+      const collapseEasing = Platform.OS === 'ios' ? Easing.in(Easing.ease) : Easing.in(Easing.cubic);
+      const collapseDuration = Platform.OS === 'ios' ? 450 : 400;
+      
       Animated.parallel([
         Animated.timing(investmentHeightAnimated, {
           toValue: 0,
-          duration: 400,
-          easing: Easing.in(Easing.cubic),
+          duration: collapseDuration,
+          easing: collapseEasing,
           useNativeDriver: false,
         }),
         Animated.timing(goldAnimatedValue, {
           toValue: 0,
-          duration: 400,
-          easing: Easing.in(Easing.cubic),
+          duration: collapseDuration,
+          easing: collapseEasing,
           useNativeDriver: true,
         }),
         Animated.timing(bondAnimatedValue, {
           toValue: 0,
-          duration: 400,
-          delay: 50,
-          easing: Easing.in(Easing.cubic),
+          duration: collapseDuration,
+          delay: Platform.OS === 'ios' ? 60 : 50,
+          easing: collapseEasing,
           useNativeDriver: true,
         }),
         Animated.timing(fixedAnimatedValue, {
           toValue: 0,
-          duration: 400,
-          delay: 100,
-          easing: Easing.in(Easing.cubic),
+          duration: collapseDuration,
+          delay: Platform.OS === 'ios' ? 120 : 100,
+          easing: collapseEasing,
           useNativeDriver: true,
         }),
         Animated.timing(mutualFundAnimatedValue, {
           toValue: 0,
-          duration: 400,
-          delay: 150,
-          easing: Easing.in(Easing.cubic),
+          duration: collapseDuration,
+          delay: Platform.OS === 'ios' ? 180 : 150,
+          easing: collapseEasing,
           useNativeDriver: true,
         })
       ]).start(() => {
@@ -274,38 +318,55 @@ const HomeScreen = () => {
   };
 
   const toggleLoansExpansion = () => {
+    // Configure layout animation for iOS
+    if (Platform.OS === 'ios') {
+      LayoutAnimation.configureNext({
+        duration: 600,
+        create: {
+          type: LayoutAnimation.Types.easeOut,
+          property: LayoutAnimation.Properties.opacity,
+        },
+        update: {
+          type: LayoutAnimation.Types.easeOut,
+        },
+      });
+    }
+    
     if (!isLoansExpanded) {
       // Expand animation
       setIsLoansExpanded(true);
       
-      // Animate container height
+      // Animate container height with platform optimization
       Animated.timing(loansHeightAnimated, {
         toValue: 1,
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
+        duration: Platform.OS === 'ios' ? 650 : 600,
+        easing: Platform.OS === 'ios' ? Easing.out(Easing.ease) : Easing.out(Easing.cubic),
         useNativeDriver: false,
       }).start();
       
-      // Animate only Home Loan from top-right
+      // Animate Business Loan item
       Animated.timing(homeLoanAnimatedValue, {
         toValue: 1,
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
+        duration: Platform.OS === 'ios' ? 650 : 600,
+        easing: Platform.OS === 'ios' ? Easing.out(Easing.ease) : Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
     } else {
       // Collapse animation
+      const collapseEasing = Platform.OS === 'ios' ? Easing.in(Easing.ease) : Easing.in(Easing.cubic);
+      const collapseDuration = Platform.OS === 'ios' ? 450 : 400;
+      
       Animated.parallel([
         Animated.timing(loansHeightAnimated, {
           toValue: 0,
-          duration: 400,
-          easing: Easing.in(Easing.cubic),
+          duration: collapseDuration,
+          easing: collapseEasing,
           useNativeDriver: false,
         }),
         Animated.timing(homeLoanAnimatedValue, {
           toValue: 0,
-          duration: 400,
-          easing: Easing.in(Easing.cubic),
+          duration: collapseDuration,
+          easing: collapseEasing,
           useNativeDriver: true,
         })
       ]).start(() => {
@@ -602,8 +663,7 @@ const HomeScreen = () => {
                 {isInsuranceExpanded && (
                   <>
                     {/* General Card */}
-                    <AnimatedLinearGradient
-                      colors={['#FBFBFB', '#E6FFF1']}
+                    <Animated.View
                       style={[
                         styles.insuranceItem,
                         {
@@ -611,45 +671,49 @@ const HomeScreen = () => {
                             {
                               translateX: generalAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [200, 0], // Start from right
+                                outputRange: Platform.OS === 'ios' ? [150, 0] : [200, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               translateY: generalAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [-100, 0], // Start from top
+                                outputRange: Platform.OS === 'ios' ? [-80, 0] : [-100, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               scale: generalAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [0.3, 1], // Scale up
+                                outputRange: Platform.OS === 'ios' ? [0.5, 1] : [0.3, 1],
+                                extrapolate: 'clamp',
                               }),
                             },
                           ],
-                          opacity: generalAnimatedValue,
+                          opacity: generalAnimatedValue.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 1],
+                            extrapolate: 'clamp',
+                          }),
                         }
                       ]}
                     >
-                      <TouchableOpacity 
-                        onPress={() => handleCategoryPress('General')} 
-                        style={styles.categoryTouchable}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.itemTitle}>General</Text>
-                        <View style={styles.insuranceIconContainer}>
-                          <Image 
-                            source={require('../../assets/Icons/generalInsurance.png')} 
-                            style={styles.insuranceIcon}
-                            resizeMode="contain"
-                          />
-                        </View>
-                      </TouchableOpacity>
-                    </AnimatedLinearGradient>
+                      <LinearGradient
+                        colors={['#FBFBFB', '#E6FFF1']}
+                        style={StyleSheet.absoluteFillObject}
+                      />
+                      <Text style={styles.itemTitle}>General</Text>
+                      <View style={styles.insuranceIconContainer}>
+                        <Image 
+                          source={require('../../assets/Icons/generalInsurance.png')} 
+                          style={styles.insuranceIcon}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    </Animated.View>
 
                     {/* Travel Card */}
-                    <AnimatedLinearGradient
-                      colors={['#FBFBFB', '#E6FFF1']}
+                    <Animated.View
                       style={[
                         styles.insuranceItem,
                         {
@@ -657,26 +721,37 @@ const HomeScreen = () => {
                             {
                               translateX: travelAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [200, 0], // Start from right
+                                outputRange: Platform.OS === 'ios' ? [150, 0] : [200, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               translateY: travelAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [-100, 0], // Start from top
+                                outputRange: Platform.OS === 'ios' ? [-80, 0] : [-100, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               scale: travelAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [0.3, 1], // Scale up
+                                outputRange: Platform.OS === 'ios' ? [0.5, 1] : [0.3, 1],
+                                extrapolate: 'clamp',
                               }),
                             },
                           ],
-                          opacity: travelAnimatedValue,
+                          opacity: travelAnimatedValue.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 1],
+                            extrapolate: 'clamp',
+                          }),
                         }
                       ]}
                     >
+                      <LinearGradient
+                        colors={['#FBFBFB', '#E6FFF1']}
+                        style={StyleSheet.absoluteFillObject}
+                      />
                       <Text style={styles.itemTitle}>Travel</Text>
                       <View style={styles.insuranceIconContainer}>
                         <Image 
@@ -685,7 +760,7 @@ const HomeScreen = () => {
                           resizeMode="contain"
                         />
                       </View>
-                    </AnimatedLinearGradient>
+                    </Animated.View>
                   </>
                 )}
               </Animated.View>
@@ -877,8 +952,7 @@ const HomeScreen = () => {
                 {isInvestmentExpanded && (
                   <>
                     {/* Gold Card */}
-                    <AnimatedLinearGradient
-                      colors={['#FBFBFB', '#FFF4E6']}
+                    <Animated.View
                       style={[
                         styles.investmentItem,
                         {
@@ -886,26 +960,37 @@ const HomeScreen = () => {
                             {
                               translateX: goldAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [200, 0],
+                                outputRange: Platform.OS === 'ios' ? [150, 0] : [200, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               translateY: goldAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [-100, 0],
+                                outputRange: Platform.OS === 'ios' ? [-80, 0] : [-100, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               scale: goldAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [0.3, 1],
+                                outputRange: Platform.OS === 'ios' ? [0.5, 1] : [0.3, 1],
+                                extrapolate: 'clamp',
                               }),
                             },
                           ],
-                          opacity: goldAnimatedValue,
+                          opacity: goldAnimatedValue.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 1],
+                            extrapolate: 'clamp',
+                          }),
                         }
                       ]}
                     >
+                      <LinearGradient
+                        colors={['#FBFBFB', '#FFF4E6']}
+                        style={StyleSheet.absoluteFillObject}
+                      />
                       <Text style={styles.itemTitle}>Gold</Text>
                       <View style={styles.investmentIconContainer}>
                         <Image 
@@ -914,11 +999,10 @@ const HomeScreen = () => {
                           resizeMode="contain"
                         />
                       </View>
-                    </AnimatedLinearGradient>
+                    </Animated.View>
 
                     {/* LAS Card */}
-                    <AnimatedLinearGradient
-                      colors={['#FBFBFB', '#FFF4E6']}
+                    <Animated.View
                       style={[
                         styles.investmentItem,
                         {
@@ -926,26 +1010,37 @@ const HomeScreen = () => {
                             {
                               translateX: bondAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [200, 0],
+                                outputRange: Platform.OS === 'ios' ? [150, 0] : [200, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               translateY: bondAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [-100, 0],
+                                outputRange: Platform.OS === 'ios' ? [-80, 0] : [-100, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               scale: bondAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [0.3, 1],
+                                outputRange: Platform.OS === 'ios' ? [0.5, 1] : [0.3, 1],
+                                extrapolate: 'clamp',
                               }),
                             },
                           ],
-                          opacity: bondAnimatedValue,
+                          opacity: bondAnimatedValue.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 1],
+                            extrapolate: 'clamp',
+                          }),
                         }
                       ]}
                     >
+                      <LinearGradient
+                        colors={['#FBFBFB', '#FFF4E6']}
+                        style={StyleSheet.absoluteFillObject}
+                      />
                       <Text style={styles.itemTitle}>LAS</Text>
                       <View style={styles.investmentIconContainer}>
                         <Image 
@@ -954,11 +1049,10 @@ const HomeScreen = () => {
                           resizeMode="contain"
                         />
                       </View>
-                    </AnimatedLinearGradient>
+                    </Animated.View>
 
                     {/* NPS Card */}
-                    <AnimatedLinearGradient
-                      colors={['#FBFBFB', '#FFF4E6']}
+                    <Animated.View
                       style={[
                         styles.investmentItem,
                         {
@@ -966,26 +1060,37 @@ const HomeScreen = () => {
                             {
                               translateX: fixedAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [200, 0],
+                                outputRange: Platform.OS === 'ios' ? [150, 0] : [200, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               translateY: fixedAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [-100, 0],
+                                outputRange: Platform.OS === 'ios' ? [-80, 0] : [-100, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               scale: fixedAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [0.3, 1],
+                                outputRange: Platform.OS === 'ios' ? [0.5, 1] : [0.3, 1],
+                                extrapolate: 'clamp',
                               }),
                             },
                           ],
-                          opacity: fixedAnimatedValue,
+                          opacity: fixedAnimatedValue.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 1],
+                            extrapolate: 'clamp',
+                          }),
                         }
                       ]}
                     >
+                      <LinearGradient
+                        colors={['#FBFBFB', '#FFF4E6']}
+                        style={StyleSheet.absoluteFillObject}
+                      />
                       <Text style={styles.itemTitle}>NPS</Text>
                       <View style={styles.investmentIconContainer}>
                         <Image 
@@ -994,11 +1099,10 @@ const HomeScreen = () => {
                           resizeMode="contain"
                         />
                       </View>
-                    </AnimatedLinearGradient>
+                    </Animated.View>
 
                     {/* Trading Card */}
-                    <AnimatedLinearGradient
-                      colors={['#FBFBFB', '#FFF4E6']}
+                    <Animated.View
                       style={[
                         styles.investmentItem,
                         {
@@ -1006,26 +1110,37 @@ const HomeScreen = () => {
                             {
                               translateX: mutualFundAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [200, 0],
+                                outputRange: Platform.OS === 'ios' ? [150, 0] : [200, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               translateY: mutualFundAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [-100, 0],
+                                outputRange: Platform.OS === 'ios' ? [-80, 0] : [-100, 0],
+                                extrapolate: 'clamp',
                               }),
                             },
                             {
                               scale: mutualFundAnimatedValue.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [0.3, 1],
+                                outputRange: Platform.OS === 'ios' ? [0.5, 1] : [0.3, 1],
+                                extrapolate: 'clamp',
                               }),
                             },
                           ],
-                          opacity: mutualFundAnimatedValue,
+                          opacity: mutualFundAnimatedValue.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 1],
+                            extrapolate: 'clamp',
+                          }),
                         }
                       ]}
                     >
+                      <LinearGradient
+                        colors={['#FBFBFB', '#FFF4E6']}
+                        style={StyleSheet.absoluteFillObject}
+                      />
                       <Text style={styles.itemTitle}>Trading</Text>
                       <View style={styles.investmentIconContainer}>
                         <Image 
@@ -1034,7 +1149,7 @@ const HomeScreen = () => {
                           resizeMode="contain"
                         />
                       </View>
-                    </AnimatedLinearGradient>
+                    </Animated.View>
                   </>
                 )}
               </Animated.View>
@@ -1167,8 +1282,7 @@ const HomeScreen = () => {
                 {/* Animated additional item - only visible when expanded */}
                 {isLoansExpanded && (
                   /* Business Loan Card */
-                  <AnimatedLinearGradient
-                    colors={['#FBFBFB', '#FCE4EC']}
+                  <Animated.View
                     style={[
                       styles.loanItem,
                       {
@@ -1176,26 +1290,37 @@ const HomeScreen = () => {
                           {
                             translateX: homeLoanAnimatedValue.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [200, 0],
+                              outputRange: Platform.OS === 'ios' ? [150, 0] : [200, 0],
+                              extrapolate: 'clamp',
                             }),
                           },
                           {
                             translateY: homeLoanAnimatedValue.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [-100, 0],
+                              outputRange: Platform.OS === 'ios' ? [-80, 0] : [-100, 0],
+                              extrapolate: 'clamp',
                             }),
                           },
                           {
                             scale: homeLoanAnimatedValue.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [0.3, 1],
+                              outputRange: Platform.OS === 'ios' ? [0.5, 1] : [0.3, 1],
+                              extrapolate: 'clamp',
                             }),
                           },
                         ],
-                        opacity: homeLoanAnimatedValue,
+                        opacity: homeLoanAnimatedValue.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 1],
+                          extrapolate: 'clamp',
+                        }),
                       }
                     ]}
                   >
+                    <LinearGradient
+                      colors={['#FBFBFB', '#FCE4EC']}
+                      style={StyleSheet.absoluteFillObject}
+                    />
                     <Text style={styles.itemTitle}>Business Loan</Text>
                     <View style={styles.loanIconContainer}>
                       <Image 
@@ -1204,7 +1329,7 @@ const HomeScreen = () => {
                         resizeMode="contain"
                       />
                     </View>
-                  </AnimatedLinearGradient>
+                  </Animated.View>
                 )}
               </Animated.View>
 
@@ -2273,6 +2398,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: 'transparent',
     zIndex: 10,
+  },
+  categoryTouchable: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'flex-start',
   },
 });
 
