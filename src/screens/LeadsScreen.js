@@ -50,7 +50,7 @@ const leadsData = [
     type: 'Gold Investments',
     date: '25-03-2025, 10:43 PM',
     status: 'Converted',
-    icon: require('../../assets/Icons/profile-avatar-social-media-icon-3d 1.png'),
+    icon: require('../../assets/Icons/Group 9167 (2).png'),
   },
   {
     id: 5,
@@ -62,8 +62,8 @@ const leadsData = [
   },
 ];
 
-const LeadItem = ({ lead }) => (
-  <View style={styles.leadItem}>
+const LeadItem = ({ lead, onPress }) => (
+  <TouchableOpacity style={styles.leadItem} onPress={onPress} activeOpacity={0.7}>
     <View style={styles.leadIconContainer}>
       <Image 
         source={lead.icon}
@@ -84,7 +84,7 @@ const LeadItem = ({ lead }) => (
         <Ionicons name="checkmark-circle" size={16} color="#38D552" />
       </View>
     </View>
-  </View>
+  </TouchableOpacity>
 );
 
 const LeadsScreen = () => {
@@ -124,7 +124,10 @@ const LeadsScreen = () => {
         >
           {leadsData.map((lead, index) => (
             <View key={lead.id}>
-              <LeadItem lead={lead} />
+              <LeadItem 
+                lead={lead} 
+                onPress={() => navigation.navigate('Main', { screen: 'Home', params: { screen: 'Calculator' } })}
+              />
               {index < leadsData.length - 1 && <View style={styles.separator} />}
             </View>
           ))}
