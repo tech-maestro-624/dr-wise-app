@@ -12,38 +12,20 @@ const CategoryModal = ({ visible, onClose, category, subCategory, subCategoryIma
   // If we have subcategory info, use that; otherwise fall back to category
   const displayName = subCategory?.name || category;
   const displayDescription = subCategory?.description || 'Share services you trust and get paid for every referral';
-  const navigationCategory = subCategory ? subCategory : category;
-  const displayImage = subCategoryImage;
+  const displayImage = subCategoryImage || subCategory?.image;
 
   if (!displayName) return null;
 
   const handleViewCategories = () => {
     onClose();
-
-    // Debug: Log what we're passing
-    console.log('CategoryModal - subCategory:', subCategory);
-    console.log('CategoryModal - navigationCategory:', navigationCategory);
-
-    // If we have subcategory data, pass the correct parameters
-    if (subCategory && subCategory._id) {
-      console.log('CategoryModal - Navigating with subcategory data:', {
-        subCatId: subCategory._id,
-        categoryId: subCategory.parentCategory?._id || subCategory.categoryId,
-        name: subCategory.name
-      });
+    // Pass subcategory data if available, otherwise pass category
+    if (subCategory) {
       navigation.navigate('Categories', {
-        subCatId: subCategory._id,
-        categoryId: subCategory.parentCategory?._id || subCategory.categoryId,
-        name: subCategory.name
+        subCategory: subCategory,
+        categoryName: category
       });
     } else {
-      // Fallback for category string
-      console.log('CategoryModal - No subcategory data, using fallback');
-      navigation.navigate('Categories', {
-        subCatId: null,
-        categoryId: null,
-        name: navigationCategory
-      });
+      navigation.navigate('Categories', { category: category });
     }
   };
 

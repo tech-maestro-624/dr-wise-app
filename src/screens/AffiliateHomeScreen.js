@@ -1,19 +1,21 @@
-import React, { useRef, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  ScrollView, 
-  TouchableOpacity, 
-  StatusBar, 
-  TextInput, 
-  Dimensions, 
-  Image, 
-  Animated, 
+import React, { useRef, useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+  TextInput,
+  Dimensions,
+  Image,
+  Animated,
   Platform,
   FlatList,
-  Easing
+  Easing,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +23,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radii, type } from '../theme/tokens';
 import BottomBar from '../components/BottomBar';
 import CategoryModal from '../components/CategoryModal';
+import { getAffiliates } from '../api/affiliate';
+import { useAuth } from '../context/AuthContext';
 
 const { width: W } = Dimensions.get('window');
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
@@ -67,7 +71,11 @@ const affiliatesData = [
 
 const AffiliateHomeScreen = () => {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [affiliates, setAffiliates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const sliderRef = useRef(null);
@@ -81,6 +89,33 @@ const AffiliateHomeScreen = () => {
       setCurrentSlide(viewableItems[0].index);
     }
   }).current;
+
+  // Fetch affiliates data
+  const fetchAffiliates = async () => {
+    try {
+      setLoading(true);
+      const response = await getAffiliates();
+      if (response.data && response.data.affiliates) {
+        setAffiliates(response.data.affiliates);
+      }
+    } catch (error) {
+      console.error('Error fetching affiliates:', error);
+      Alert.alert('Error', 'Failed to load affiliates data');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Handle refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchAffiliates();
+  };
+
+  useEffect(() => {
+    fetchAffiliates();
+  }, []);
 
   const renderSliderCard = ({ item, index }) => (
     <View style={styles.heroCard}>
@@ -111,15 +146,18 @@ const AffiliateHomeScreen = () => {
   );
 
   const renderAffiliateItem = (affiliate, index) => (
-    <TouchableOpacity 
-      key={affiliate.id} 
+    <TouchableOpacity
+      key={affiliate._id || affiliate.id}
       style={styles.affiliateItem}
-      onPress={() => navigation.navigate('Leads', { affiliateName: affiliate.name })}
+      onPress={() => navigation.navigate('Leads', {
+        affiliateId: affiliate._id || affiliate.id,
+        affiliateName: affiliate.name
+      })}
       activeOpacity={0.7}
     >
       <View style={styles.affiliateContent}>
         <View style={styles.affiliateAvatar}>
-          <Image 
+          <Image
             source={require('../../assets/Icons/profile-avatar.png')}
             style={styles.avatarImage}
             resizeMode="contain"
@@ -127,14 +165,16 @@ const AffiliateHomeScreen = () => {
         </View>
         <View style={styles.affiliateInfo}>
           <Text style={styles.affiliateName}>{affiliate.name}</Text>
-          <Text style={styles.affiliatePhone}>{affiliate.phone}</Text>
+          <Text style={styles.affiliatePhone}>{affiliate.phoneNumber || affiliate.phone || 'N/A'}</Text>
         </View>
         <View style={styles.affiliateRight}>
-          <Text style={styles.affiliateDate}>{affiliate.date}</Text>
+          <Text style={styles.affiliateDate}>
+            {affiliate.createdAt ? new Date(affiliate.createdAt).toLocaleDateString() : 'N/A'}
+          </Text>
           <Ionicons name="chevron-forward" size={16} color="#1A1B20" />
         </View>
       </View>
-      {index < affiliatesData.length - 1 && <View style={styles.separator} />}
+      {index < affiliates.length - 1 && <View style={styles.separator} />}
     </TouchableOpacity>
   );
 
@@ -218,9 +258,20 @@ const AffiliateHomeScreen = () => {
         {/* Your Affiliates Section */}
         <View style={styles.affiliatesSection}>
           <Text style={styles.affiliatesTitle}>Your Affiliates</Text>
-          <View style={styles.affiliatesList}>
-            {affiliatesData.map((a, i) => renderAffiliateItem(a, i))}
-          </View>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#8F31F9" />
+              <Text style={styles.loadingText}>Loading affiliates...</Text>
+            </View>
+          ) : affiliates.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No affiliates found</Text>
+            </View>
+          ) : (
+            <View style={styles.affiliatesList}>
+              {affiliates.map((a, i) => renderAffiliateItem(a, i))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -476,6 +527,29 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(125, 125, 125, 0.1)',
     width: '100%',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#7D7D7D',
+    fontFamily: 'Rubik-Regular',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#7D7D7D',
+    fontFamily: 'Rubik-Regular',
   },
 });
 

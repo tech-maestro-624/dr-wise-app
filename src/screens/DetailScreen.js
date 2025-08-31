@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,70 +7,17 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getProductById } from '../api/product';
-import Toast from 'react-native-toast-message';
 import { Colors, Typography, Spacing, BorderRadius, CommonStyles, Shadows } from '../constants/designSystem';
 
 const DetailScreen = ({ route, navigation }) => {
-  const { product } = route.params || {};
-  const [productDetails, setProductDetails] = useState(product || null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const { title, categoryName } = route.params || {};
+  const displayTitle = title || categoryName || 'Details';
 
-  const displayTitle = productDetails?.name || product?.name || 'Product Details';
-
-  // Fetch product details if we only have the ID
-  const fetchProductDetails = async () => {
-    if (!product || !product._id || productDetails) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      console.log('Fetching product details for:', product._id);
-
-      const response = await getProductById(product._id);
-      console.log('Product details response:', response.data);
-
-      if (response.data) {
-        setProductDetails(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching product details:', error);
-      setError('Failed to load product details');
-      Toast.show({
-        type: 'error',
-        text1: 'Failed to load product details',
-        text2: error?.response?.data?.message || 'Please try again',
-        position: 'bottom',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProductDetails();
-  }, [product]);
-
-  // Get product content from API data
+  // Sample detail content based on the category
   const getDetailContent = () => {
-    if (!productDetails) return null;
-
-    // Use actual product data from API
-    return {
-      description: productDetails.description || 'Product description not available',
-      features: productDetails.benefits || productDetails.features || [],
-      benefits: productDetails.benefits || [],
-      category: productDetails.categoryId?.name || 'General',
-    };
-  };
-
-  // Fallback content for static display
-  const getFallbackContent = () => {
     const content = {
       'Mutual Fund': {
         description: 'Invest in professionally managed mutual funds to diversify your portfolio and achieve long-term financial goals.',
@@ -145,40 +92,6 @@ const DetailScreen = ({ route, navigation }) => {
   };
 
   const detailContent = getDetailContent();
-
-  // Loading state
-  if (loading) {
-    return (
-      <SafeAreaView style={[CommonStyles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#8F31F9" />
-        <Text style={{ marginTop: 16, fontSize: 16, color: '#7D7D7D' }}>Loading product details...</Text>
-      </SafeAreaView>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <SafeAreaView style={[CommonStyles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ fontSize: 16, color: '#7D7D7D', textAlign: 'center', marginBottom: 20 }}>{error}</Text>
-        <TouchableOpacity
-          style={{ backgroundColor: '#8F31F9', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
-          onPress={fetchProductDetails}
-        >
-          <Text style={{ color: '#FFFFFF', fontSize: 16 }}>Retry</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
-  // No content available
-  if (!detailContent) {
-    return (
-      <SafeAreaView style={[CommonStyles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ fontSize: 16, color: '#7D7D7D', textAlign: 'center' }}>Product details not available</Text>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={CommonStyles.safeArea}>

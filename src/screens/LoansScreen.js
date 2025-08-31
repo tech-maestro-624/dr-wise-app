@@ -1,232 +1,128 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Platform, Dimensions, ActivityIndicator } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import CategoryModal from '../components/CategoryModal';
-import { getCategories } from '../api/categorys';
 import { getSubCategories } from '../api/subCategories';
+import { getCategories } from '../api/categorys';
 import Toast from 'react-native-toast-message';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import global from '../Utils/global';
 
-// --- Data for the Loan Categories ---
-const loanCategories = [
-  { name: 'Home Loan', icon: require('../../assets/Icons/propertyLoans.png') },
-  { name: 'Personal Loans', icon: require('../../assets/Icons/personalLoans.png') },
-  { name: 'Mortgage Loans', icon: require('../../assets/Icons/loansSection.png') },
-  { name: 'Business Loans', icon: require('../../assets/Icons/businessLoans.png') },
-];
+// Default icons mapping for subcategories
+const getSubCategoryIcon = (subCategoryName) => {
+  const name = subCategoryName?.toLowerCase() || '';
+  if (name.includes('home')) return require('../../assets/Icons/propertyLoans.png');
+  if (name.includes('personal')) return require('../../assets/Icons/personalLoans.png');
+  if (name.includes('mortgage')) return require('../../assets/Icons/loansSection.png');
+  if (name.includes('business')) return require('../../assets/Icons/businessLoans.png');
+  return require('../../assets/Icons/propertyLoans.png'); // default
+};
 
 const LoansScreen = () => {
   const navigation = useNavigation();
   const { width: screenWidth } = Dimensions.get('window');
 
-  // State for category modal
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedSubCategoryData, setSelectedSubCategoryData] = useState(null);
-  const [selectedSubCategoryImage, setSelectedSubCategoryImage] = useState(null);
-
-  // Dynamic data state
-  const [categories, setCategories] = useState([]);
+  // State for subcategories
   const [subCategories, setSubCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
+  // State for category modal
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedSubCategory, setSelectedSubCategory] = useState(null);
+
   // Calculate responsive card width
   const cardWidth = Math.min(156.61, (screenWidth - 60) / 2); // 60 = padding + gap
   const gap = 19.78;
 
-  // Fetch categories and subcategories
-  const fetchAllCategories = useCallback(async () => {
-    try {
-      const resp = await getCategories();
-      console.log('LoansScreen - Categories full response:', resp);
-      console.log('LoansScreen - Categories data:', resp.data);
-      console.log('LoansScreen - Categories data type:', typeof resp.data);
-      console.log('LoansScreen - Categories data keys:', resp.data ? Object.keys(resp.data) : 'null');
+  // Fetch loan subcategories on component mount
+  useEffect(() => {
+    const fetchLoanSubCategories = async () => {
+      try {
+        setLoading(true);
+        console.log('Fetching categories...');
 
-      let categoriesData = [];
-      if (resp.data?.data && Array.isArray(resp.data.data)) {
-        categoriesData = resp.data.data;
-      } else if (resp.data && Array.isArray(resp.data)) {
-        categoriesData = resp.data;
-      } else if (resp.data?.categories && Array.isArray(resp.data.categories)) {
-        categoriesData = resp.data.categories;
-      }
+        // First, get all categories to find the Loan category
+        const categoriesResponse = await getCategories();
+        console.log('Categories API response:', categoriesResponse);
 
-      console.log('LoansScreen - Final categories data:', categoriesData);
-
-      // Check if categories contain subcategories
-      categoriesData.forEach(cat => {
-        console.log(`LoansScreen - Category ${cat.name}:`, cat);
-        if (cat.subcategories || cat.subCategories) {
-          console.log(`LoansScreen - Category ${cat.name} has subcategories:`, cat.subcategories || cat.subCategories);
-        }
-      });
-
-      setCategories(categoriesData);
-    } catch (error) {
-      console.error('LoansScreen - Error fetching categories:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error fetching categories',
-        text2: error?.response?.data?.message || 'Please try again',
-        position: 'bottom',
-      });
-    }
-  }, []);
-
-  const fetchAllSubCategories = useCallback(async () => {
-    try {
-      console.log('LoansScreen - Calling getSubCategories with different approaches');
-
-      // Check if token exists
-      const token = await AsyncStorage.getItem('token');
-      console.log('LoansScreen - Token exists:', !!token);
-      console.log('LoansScreen - Token value:', token ? token.substring(0, 20) + '...' : 'null');
-
-      // First try without parameters
-      console.log('LoansScreen - Attempt 1: No parameters');
-      console.log('LoansScreen - Base URL from global:', global.baseURL);
-      console.log('LoansScreen - Full URL would be:', `${global.baseURL}/subcategory`);
-      const resp1 = await getSubCategories();
-      console.log('LoansScreen - Response 1:', resp1);
-      console.log('LoansScreen - Response 1 status:', resp1.status);
-      console.log('LoansScreen - Response 1 data:', resp1.data);
-
-      // Check if we got data
-      if (resp1.data && (Array.isArray(resp1.data) || resp1.data.data)) {
-        let subCategoriesData = [];
-        if (resp1.data?.data && Array.isArray(resp1.data.data)) {
-          subCategoriesData = resp1.data.data;
-        } else if (resp1.data && Array.isArray(resp1.data)) {
-          subCategoriesData = resp1.data;
+        let categoriesData = [];
+        if (categoriesResponse.data) {
+          if (categoriesResponse.data.data && Array.isArray(categoriesResponse.data.data)) {
+            categoriesData = categoriesResponse.data.data;
+          } else if (Array.isArray(categoriesResponse.data)) {
+            categoriesData = categoriesResponse.data;
+          }
         }
 
-        console.log('LoansScreen - Found data in attempt 1:', subCategoriesData);
-        if (subCategoriesData.length > 0) {
-          setSubCategories(subCategoriesData);
+        console.log('Parsed categories:', categoriesData);
+
+        // Find the Loan category
+        const loanCategory = categoriesData.find(cat =>
+          cat.name?.toLowerCase().includes('loan') ||
+          cat.name?.toLowerCase().includes('loans')
+        );
+
+        if (!loanCategory) {
+          console.log('Loan category not found');
+          setSubCategories([]);
           return;
         }
-      }
 
-      // Try with different pagination parameters
-      console.log('LoansScreen - Attempt 2: With pagination');
-      const resp2 = await getSubCategories({ page: 1, limit: 1000 });
-      console.log('LoansScreen - Response 2:', resp2);
-      console.log('LoansScreen - Response 2 data:', resp2.data);
+        console.log('Found Loan category:', loanCategory);
 
-      // Try different response structures for second attempt
-      let subCategoriesData = [];
-      if (resp2.data?.data && Array.isArray(resp2.data.data)) {
-        subCategoriesData = resp2.data.data;
-      } else if (resp2.data && Array.isArray(resp2.data)) {
-        subCategoriesData = resp2.data;
-      }
+        // Now fetch subcategories with parent category filter
+        console.log('Fetching loan subcategories for category ID:', loanCategory._id);
+        const subCategoriesResponse = await getSubCategories({
+          condition: JSON.stringify({ parentCategory: loanCategory._id })
+        });
 
-      console.log('LoansScreen - Final subcategories data:', subCategoriesData);
-      console.log('LoansScreen - Final subcategories length:', subCategoriesData.length);
-      setSubCategories(subCategoriesData);
+        console.log('Subcategories API response:', subCategoriesResponse);
+        console.log('Subcategories response data:', subCategoriesResponse.data);
 
-    } catch (error) {
-      console.error('LoansScreen - Error fetching subcategories:', error);
-      console.error('LoansScreen - Error response:', error.response);
-      console.error('LoansScreen - Error status:', error.response?.status);
-      console.error('LoansScreen - Error message:', error.message);
+        // Handle backend response structure: { success: true, data: [...], pagination: {...} }
+        let subCategoriesData = [];
+        if (subCategoriesResponse.data) {
+          // Primary structure from backend
+          if (subCategoriesResponse.data.data && Array.isArray(subCategoriesResponse.data.data)) {
+            subCategoriesData = subCategoriesResponse.data.data;
+          } else if (Array.isArray(subCategoriesResponse.data)) {
+            subCategoriesData = subCategoriesResponse.data;
+          } else if (subCategoriesResponse.data.subcategories && Array.isArray(subCategoriesResponse.data.subcategories)) {
+            subCategoriesData = subCategoriesResponse.data.subcategories;
+          } else if (typeof subCategoriesResponse.data === 'object' && Array.isArray(Object.values(subCategoriesResponse.data)[0])) {
+            // Handle case where data is wrapped in an object
+            subCategoriesData = Object.values(subCategoriesResponse.data)[0];
+          }
+        }
 
-      // Check if it's an auth error
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        console.error('LoansScreen - Authentication error detected');
+        console.log('Parsed loan subcategories:', subCategoriesData);
+        setSubCategories(subCategoriesData);
+      } catch (error) {
+        console.error('Error fetching loan subcategories:', error);
         Toast.show({
           type: 'error',
-          text1: 'Authentication Error',
-          text2: 'Please log in again',
-          position: 'bottom',
+          text1: 'Error',
+          text2: 'Failed to load loan categories. Please try again.',
         });
-      } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Error fetching subcategories',
-          text2: error?.response?.data?.message || 'Please try again',
-          position: 'bottom',
-        });
+        setSubCategories([]);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    fetchLoanSubCategories();
   }, []);
-
-  // Get loan subcategories dynamically
-  const getLoanSubCategories = () => {
-    console.log('LoansScreen - getLoanSubCategories called');
-    console.log('LoansScreen - categories:', categories);
-    console.log('LoansScreen - subCategories:', subCategories);
-
-    const loanCategory = categories.find(cat => cat.name.toLowerCase().includes('loan'));
-    console.log('LoansScreen - loanCategory found:', loanCategory);
-
-    if (!loanCategory) {
-      console.log('LoansScreen - No loan category found');
-      return [];
-    }
-
-    const filteredSubs = subCategories.filter(
-      sub => sub.parentCategory?._id === loanCategory._id
-    );
-    console.log('LoansScreen - filtered subcategories:', filteredSubs);
-
-    return filteredSubs.sort((a, b) => {
-      const orderMap = {
-        'Home Loan': 1,
-        'Personal Loans': 2,
-        'Mortgage Loans': 3,
-        'Business Loans': 4
-      };
-
-      const orderA = orderMap[a.name] || 99;
-      const orderB = orderMap[b.name] || 99;
-      return orderA - orderB;
-    });
-  };
-
-  // Get image URI for subcategory
-  const getSubCategoryImageUri = (base64) => {
-    if (!base64) return null;
-    return base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
-  };
 
   // Category modal functions
   const handleCategoryPress = (subCategory) => {
-    console.log('LoansScreen - handleCategoryPress called with:', subCategory);
-    setSelectedCategory(subCategory.name);
-    setSelectedSubCategoryData(subCategory);
-    setSelectedSubCategoryImage(getSubCategoryImageUri(subCategory.image));
+    setSelectedSubCategory(subCategory);
     setShowCategoryModal(true);
   };
 
   const closeCategoryModal = () => {
     setShowCategoryModal(false);
-    setSelectedCategory('');
-    setSelectedSubCategoryData(null);
-    setSelectedSubCategoryImage(null);
+    setSelectedSubCategory(null);
   };
-
-  // Load data on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await Promise.all([fetchAllCategories(), fetchAllSubCategories()]);
-      setLoading(false);
-    };
-    loadData();
-  }, [fetchAllCategories, fetchAllSubCategories]);
-
-  // Refresh data when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      fetchAllCategories();
-      fetchAllSubCategories();
-    }, [fetchAllCategories, fetchAllSubCategories])
-  );
 
   return (
     <View style={styles.container}>
@@ -282,40 +178,35 @@ const LoansScreen = () => {
             
             {loading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#C75B7A" />
-                <Text style={styles.loadingText}>Loading loan categories...</Text>
+                <ActivityIndicator size="large" color="#A5236A" />
+                <Text style={styles.loadingText}>Loading categories...</Text>
+              </View>
+            ) : subCategories.length > 0 ? (
+              <View style={[styles.gridContainer, { gap }]}>
+                {subCategories.map((subCategory, index) => (
+                  <TouchableOpacity
+                    key={subCategory._id || index}
+                    style={[styles.gridItemWrapper, { width: cardWidth }]}
+                    onPress={() => handleCategoryPress(subCategory)}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={['#FBFBFB', '#F6DCDD']}
+                      style={styles.gridItem}
+                    >
+                      <Text style={styles.gridItemText}>{subCategory.name}</Text>
+                      <Image
+                        source={subCategory.image ? { uri: subCategory.image } : getSubCategoryIcon(subCategory.name)}
+                        style={styles.gridItemIcon}
+                      />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
               </View>
             ) : (
-              <View style={[styles.gridContainer, { gap }]}>
-                {(() => {
-                  const subCategories = getLoanSubCategories();
-                  console.log('LoansScreen - Rendering subcategories:', subCategories);
-                  return subCategories.map((subCategory, index) => {
-                    console.log('LoansScreen - Rendering subcategory:', subCategory.name, subCategory._id);
-                    const imageUri = getSubCategoryImageUri(subCategory.image);
-
-                    return (
-                      <TouchableOpacity
-                        key={subCategory._id || index}
-                        style={[styles.gridItemWrapper, { width: cardWidth }]}
-                        onPress={() => handleCategoryPress(subCategory)}
-                        activeOpacity={0.8}
-                      >
-                          <LinearGradient
-                              colors={['#FBFBFB', '#F6DCDD']}
-                              style={styles.gridItem}
-                          >
-                              <Text style={styles.gridItemText}>{subCategory.name}</Text>
-                              {imageUri ? (
-                                <Image source={{ uri: imageUri }} style={styles.gridItemIcon} />
-                              ) : (
-                                <Image source={require('../../assets/Icons/propertyLoans.png')} style={styles.gridItemIcon} />
-                              )}
-                          </LinearGradient>
-                      </TouchableOpacity>
-                    );
-                  });
-                })()}
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No categories available</Text>
+                <Text style={styles.emptySubText}>Categories will be available soon.</Text>
               </View>
             )}
           </ScrollView>
@@ -330,9 +221,8 @@ const LoansScreen = () => {
         <CategoryModal
           visible={showCategoryModal}
           onClose={closeCategoryModal}
-          category={selectedCategory}
-          subCategory={selectedSubCategoryData}
-          subCategoryImage={selectedSubCategoryImage}
+          category="Loan"
+          subCategory={selectedSubCategory}
         />
       </SafeAreaView>
     </View>
@@ -535,13 +425,35 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 200,
+    paddingVertical: 50,
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
+    fontFamily: 'Rubik-Regular',
     fontSize: 16,
     color: '#7D7D7D',
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    fontFamily: 'Rubik-SemiBold',
+    fontSize: 18,
+    color: '#1A1B20',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubText: {
     fontFamily: 'Rubik-Regular',
+    fontSize: 14,
+    color: '#7D7D7D',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

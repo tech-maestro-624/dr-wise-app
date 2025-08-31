@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,13 @@ import {
   Image,
   Platform,
   Dimensions,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getLeads } from '../api/lead';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const scale = Math.min(screenWidth / 375, screenHeight / 812);
@@ -62,35 +65,100 @@ const leadsData = [
   },
 ];
 
-const LeadItem = ({ lead, onPress }) => (
-  <TouchableOpacity style={styles.leadItem} onPress={onPress} activeOpacity={0.7}>
-    <View style={styles.leadIconContainer}>
-      <Image 
-        source={lead.icon}
-        style={styles.leadIcon}
-        resizeMode="contain"
-      />
-    </View>
-    
-    <View style={styles.leadInfo}>
-      <Text style={styles.leadName}>{lead.name}</Text>
-      <Text style={styles.leadType}>{lead.type}</Text>
-    </View>
-    
-    <View style={styles.leadRight}>
-      <Text style={styles.leadDate}>{lead.date}</Text>
-      <View style={styles.statusContainer}>
-        <Text style={styles.statusText}>{lead.status}</Text>
-        <Ionicons name="checkmark-circle" size={16} color="#38D552" />
+const LeadItem = ({ lead, onPress }) => {
+  // Get status color and icon
+  const getStatusStyle = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'converted':
+        return { color: '#38D552', icon: 'checkmark-circle' };
+      case 'pending':
+        return { color: '#FFA500', icon: 'time-outline' };
+      case 'rejected':
+        return { color: '#FF4444', icon: 'close-circle' };
+      default:
+        return { color: '#666666', icon: 'help-circle-outline' };
+    }
+  };
+
+  const statusStyle = getStatusStyle(lead.status);
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString() + ', ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    } catch {
+      return dateString;
+    }
+  };
+
+  return (
+    <TouchableOpacity style={styles.leadItem} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.leadIconContainer}>
+        <Image
+          source={require('../../assets/Icons/image.png')} // Default icon
+          style={styles.leadIcon}
+          resizeMode="contain"
+        />
       </View>
-    </View>
-  </TouchableOpacity>
-);
+
+      <View style={styles.leadInfo}>
+        <Text style={styles.leadName}>{lead.name || 'Unknown'}</Text>
+        <Text style={styles.leadType}>
+          {lead.productId?.name || lead.categoryId?.name || 'General Lead'}
+        </Text>
+      </View>
+
+      <View style={styles.leadRight}>
+        <Text style={styles.leadDate}>{formatDate(lead.createdAt || lead.updatedAt)}</Text>
+        <View style={styles.statusContainer}>
+          <Text style={[styles.statusText, { color: statusStyle.color }]}>
+            {lead.status || 'Unknown'}
+          </Text>
+          <Ionicons name={statusStyle.icon} size={16} color={statusStyle.color} />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 const LeadsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const affiliateName = route.params?.affiliateName || 'Dhananjaya J';
+  const { affiliateId, affiliateName } = route.params || {};
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch leads for the specific affiliate
+  const fetchAffiliateLeads = async () => {
+    if (!affiliateId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await getLeads({
+        condition: { referrer: affiliateId },
+        page: 1,
+        limit: 50
+      });
+
+      if (response.data && response.data.leads) {
+        setLeads(response.data.leads);
+      }
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      Alert.alert('Error', 'Failed to load leads data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAffiliateLeads();
+  }, [affiliateId]);
 
   return (
     <LinearGradient
@@ -117,20 +185,33 @@ const LeadsScreen = () => {
         <Text style={styles.affiliateName}>{affiliateName}</Text>
 
         {/* Leads List */}
-        <ScrollView 
+        <ScrollView
           style={styles.leadsContainer}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.leadsContent}
         >
-          {leadsData.map((lead, index) => (
-            <View key={lead.id}>
-              <LeadItem 
-                lead={lead} 
-                onPress={() => navigation.navigate('Main', { screen: 'Home', params: { screen: 'Calculator' } })}
-              />
-              {index < leadsData.length - 1 && <View style={styles.separator} />}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#8F31F9" />
+              <Text style={styles.loadingText}>Loading leads...</Text>
             </View>
-          ))}
+          ) : leads.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {affiliateId ? 'No leads found for this affiliate' : 'No affiliate selected'}
+              </Text>
+            </View>
+          ) : (
+            leads.map((lead, index) => (
+              <View key={lead._id || lead.id}>
+                <LeadItem
+                  lead={lead}
+                  onPress={() => navigation.navigate('Calculator')}
+                />
+                {index < leads.length - 1 && <View style={styles.separator} />}
+              </View>
+            ))
+          )}
         </ScrollView>
     </LinearGradient>
   );
@@ -246,6 +327,30 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(125, 125, 125, 0.1)',
     marginLeft: 58 * scale,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40 * scale,
+  },
+  loadingText: {
+    marginTop: 10 * scale,
+    fontSize: 16 * scale,
+    color: '#7D7D7D',
+    fontFamily: 'Rubik-Regular',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40 * scale,
+  },
+  emptyText: {
+    fontSize: 16 * scale,
+    color: '#7D7D7D',
+    fontFamily: 'Rubik-Regular',
+    textAlign: 'center',
   },
 });
 

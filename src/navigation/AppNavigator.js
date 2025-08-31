@@ -33,6 +33,7 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import TermsConditionsScreen from '../screens/TermsConditionsScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import CategoryDetailScreen from '../screens/CategoryDetailScreen';
+import ReferralFormScreen from '../screens/ReferralFormScreen';
 import VerificationMainScreen from '../screens/verification/VerificationMainScreen';
 import GovernmentIDScreen from '../screens/verification/GovernmentIDScreen';
 import SelfiePhotoScreen from '../screens/verification/SelfiePhotoScreen';
@@ -100,18 +101,18 @@ function AffiliateTabNavigator() {
 
 // Authentication-aware navigator component
 function AuthNavigator() {
-    const { isAuthenticated, user } = useAuth();
+    const { isAuthenticated, user, isAmbassador } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        console.log('AuthNavigator - isAuthenticated:', isAuthenticated, 'user:', user?.name);
+        console.log('AuthNavigator - isAuthenticated:', isAuthenticated, 'user:', user?.name, 'isAmbassador:', isAmbassador);
         // Small delay to allow AuthContext to initialize
         const timer = setTimeout(() => {
             setIsLoading(false);
         }, 100);
 
         return () => clearTimeout(timer);
-    }, [isAuthenticated, user]);
+    }, [isAuthenticated, user, isAmbassador]);
 
     if (isLoading) {
         return (
@@ -133,9 +134,14 @@ function AuthNavigator() {
                     </>
                 ) : (
                     <>
-                        {/* Main authenticated screens */}
-                        <Stack.Screen name="Main" component={MainTabNavigator} />
-                        <Stack.Screen name="AffiliateHome" component={AffiliateTabNavigator} />
+                        {/* Role-based main screens */}
+                        {isAmbassador ? (
+                            <Stack.Screen name="Main" component={AffiliateTabNavigator} />
+                        ) : (
+                            <Stack.Screen name="Main" component={MainTabNavigator} />
+                        )}
+
+                        {/* Common screens for all authenticated users */}
                         <Stack.Screen name="Leads" component={LeadsScreen} />
                         <Stack.Screen name="Calculator" component={CalculatorScreen} />
                         <Stack.Screen name="TermInsuranceCalculator" component={TermInsuranceCalculatorScreen} />
@@ -151,6 +157,7 @@ function AuthNavigator() {
                         <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
                         <Stack.Screen name="Categories" component={CategoriesScreen} />
                         <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
+                        <Stack.Screen name="ReferralForm" component={ReferralFormScreen} />
                         <Stack.Screen name="Verification" component={VerificationMainScreen} />
                         <Stack.Screen name="GovernmentIDScreen" component={GovernmentIDScreen} />
                         <Stack.Screen name="SelfiePhotoScreen" component={SelfiePhotoScreen} />

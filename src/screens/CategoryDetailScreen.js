@@ -1,9 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Platform, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
+import { getProductById } from '../api/product';
+import Toast from 'react-native-toast-message';
 
 
 
@@ -11,10 +13,31 @@ import Svg, { Path } from 'react-native-svg';
 const CategoryDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { category, planName } = route.params || { category: 'General', planName: 'Individual Plan' };
+  const { category, planName, product, subCategory } = route.params || {};
 
-  // Get hero section colors and background based on category
-  const getHeroColors = (category) => {
+  // State for product data
+  const [productData, setProductData] = useState(product || null);
+  const [loading, setLoading] = useState(!product);
+
+  // Get hero section colors and background based on category or product
+  const getHeroColors = (category, productData) => {
+    // First try to determine from product data if available
+    if (productData && productData.categoryId) {
+      const catName = productData.categoryId.name?.toLowerCase() || '';
+      if (catName.includes('insurance')) return ['#1D8C7C', '#2AA795', '#197366'];
+      if (catName.includes('investment')) return ['#F6AC11', '#F7C459', '#C4890E'];
+      if (catName.includes('loan')) return ['#A5236A', '#D03A8C', '#952261'];
+      if (catName.includes('tax') || catName.includes('travel')) return ['#8F31F9', '#521B90'];
+    }
+
+    // Fallback to category parameter
+    const catName = category?.toLowerCase() || '';
+    if (catName.includes('insurance')) return ['#1D8C7C', '#2AA795', '#197366'];
+    if (catName.includes('investment')) return ['#F6AC11', '#F7C459', '#C4890E'];
+    if (catName.includes('loan')) return ['#A5236A', '#D03A8C', '#952261'];
+    if (catName.includes('tax') || catName.includes('travel')) return ['#8F31F9', '#521B90'];
+
+    // Legacy category names
     switch (category) {
       case 'Life':
       case 'Health':
@@ -28,16 +51,16 @@ const CategoryDetailScreen = () => {
       case 'LAS':
       case 'NPS':
       case 'Trading':
-        return ['#F6AC11', '#F7C459', '#C4890E']; // Orange gradient for Investments (from InvestmentsScreen)
+        return ['#F6AC11', '#F7C459', '#C4890E']; // Orange gradient for Investments
       case 'Home Loan':
       case 'Personal Loans':
       case 'Mortgage Loan':
       case 'Business Loan':
-        return ['#A5236A', '#D03A8C', '#952261']; // Pink gradient for Loans (from LoansScreen)
+        return ['#A5236A', '#D03A8C', '#952261']; // Pink gradient for Loans
       case 'Tax':
       case 'Domestic Travel':
       case 'International Travel':
-        return ['#8F31F9', '#521B90']; // Purple gradient for Tax & Travel (from Figma)
+        return ['#8F31F9', '#521B90']; // Purple gradient for Tax & Travel
       default:
         return ['#1D8C7C', '#2AA795', '#197366']; // Default green for Insurance
     }
@@ -98,10 +121,49 @@ const CategoryDetailScreen = () => {
     }
   };
 
-  const heroColors = getHeroColors(category);
+  // Fetch product data if not provided
+  useEffect(() => {
+    const fetchProductData = async () => {
+      // If we already have product data, no need to fetch
+      if (productData) {
+        setLoading(false);
+        return;
+      }
+
+      // If we have a product ID from planName (legacy support), fetch it
+      if (planName && typeof planName === 'string' && planName.length > 10) {
+        // Assume planName might be a product ID
+        try {
+          setLoading(true);
+          const response = await getProductById(planName);
+          if (response.data) {
+            setProductData(response.data);
+          }
+        } catch (error) {
+          console.error('Error fetching product:', error);
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'Failed to load product details.',
+          });
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+
+    fetchProductData();
+  }, [product, planName, productData]);
+
+  const heroColors = getHeroColors(category, productData);
   const backgroundColor = getBackgroundColor(category);
   const gradientLocations = getGradientLocations(category);
   const backButtonColor = getBackButtonColor(category);
+
+  // Get display title from product data or fallback
+  const displayTitle = productData?.name || planName || 'Product Details';
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -130,7 +192,7 @@ const CategoryDetailScreen = () => {
             <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: backButtonColor }]}>
               <Ionicons name="chevron-back-outline" size={20} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{planName}</Text>
+            <Text style={styles.headerTitle}>{displayTitle}</Text>
             <View style={{ width: 40 }} /> 
           </View>
           
@@ -151,46 +213,71 @@ const CategoryDetailScreen = () => {
 
         {/* --- Main Content --- */}
         <View style={[styles.contentContainer, { backgroundColor }]}>
-          <ScrollView 
-            contentContainerStyle={[styles.scrollContent, { backgroundColor }]} 
+          <ScrollView
+            contentContainerStyle={[styles.scrollContent, { backgroundColor }]}
             showsVerticalScrollIndicator={false}
             style={{ backgroundColor }}
           >
-            
-            {/* Key Benefits Section */}
-            <View style={styles.keyBenefitsSection}>
-              <Text style={styles.keyBenefitsTitle}>Key Benefits</Text>
-              <Text style={styles.keyBenefitsDescription}>
-                Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's s
-              </Text>
-            </View>
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#8F31F9" />
+                <Text style={styles.loadingText}>Loading product details...</Text>
+              </View>
+            ) : productData ? (
+              <>
+                {/* Key Benefits Section */}
+                <View style={styles.keyBenefitsSection}>
+                  <Text style={styles.keyBenefitsTitle}>Key Benefits</Text>
+                  <Text style={styles.keyBenefitsDescription}>
+                    {productData.description || 'Discover the benefits of this product and start earning rewards by referring it to others.'}
+                  </Text>
+                </View>
 
-            {/* Benefits List with Shield Icon */}
-            <View style={styles.benefitsContainer}>
-              <View style={styles.benefitsList}>
-                <View style={styles.benefitItem}>
-                  <View style={styles.benefitDot} />
-                  <Text style={styles.benefitText}>Lorem Ipsum is simply dummy text of printing</Text>
+                {/* Benefits List with Shield Icon */}
+                <View style={styles.benefitsContainer}>
+                  <View style={styles.benefitsList}>
+                    {productData.benefits && productData.benefits.length > 0 ? (
+                      productData.benefits.map((benefit, index) => (
+                        <View key={index} style={styles.benefitItem}>
+                          <View style={styles.benefitDot} />
+                          <Text style={styles.benefitText}>{benefit}</Text>
+                        </View>
+                      ))
+                    ) : (
+                      // Default benefits if none provided
+                      <>
+                        <View style={styles.benefitItem}>
+                          <View style={styles.benefitDot} />
+                          <Text style={styles.benefitText}>Earn rewards by referring this product</Text>
+                        </View>
+                        <View style={styles.benefitItem}>
+                          <View style={styles.benefitDot} />
+                          <Text style={styles.benefitText}>Build your referral network</Text>
+                        </View>
+                        <View style={styles.benefitItem}>
+                          <View style={styles.benefitDot} />
+                          <Text style={styles.benefitText}>Track your earnings in real-time</Text>
+                        </View>
+                        <View style={styles.benefitItem}>
+                          <View style={styles.benefitDot} />
+                          <Text style={styles.benefitText}>Exclusive ambassador benefits</Text>
+                        </View>
+                      </>
+                    )}
+                  </View>
+
+                  {/* Group Icon */}
+                  <View style={styles.shieldIconContainer}>
+                    <Image source={require('../../assets/Icons/Group.png')} style={styles.groupIcon} />
+                  </View>
                 </View>
-                <View style={styles.benefitItem}>
-                  <View style={styles.benefitDot} />
-                  <Text style={styles.benefitText}>Lorem Ipsum is simply dummy</Text>
-                </View>
-                <View style={styles.benefitItem}>
-                  <View style={styles.benefitDot} />
-                  <Text style={styles.benefitText}>Lorem Ipsum is simply dummy text of printing</Text>
-                </View>
-                <View style={styles.benefitItem}>
-                  <View style={styles.benefitDot} />
-                  <Text style={styles.benefitText}>Lorem Ipsum is simply dummy text of printing</Text>
-                </View>
+              </>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>Product details not available</Text>
+                <Text style={styles.emptySubText}>Unable to load product information. Please try again later.</Text>
               </View>
-              
-              {/* Group Icon */}
-              <View style={styles.shieldIconContainer}>
-                <Image source={require('../../assets/Icons/Group.png')} style={styles.groupIcon} />
-              </View>
-            </View>
+            )}
 
                         {/* Referral Card */}
             <View style={styles.referralCard}>
@@ -205,7 +292,13 @@ const CategoryDetailScreen = () => {
             </View>
 
             {/* Refer a Friend Button */}
-            <TouchableOpacity style={styles.referFriendButton}>
+            <TouchableOpacity
+              style={styles.referFriendButton}
+              onPress={() => navigation.navigate('ReferralForm', {
+                product: productData,
+                category: category
+              })}
+            >
               <Text style={styles.referFriendButtonText}>Refer a friend</Text>
             </TouchableOpacity>
 
@@ -499,6 +592,40 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 8,
     elevation: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 100,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontFamily: 'Rubik-Regular',
+    fontSize: 16,
+    color: '#7D7D7D',
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 100,
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    fontFamily: 'Rubik-SemiBold',
+    fontSize: 18,
+    color: '#1A1B20',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubText: {
+    fontFamily: 'Rubik-Regular',
+    fontSize: 14,
+    color: '#7D7D7D',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

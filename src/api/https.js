@@ -13,6 +13,9 @@ apiClient.interceptors.request.use(
     const token = await AsyncStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('API Client - Adding auth header for:', config.url);
+    } else {
+      console.log('API Client - No token found for:', config.url);
     }
     return config;
   },
@@ -24,6 +27,9 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.log('API Client - Response error for:', error.config?.url);
+    console.log('API Client - Status:', error.response?.status);
+    console.log('API Client - Error data:', error.response?.data);
     return Promise.reject(error);
   }
 );
