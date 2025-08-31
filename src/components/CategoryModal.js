@@ -19,7 +19,32 @@ const CategoryModal = ({ visible, onClose, category, subCategory, subCategoryIma
 
   const handleViewCategories = () => {
     onClose();
-    navigation.navigate('Categories', { category: navigationCategory });
+
+    // Debug: Log what we're passing
+    console.log('CategoryModal - subCategory:', subCategory);
+    console.log('CategoryModal - navigationCategory:', navigationCategory);
+
+    // If we have subcategory data, pass the correct parameters
+    if (subCategory && subCategory._id) {
+      console.log('CategoryModal - Navigating with subcategory data:', {
+        subCatId: subCategory._id,
+        categoryId: subCategory.parentCategory?._id || subCategory.categoryId,
+        name: subCategory.name
+      });
+      navigation.navigate('Categories', {
+        subCatId: subCategory._id,
+        categoryId: subCategory.parentCategory?._id || subCategory.categoryId,
+        name: subCategory.name
+      });
+    } else {
+      // Fallback for category string
+      console.log('CategoryModal - No subcategory data, using fallback');
+      navigation.navigate('Categories', {
+        subCatId: null,
+        categoryId: null,
+        name: navigationCategory
+      });
+    }
   };
 
   return (

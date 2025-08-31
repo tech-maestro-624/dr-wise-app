@@ -62,20 +62,20 @@ const insuranceItems = [
 ];
 
 const investmentItems = [
-  { title: 'Trading' },
-  { title: 'NPS' },
-  { title: 'LAS' },
-  { title: 'Gold' },
-  { title: 'BOND' },
-  { title: 'Fixed' },
   { title: 'Mutual Fund' },
+  { title: 'Fixed' },
+  { title: 'Bond' },
+  { title: 'Gold' },
+  { title: 'LAS' },
+  { title: 'NPS' },
+  { title: 'Trading' },
 ];
 
 const loanItems = [
-  { title: 'Business Loan' },
-  { title: 'Mortgage Loan' },
-  { title: 'Personal Loans' },
   { title: 'Home Loan' },
+  { title: 'Personal Loans' },
+  { title: 'Mortgage Loans' },
+  { title: 'Business Loans' },
 ];
 
 // AutoSwiper Component - Same as drwise-user
@@ -566,7 +566,7 @@ const HomeScreen = () => {
       });
     }
   };
-
+  
   const handleCategoryPress = (category, subCategory = null, subCategoryImage = null) => {
     setSelectedCategory(category);
     setSelectedSubCategoryData(subCategory);
@@ -649,9 +649,34 @@ const HomeScreen = () => {
     const insuranceCategory = categories.find(cat => cat.name.toLowerCase().includes('insurance'));
     if (!insuranceCategory) return insuranceItems; // fallback to static
 
-    const insuranceSubs = subCategories.filter(
+    // Define the desired order for insurance subcategories (case-insensitive and flexible matching)
+    const getOrderValue = (name) => {
+      const lowerName = name.toLowerCase();
+      if (lowerName.includes('life')) return 1;
+      if (lowerName.includes('health')) return 2;
+      if (lowerName.includes('motor')) return 3;
+      if (lowerName.includes('general')) return 4;
+      if (lowerName.includes('travel')) return 5;
+      return 99; // Default to high number if not in order
+    };
+
+    let insuranceSubs = subCategories.filter(
       sub => sub.parentCategory?._id === insuranceCategory._id
-    ).slice(0, 5); // limit to 5 items
+    );
+
+    // Debug: Log the names before sorting
+    console.log('Insurance subs before sorting:', insuranceSubs.map(sub => sub.name));
+
+    insuranceSubs = insuranceSubs.sort((a, b) => {
+      const orderA = getOrderValue(a.name);
+      const orderB = getOrderValue(b.name);
+      return orderA - orderB; // Lower number = higher priority
+    });
+
+    // Debug: Log the names after sorting
+    console.log('Insurance subs after sorting:', insuranceSubs.map(sub => sub.name));
+
+    insuranceSubs = insuranceSubs.slice(0, 5); // limit to 5 items
 
     return insuranceSubs.length > 0
       ? insuranceSubs.map(sub => ({ title: sub.name, id: sub._id, description: sub.description, image: sub.image }))
@@ -662,9 +687,36 @@ const HomeScreen = () => {
     const investmentCategory = categories.find(cat => cat.name.toLowerCase().includes('investment'));
     if (!investmentCategory) return investmentItems; // fallback to static
 
-    const investmentSubs = subCategories.filter(
+    // Define the desired order for investment subcategories (case-insensitive and flexible matching)
+    const getOrderValue = (name) => {
+      const lowerName = name.toLowerCase();
+      if (lowerName.includes('mutual fund') || lowerName.includes('mutual')) return 1;
+      if (lowerName.includes('fixed')) return 2;
+      if (lowerName.includes('bond')) return 3;
+      if (lowerName.includes('gold')) return 4;
+      if (lowerName.includes('las')) return 5;
+      if (lowerName.includes('nps')) return 6;
+      if (lowerName.includes('trading')) return 7;
+      return 99; // Default to high number if not in order
+    };
+
+    let investmentSubs = subCategories.filter(
       sub => sub.parentCategory?._id === investmentCategory._id
-    ).slice(0, 7); // limit to 7 items
+    );
+
+    // Debug: Log the names before sorting
+    console.log('Investment subs before sorting:', investmentSubs.map(sub => sub.name));
+
+    investmentSubs = investmentSubs.sort((a, b) => {
+      const orderA = getOrderValue(a.name);
+      const orderB = getOrderValue(b.name);
+      return orderA - orderB; // Lower number = higher priority
+    });
+
+    // Debug: Log the names after sorting
+    console.log('Investment subs after sorting:', investmentSubs.map(sub => sub.name));
+
+    investmentSubs = investmentSubs.slice(0, 7); // limit to 7 items
 
     return investmentSubs.length > 0
       ? investmentSubs.map(sub => ({ title: sub.name, id: sub._id, description: sub.description, image: sub.image }))
@@ -675,9 +727,33 @@ const HomeScreen = () => {
     const loanCategory = categories.find(cat => cat.name.toLowerCase().includes('loan'));
     if (!loanCategory) return loanItems; // fallback to static
 
-    const loanSubs = subCategories.filter(
+    // Define the desired order for loan subcategories (case-insensitive and flexible matching)
+    const getOrderValue = (name) => {
+      const lowerName = name.toLowerCase();
+      if (lowerName.includes('home loan') || lowerName.includes('home')) return 1;
+      if (lowerName.includes('personal loan') || lowerName.includes('personal')) return 2;
+      if (lowerName.includes('mortgage loan') || lowerName.includes('mortgage')) return 3;
+      if (lowerName.includes('business loan') || lowerName.includes('business')) return 4;
+      return 99; // Default to high number if not in order
+    };
+
+    let loanSubs = subCategories.filter(
       sub => sub.parentCategory?._id === loanCategory._id
-    ).slice(0, 4); // limit to 4 items
+    );
+
+    // Debug: Log the names before sorting
+    console.log('Loan subs before sorting:', loanSubs.map(sub => sub.name));
+
+    loanSubs = loanSubs.sort((a, b) => {
+      const orderA = getOrderValue(a.name);
+      const orderB = getOrderValue(b.name);
+      return orderA - orderB; // Lower number = higher priority
+    });
+
+    // Debug: Log the names after sorting
+    console.log('Loan subs after sorting:', loanSubs.map(sub => sub.name));
+
+    loanSubs = loanSubs.slice(0, 4); // limit to 4 items
 
     return loanSubs.length > 0
       ? loanSubs.map(sub => ({ title: sub.name, id: sub._id, description: sub.description, image: sub.image }))

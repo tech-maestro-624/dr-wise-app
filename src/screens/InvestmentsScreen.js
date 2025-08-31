@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Platform, Dimensions } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Platform, Dimensions, ActivityIndicator } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import CategoryModal from '../components/CategoryModal';
+import { getCategories } from '../api/categorys';
+import { getSubCategories } from '../api/subCategories';
+import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import global from '../Utils/global';
 
 // --- Data for the Investment Categories ---
 const investmentCategories = [
   { name: 'Mutual Fund', icon: require('../../assets/Icons/mutualFund.png') },
   { name: 'Fixed', icon: require('../../assets/Icons/fixedInv.png') },
-  { name: 'BOND', icon: require('../../assets/Icons/bondInv.png') },
+  { name: 'Bond', icon: require('../../assets/Icons/bondInv.png') },
   { name: 'Gold', icon: require('../../assets/Icons/goldInv.png') },
   { name: 'LAS', icon: require('../../assets/Icons/LASInvestments.png') },
   { name: 'NPS', icon: require('../../assets/Icons/npsInsurance.png') },
@@ -19,25 +24,215 @@ const investmentCategories = [
 const InvestmentsScreen = () => {
   const navigation = useNavigation();
   const { width: screenWidth } = Dimensions.get('window');
-  
+
   // State for category modal
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSubCategoryData, setSelectedSubCategoryData] = useState(null);
+  const [selectedSubCategoryImage, setSelectedSubCategoryImage] = useState(null);
+
+  // Dynamic data state
+  const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   // Calculate responsive card width
   const cardWidth = Math.min(156.61, (screenWidth - 60) / 2); // 60 = padding + gap
   const gap = 19.78;
 
+  // Fetch categories and subcategories
+  const fetchAllCategories = useCallback(async () => {
+    try {
+      const resp = await getCategories();
+      console.log('InvestmentsScreen - Categories full response:', resp);
+      console.log('InvestmentsScreen - Categories data:', resp.data);
+      console.log('InvestmentsScreen - Categories data type:', typeof resp.data);
+      console.log('InvestmentsScreen - Categories data keys:', resp.data ? Object.keys(resp.data) : 'null');
+
+      let categoriesData = [];
+      if (resp.data?.data && Array.isArray(resp.data.data)) {
+        categoriesData = resp.data.data;
+      } else if (resp.data && Array.isArray(resp.data)) {
+        categoriesData = resp.data;
+      } else if (resp.data?.categories && Array.isArray(resp.data.categories)) {
+        categoriesData = resp.data.categories;
+      }
+
+      console.log('InvestmentsScreen - Final categories data:', categoriesData);
+
+      // Check if categories contain subcategories
+      categoriesData.forEach(cat => {
+        console.log(`InvestmentsScreen - Category ${cat.name}:`, cat);
+        if (cat.subcategories || cat.subCategories) {
+          console.log(`InvestmentsScreen - Category ${cat.name} has subcategories:`, cat.subcategories || cat.subCategories);
+        }
+      });
+
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error('InvestmentsScreen - Error fetching categories:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error fetching categories',
+        text2: error?.response?.data?.message || 'Please try again',
+        position: 'bottom',
+      });
+    }
+  }, []);
+
+  const fetchAllSubCategories = useCallback(async () => {
+    try {
+      console.log('InvestmentsScreen - Calling getSubCategories with different approaches');
+
+      // Check if token exists
+      const token = await AsyncStorage.getItem('token');
+      console.log('InvestmentsScreen - Token exists:', !!token);
+      console.log('InvestmentsScreen - Token value:', token ? token.substring(0, 20) + '...' : 'null');
+
+      // First try without parameters
+      console.log('InvestmentsScreen - Attempt 1: No parameters');
+      console.log('InvestmentsScreen - Base URL from global:', global.baseURL);
+      console.log('InvestmentsScreen - Full URL would be:', `${global.baseURL}/subcategory`);
+      const resp1 = await getSubCategories();
+      console.log('InvestmentsScreen - Response 1:', resp1);
+      console.log('InvestmentsScreen - Response 1 status:', resp1.status);
+      console.log('InvestmentsScreen - Response 1 data:', resp1.data);
+
+      // Check if we got data
+      if (resp1.data && (Array.isArray(resp1.data) || resp1.data.data)) {
+        let subCategoriesData = [];
+        if (resp1.data?.data && Array.isArray(resp1.data.data)) {
+          subCategoriesData = resp1.data.data;
+        } else if (resp1.data && Array.isArray(resp1.data)) {
+          subCategoriesData = resp1.data;
+        }
+
+        console.log('InvestmentsScreen - Found data in attempt 1:', subCategoriesData);
+        if (subCategoriesData.length > 0) {
+          setSubCategories(subCategoriesData);
+          return;
+        }
+      }
+
+      // Try with different pagination parameters
+      console.log('InvestmentsScreen - Attempt 2: With pagination');
+      const resp2 = await getSubCategories({ page: 1, limit: 1000 });
+      console.log('InvestmentsScreen - Response 2:', resp2);
+      console.log('InvestmentsScreen - Response 2 data:', resp2.data);
+
+      // Try different response structures for second attempt
+      let subCategoriesData = [];
+      if (resp2.data?.data && Array.isArray(resp2.data.data)) {
+        subCategoriesData = resp2.data.data;
+      } else if (resp2.data && Array.isArray(resp2.data)) {
+        subCategoriesData = resp2.data;
+      }
+
+      console.log('InvestmentsScreen - Final subcategories data:', subCategoriesData);
+      console.log('InvestmentsScreen - Final subcategories length:', subCategoriesData.length);
+      setSubCategories(subCategoriesData);
+
+    } catch (error) {
+      console.error('InvestmentsScreen - Error fetching subcategories:', error);
+      console.error('InvestmentsScreen - Error response:', error.response);
+      console.error('InvestmentsScreen - Error status:', error.response?.status);
+      console.error('InvestmentsScreen - Error message:', error.message);
+
+      // Check if it's an auth error
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.error('InvestmentsScreen - Authentication error detected');
+        Toast.show({
+          type: 'error',
+          text1: 'Authentication Error',
+          text2: 'Please log in again',
+          position: 'bottom',
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error fetching subcategories',
+          text2: error?.response?.data?.message || 'Please try again',
+          position: 'bottom',
+        });
+      }
+    }
+  }, []);
+
+  // Get investment subcategories dynamically
+  const getInvestmentSubCategories = () => {
+    console.log('InvestmentsScreen - getInvestmentSubCategories called');
+    console.log('InvestmentsScreen - categories:', categories);
+    console.log('InvestmentsScreen - subCategories:', subCategories);
+
+    const investmentCategory = categories.find(cat => cat.name.toLowerCase().includes('investment'));
+    console.log('InvestmentsScreen - investmentCategory found:', investmentCategory);
+
+    if (!investmentCategory) {
+      console.log('InvestmentsScreen - No investment category found');
+      return [];
+    }
+
+    const filteredSubs = subCategories.filter(
+      sub => sub.parentCategory?._id === investmentCategory._id
+    );
+    console.log('InvestmentsScreen - filtered subcategories:', filteredSubs);
+
+    return filteredSubs.sort((a, b) => {
+      const orderMap = {
+        'Mutual Fund': 1,
+        'Fixed': 2,
+        'Bond': 3,
+        'Gold': 4,
+        'LAS': 5,
+        'NPS': 6,
+        'Trading': 7
+      };
+
+      const orderA = orderMap[a.name] || 99;
+      const orderB = orderMap[b.name] || 99;
+      return orderA - orderB;
+    });
+  };
+
+  // Get image URI for subcategory
+  const getSubCategoryImageUri = (base64) => {
+    if (!base64) return null;
+    return base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
+  };
+
   // Category modal functions
-  const handleCategoryPress = (category) => {
-    setSelectedCategory(category);
+  const handleCategoryPress = (subCategory) => {
+    console.log('InvestmentsScreen - handleCategoryPress called with:', subCategory);
+    setSelectedCategory(subCategory.name);
+    setSelectedSubCategoryData(subCategory);
+    setSelectedSubCategoryImage(getSubCategoryImageUri(subCategory.image));
     setShowCategoryModal(true);
   };
 
   const closeCategoryModal = () => {
     setShowCategoryModal(false);
     setSelectedCategory('');
+    setSelectedSubCategoryData(null);
+    setSelectedSubCategoryImage(null);
   };
+
+  // Load data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchAllCategories(), fetchAllSubCategories()]);
+      setLoading(false);
+    };
+    loadData();
+  }, [fetchAllCategories, fetchAllSubCategories]);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchAllCategories();
+      fetchAllSubCategories();
+    }, [fetchAllCategories, fetchAllSubCategories])
+  );
 
   return (
     <View style={styles.container}>
@@ -90,25 +285,45 @@ const InvestmentsScreen = () => {
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             <Text style={styles.contentHeaderTitle}>Earn While You Refer</Text>
             <Text style={styles.contentHeaderSubtitle}>Share services you trust and get paid for every referral</Text>
-            
-            <View style={[styles.gridContainer, { gap }]}>
-              {investmentCategories.map((item, index) => (
-                <TouchableOpacity 
-                  key={index} 
-                  style={[styles.gridItemWrapper, { width: cardWidth }]}
-                  onPress={() => handleCategoryPress(item.name)}
-                  activeOpacity={0.8}
-                >
-                  <LinearGradient
-                    colors={['#FFFFFF', '#FEE9CF']}
-                    style={styles.gridItem}
-                  >
-                    <Text style={styles.gridItemText}>{item.name}</Text>
-                    <Image source={item.icon} style={styles.gridItemIcon} />
-                  </LinearGradient>
-                </TouchableOpacity>
-              ))}
-            </View>
+
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#F6AC11" />
+                <Text style={styles.loadingText}>Loading investment categories...</Text>
+              </View>
+            ) : (
+              <View style={[styles.gridContainer, { gap }]}>
+                {(() => {
+                  const subCategories = getInvestmentSubCategories();
+                  console.log('InvestmentsScreen - Rendering subcategories:', subCategories);
+                  return subCategories.map((subCategory, index) => {
+                    console.log('InvestmentsScreen - Rendering subcategory:', subCategory.name, subCategory._id);
+                    const imageUri = getSubCategoryImageUri(subCategory.image);
+
+                    return (
+                      <TouchableOpacity
+                        key={subCategory._id || index}
+                        style={[styles.gridItemWrapper, { width: cardWidth }]}
+                        onPress={() => handleCategoryPress(subCategory)}
+                        activeOpacity={0.8}
+                      >
+                          <LinearGradient
+                              colors={['#FFFFFF', '#FEE9CF']}
+                              style={styles.gridItem}
+                          >
+                              <Text style={styles.gridItemText}>{subCategory.name}</Text>
+                              {imageUri ? (
+                                <Image source={{ uri: imageUri }} style={styles.gridItemIcon} />
+                              ) : (
+                                <Image source={require('../../assets/Icons/mutualFund.png')} style={styles.gridItemIcon} />
+                              )}
+                          </LinearGradient>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
+              </View>
+            )}
           </ScrollView>
         </View>
 
@@ -118,10 +333,12 @@ const InvestmentsScreen = () => {
         </TouchableOpacity>
 
         {/* Category Modal */}
-        <CategoryModal 
+        <CategoryModal
           visible={showCategoryModal}
           onClose={closeCategoryModal}
           category={selectedCategory}
+          subCategory={selectedSubCategoryData}
+          subCategoryImage={selectedSubCategoryImage}
         />
       </SafeAreaView>
     </View>
@@ -319,6 +536,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 8,
     elevation: 8,
+  },
+  // Loading styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666666',
+    fontFamily: 'Rubik-Regular',
   },
 });
 

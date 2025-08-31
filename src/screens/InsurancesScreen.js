@@ -1,43 +1,231 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Platform, Dimensions } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Platform, Dimensions, ActivityIndicator } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import CategoryModal from '../components/CategoryModal';
-
-// --- Data for the Insurance Categories ---
-// ** IMPORTANT: Ensure these image paths are correct for your project structure **
-const insuranceCategories = [
-  { name: 'Travel', icon: require('../../assets/Icons/planeInsurance.png') },
-  { name: 'Health', icon: require('../../assets/Icons/heartInsurance.png') },
-  { name: 'Life', icon: require('../../assets/Icons/umbrella.png') },
-  { name: 'Motor', icon: require('../../assets/Icons/steeringwheel.png') },
-  { name: 'General', icon: require('../../assets/Icons/generalInsurance.png') },
-];
+import { getCategories } from '../api/categorys';
+import { getSubCategories } from '../api/subCategories';
+import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import global from '../Utils/global';
 
 const InsurancesScreen = () => {
   const navigation = useNavigation();
   const { width: screenWidth } = Dimensions.get('window');
-  
+
   // State for category modal
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSubCategoryData, setSelectedSubCategoryData] = useState(null);
+  const [selectedSubCategoryImage, setSelectedSubCategoryImage] = useState(null);
+
+  // Dynamic data state
+  const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   // Calculate responsive card width
   const cardWidth = Math.min(156.61, (screenWidth - 60) / 2); // 60 = padding + gap
   const gap = 19.78;
 
+  // Fetch categories and subcategories
+  const fetchAllCategories = useCallback(async () => {
+    try {
+      const resp = await getCategories();
+      console.log('InsurancesScreen - Categories full response:', resp);
+      console.log('InsurancesScreen - Categories data:', resp.data);
+      console.log('InsurancesScreen - Categories data type:', typeof resp.data);
+      console.log('InsurancesScreen - Categories data keys:', resp.data ? Object.keys(resp.data) : 'null');
+
+      let categoriesData = [];
+      if (resp.data?.data && Array.isArray(resp.data.data)) {
+        categoriesData = resp.data.data;
+      } else if (resp.data && Array.isArray(resp.data)) {
+        categoriesData = resp.data;
+      } else if (resp.data?.categories && Array.isArray(resp.data.categories)) {
+        categoriesData = resp.data.categories;
+      }
+
+      console.log('InsurancesScreen - Final categories data:', categoriesData);
+
+      // Check if categories contain subcategories
+      categoriesData.forEach(cat => {
+        console.log(`InsurancesScreen - Category ${cat.name}:`, cat);
+        if (cat.subcategories || cat.subCategories) {
+          console.log(`InsurancesScreen - Category ${cat.name} has subcategories:`, cat.subcategories || cat.subCategories);
+        }
+      });
+
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error('InsurancesScreen - Error fetching categories:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error fetching categories',
+        text2: error?.response?.data?.message || 'Please try again',
+        position: 'bottom',
+      });
+    }
+  }, []);
+
+  const fetchAllSubCategories = useCallback(async () => {
+    try {
+      console.log('InsurancesScreen - Calling getSubCategories with different approaches');
+
+      // Check if token exists
+      const token = await AsyncStorage.getItem('token');
+      console.log('InsurancesScreen - Token exists:', !!token);
+      console.log('InsurancesScreen - Token value:', token ? token.substring(0, 20) + '...' : 'null');
+
+      // First try without parameters
+      console.log('InsurancesScreen - Attempt 1: No parameters');
+      console.log('InsurancesScreen - Base URL from global:', global.baseURL);
+      console.log('InsurancesScreen - Full URL would be:', `${global.baseURL}/subcategory`);
+      const resp1 = await getSubCategories();
+      console.log('InsurancesScreen - Response 1:', resp1);
+      console.log('InsurancesScreen - Response 1 status:', resp1.status);
+      console.log('InsurancesScreen - Response 1 data:', resp1.data);
+
+      // Check if we got data
+      if (resp1.data && (Array.isArray(resp1.data) || resp1.data.data)) {
+        let subCategoriesData = [];
+        if (resp1.data?.data && Array.isArray(resp1.data.data)) {
+          subCategoriesData = resp1.data.data;
+        } else if (resp1.data && Array.isArray(resp1.data)) {
+          subCategoriesData = resp1.data;
+        }
+
+        console.log('InsurancesScreen - Found data in attempt 1:', subCategoriesData);
+        if (subCategoriesData.length > 0) {
+          setSubCategories(subCategoriesData);
+          return;
+        }
+      }
+
+      // Try with different pagination parameters
+      console.log('InsurancesScreen - Attempt 2: With pagination');
+      const resp2 = await getSubCategories({ page: 1, limit: 1000 });
+      console.log('InsurancesScreen - Response 2:', resp2);
+      console.log('InsurancesScreen - Response 2 data:', resp2.data);
+
+      // Try different response structures for second attempt
+      let subCategoriesData = [];
+      if (resp2.data?.data && Array.isArray(resp2.data.data)) {
+        subCategoriesData = resp2.data.data;
+      } else if (resp2.data && Array.isArray(resp2.data)) {
+        subCategoriesData = resp2.data;
+      }
+
+      console.log('InsurancesScreen - Final subcategories data:', subCategoriesData);
+      console.log('InsurancesScreen - Final subcategories length:', subCategoriesData.length);
+      setSubCategories(subCategoriesData);
+
+    } catch (error) {
+      console.error('InsurancesScreen - Error fetching subcategories:', error);
+      console.error('InsurancesScreen - Error response:', error.response);
+      console.error('InsurancesScreen - Error status:', error.response?.status);
+      console.error('InsurancesScreen - Error message:', error.message);
+
+      // Check if it's an auth error
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.error('InsurancesScreen - Authentication error detected');
+        Toast.show({
+          type: 'error',
+          text1: 'Authentication Error',
+          text2: 'Please log in again',
+          position: 'bottom',
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error fetching subcategories',
+          text2: error?.response?.data?.message || 'Please try again',
+          position: 'bottom',
+        });
+      }
+    }
+  }, []);
+
+  // Get insurance subcategories dynamically
+  const getInsuranceSubCategories = () => {
+    console.log('InsurancesScreen - getInsuranceSubCategories called');
+    console.log('InsurancesScreen - categories:', categories);
+    console.log('InsurancesScreen - subCategories:', subCategories);
+    console.log('InsurancesScreen - subCategories length:', subCategories.length);
+
+    const insuranceCategory = categories.find(cat => cat.name.toLowerCase().includes('insurance'));
+    console.log('InsurancesScreen - insuranceCategory found:', insuranceCategory);
+
+    if (!insuranceCategory) {
+      console.log('InsurancesScreen - No insurance category found');
+      return [];
+    }
+
+    console.log('InsurancesScreen - Looking for subcategories with parentCategory._id:', insuranceCategory._id);
+
+    const filteredSubs = subCategories.filter(sub => {
+      console.log('InsurancesScreen - Checking subcategory:', sub.name, 'parentCategory:', sub.parentCategory?._id);
+      return sub.parentCategory?._id === insuranceCategory._id;
+    });
+
+    console.log('InsurancesScreen - filtered subcategories:', filteredSubs);
+
+    return filteredSubs.sort((a, b) => {
+      const orderMap = {
+        'Life': 1,
+        'Health': 2,
+        'Motor': 3,
+        'General': 4,
+        'Travel': 5
+      };
+
+      const orderA = orderMap[a.name] || 99;
+      const orderB = orderMap[b.name] || 99;
+      return orderA - orderB;
+    });
+  };
+
+  // Get image URI for subcategory
+  const getSubCategoryImageUri = (base64) => {
+    if (!base64) return null;
+    return base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
+  };
+
   // Category modal functions
-  const handleCategoryPress = (category) => {
-    setSelectedCategory(category);
+  const handleCategoryPress = (subCategory) => {
+    console.log('InsuranceScreen - handleCategoryPress called with:', subCategory);
+    setSelectedCategory(subCategory.name);
+    setSelectedSubCategoryData(subCategory);
+    setSelectedSubCategoryImage(getSubCategoryImageUri(subCategory.image));
     setShowCategoryModal(true);
   };
 
   const closeCategoryModal = () => {
     setShowCategoryModal(false);
     setSelectedCategory('');
+    setSelectedSubCategoryData(null);
+    setSelectedSubCategoryImage(null);
   };
+
+  // Load data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchAllCategories(), fetchAllSubCategories()]);
+      setLoading(false);
+    };
+    loadData();
+  }, [fetchAllCategories, fetchAllSubCategories]);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchAllCategories();
+      fetchAllSubCategories();
+    }, [fetchAllCategories, fetchAllSubCategories])
+  );
 
   return (
     <View style={styles.container}>
@@ -90,25 +278,45 @@ const InsurancesScreen = () => {
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             <Text style={styles.contentHeaderTitle}>Earn While You Refer</Text>
             <Text style={styles.contentHeaderSubtitle}>Share services you trust and get paid for every referral</Text>
-            
-            <View style={[styles.gridContainer, { gap }]}>
-              {insuranceCategories.map((item, index) => (
-                <TouchableOpacity 
-                  key={index} 
-                  style={[styles.gridItemWrapper, { width: cardWidth }]}
-                  onPress={() => handleCategoryPress(item.name)}
-                  activeOpacity={0.8}
-                >
-                    <LinearGradient
-                        colors={['#FFFFFF', '#E6FFF1']}
-                        style={styles.gridItem}
-                    >
-                        <Text style={styles.gridItemText}>{item.name}</Text>
-                        <Image source={item.icon} style={styles.gridItemIcon} />
-                    </LinearGradient>
-                </TouchableOpacity>
-              ))}
-            </View>
+
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#1D8C7C" />
+                <Text style={styles.loadingText}>Loading insurance categories...</Text>
+              </View>
+            ) : (
+              <View style={[styles.gridContainer, { gap }]}>
+                {(() => {
+                  const subCategories = getInsuranceSubCategories();
+                  console.log('InsurancesScreen - Rendering subcategories:', subCategories);
+                  return subCategories.map((subCategory, index) => {
+                    console.log('InsurancesScreen - Rendering subcategory:', subCategory.name, subCategory._id);
+                    const imageUri = getSubCategoryImageUri(subCategory.image);
+
+                    return (
+                      <TouchableOpacity
+                        key={subCategory._id || index}
+                        style={[styles.gridItemWrapper, { width: cardWidth }]}
+                        onPress={() => handleCategoryPress(subCategory)}
+                        activeOpacity={0.8}
+                      >
+                          <LinearGradient
+                              colors={['#FFFFFF', '#E6FFF1']}
+                              style={styles.gridItem}
+                          >
+                              <Text style={styles.gridItemText}>{subCategory.name}</Text>
+                              {imageUri ? (
+                                <Image source={{ uri: imageUri }} style={styles.gridItemIcon} />
+                              ) : (
+                                <Image source={require('../../assets/Icons/umbrella.png')} style={styles.gridItemIcon} />
+                              )}
+                          </LinearGradient>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
+              </View>
+            )}
           </ScrollView>
         </View>
 
@@ -118,10 +326,12 @@ const InsurancesScreen = () => {
         </TouchableOpacity>
 
         {/* Category Modal */}
-        <CategoryModal 
+        <CategoryModal
           visible={showCategoryModal}
           onClose={closeCategoryModal}
           category={selectedCategory}
+          subCategory={selectedSubCategoryData}
+          subCategoryImage={selectedSubCategoryImage}
         />
       </SafeAreaView>
     </View>
@@ -320,6 +530,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 8,
     elevation: 8,
+  },
+  // Loading styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666666',
+    fontFamily: 'Rubik-Regular',
   },
 });
 
