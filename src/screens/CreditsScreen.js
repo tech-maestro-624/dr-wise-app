@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,53 +8,159 @@ import {
   TouchableOpacity,
   StatusBar,
   Image,
-  Platform
+  Platform,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-
-// Mock data for the transaction list
-const transactions = [
-  {
-    id: 1,
-    title: 'Individual Plan',
-    date: '25-03-2025,10:43 PM',
-    description: 'Welcome Bonus of 100 Coins',
-    amount: '₹100.00',
-  },
-  {
-    id: 2,
-    title: 'Individual Plan',
-    date: '24-03-2025,08:12 PM',
-    description: 'Referral Bonus',
-    amount: '₹100.00',
-  },
-  {
-    id: 3,
-    title: 'Individual Plan',
-    date: '23-03-2025,09:30 AM',
-    description: 'Welcome Bonus of 100 Coins',
-    amount: '₹100.00',
-  },
-  {
-    id: 4,
-    title: 'Individual Plan',
-    date: '22-03-2025,02:15 PM',
-    description: 'Referral Bonus',
-    amount: '₹100.00',
-  },
-  {
-    id: 5,
-    title: 'Individual Plan',
-    date: '21-03-2025,11:45 AM',
-    description: 'Welcome Bonus of 100 Coins',
-    amount: '₹100.00',
-  },
-];
+import { useAuth } from '../context/AuthContext';
+import { getUserData } from '../api/auth';
+import { getWallet } from '../api/wallet';
+import { getTransactions } from '../api/transactions';
 
 const CreditsScreen = () => {
   const navigation = useNavigation();
+  const { user: authUser } = useAuth();
+
+  // State for user data
+  const [user, setUser] = useState(null);
+  const [wallet, setWallet] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [stats, setStats] = useState({ received: 0, redeemed: 0 });
+  const [loading, setLoading] = useState(false);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+
+  // Calculate received and redeemed amounts from transactions (based on credit.tsx logic)
+  const calculateStats = (transactionList) => {
+    const totalReceived = transactionList
+      .filter(
+        (transaction) =>
+          transaction.type === 'credit' ||
+          transaction.type === 'JOINING_BONUS' ||
+          transaction.type === 'UNLOCK_REFERRAL_BONUS'
+      )
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+    const totalRedeemed = transactionList
+      .filter(
+        (transaction) =>
+          transaction.type === 'debit' && transaction.status === 'approved'
+      )
+      .reduce((acc, curr) => acc + Math.abs(curr.amount || 0), 0);
+
+    return { received: totalReceived, redeemed: totalRedeemed };
+  };
+
+  // Fetch user data
+  const fetchUserData = async () => {
+    try {
+      const response = await getUserData();
+      if (response && response.data && response.data.user) {
+        setUser(response.data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      // Don't show alert for user data error as it's not critical for credits screen
+    }
+  };
+
+  // Fetch wallet data
+  const fetchWalletData = async () => {
+    setWalletLoading(true);
+    try {
+      const response = await getWallet();
+      if (response && response.data) {
+        setWallet(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching wallet data:', error);
+      Alert.alert('Error', 'Failed to load wallet balance. Please try again.');
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
+  // Fetch transactions data
+  const fetchTransactionsData = async () => {
+    setTransactionsLoading(true);
+    try {
+      const response = await getTransactions();
+      if (response && response.data) {
+        // Handle different possible response structures
+        let transactionList = [];
+        if (Array.isArray(response.data)) {
+          transactionList = response.data;
+        } else if (response.data.transactions && Array.isArray(response.data.transactions)) {
+          transactionList = response.data.transactions;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          transactionList = response.data.data;
+        }
+
+        console.log('Transaction list:', transactionList);
+
+        // Calculate received and redeemed amounts
+        const calculatedStats = calculateStats(transactionList);
+        setStats(calculatedStats);
+
+        console.log('Calculated stats:', calculatedStats);
+
+        // Transform transactions to match UI structure
+        const transformedTransactions = transactionList.slice(0, 5).map((transaction, index) => ({
+          id: transaction._id || index.toString(),
+          title: transaction.type || 'Transaction',
+          date: transaction.date ? new Date(transaction.date).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          }).replace(',', ',') : 'N/A',
+          description: transaction.description || transaction.type || 'Transaction',
+          amount: `₹${Math.abs(transaction.amount || 0).toFixed(2)}`,
+          type: transaction.type,
+        }));
+
+        setTransactions(transformedTransactions);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions data:', error);
+      Alert.alert('Error', 'Failed to load transaction history. Please try again.');
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
+  // Fetch all data
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchUserData(),
+        fetchWalletData(),
+        fetchTransactionsData()
+      ]);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  // Re-fetch on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchAllData();
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -72,27 +178,48 @@ const CreditsScreen = () => {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* --- Balance Card --- */}
           <View style={styles.balanceCard}>
-            <Text style={styles.helloText}>Hello Punith</Text>
-            <Text style={styles.balanceAmount}>₹1,200</Text>
-            <Text style={styles.balanceLabel}>Your Balance</Text>
-            <View style={styles.divider} />
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <Text style={styles.statLabel}>Received</Text>
-                <Text style={styles.statAmount}>₹100.00</Text>
+            {walletLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#8F31F9" />
+                <Text style={styles.loadingText}>Loading balance...</Text>
               </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statLabel}>Redeemed</Text>
-                <Text style={styles.statAmount}>₹0.00</Text>
-              </View>
-            </View>
-            <View style={styles.lockedBonusContainer}>
-              <Text style={styles.lockedBonusLabel}>Locked Referral Bouns</Text>
-              <View style={styles.lockedBonusContent}>
-                <Text style={styles.lockedBonusAmount}>₹100.00</Text>
-                <Ionicons name="lock-closed" size={18} color="#1A1B20" />
-              </View>
-            </View>
+            ) : (
+              <>
+                <Text style={styles.helloText}>
+                  Hello {user?.name || authUser?.name || 'User'}
+                </Text>
+                <Text style={styles.balanceAmount}>
+                  ₹{wallet?.balance ? wallet.balance.toFixed(2) : '0.00'}
+                </Text>
+                <Text style={styles.balanceLabel}>Your Balance</Text>
+                <View style={styles.divider} />
+                <View style={styles.statsContainer}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Received</Text>
+                    <Text style={styles.statAmount}>
+                      ₹{stats.received.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Redeemed</Text>
+                    <Text style={styles.statAmount}>
+                      ₹{stats.redeemed.toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+                {wallet?.lockedRefBonus && wallet.lockedRefBonus > 0 && (
+                  <View style={styles.lockedBonusContainer}>
+                    <Text style={styles.lockedBonusLabel}>Locked Referral Bonus</Text>
+                    <View style={styles.lockedBonusContent}>
+                      <Text style={styles.lockedBonusAmount}>
+                        ₹{wallet.lockedRefBonus.toFixed(2)}
+                      </Text>
+                      <Ionicons name="lock-closed" size={18} color="#1A1B20" />
+                    </View>
+                  </View>
+                )}
+              </>
+            )}
             <TouchableOpacity 
               style={styles.redeemButton}
               onPress={() => navigation.navigate('Redeem')}
@@ -114,23 +241,35 @@ const CreditsScreen = () => {
             </View>
 
             {/* Transaction List */}
-            {transactions.map((item) => (
-              <View key={item.id} style={styles.transactionItem}>
-                <View style={styles.transactionIconContainer}>
-                  <Image 
-                    source={require('../../assets/Icons/tickmark.png')} 
-                    style={styles.checkmarkIcon}
-                    resizeMode="cover"
-                  />
-                </View>
-                <View style={styles.transactionDetails}>
-                  <Text style={styles.transactionTitle}>{item.title}</Text>
-                  <Text style={styles.transactionDate}>{item.date}</Text>
-                  <Text style={styles.transactionDescription}>{item.description}</Text>
-                </View>
-                <Text style={styles.transactionAmount}>{item.amount}</Text>
+            {transactionsLoading ? (
+              <View style={styles.transactionLoadingContainer}>
+                <ActivityIndicator size="small" color="#8F31F9" />
+                <Text style={styles.transactionLoadingText}>Loading transactions...</Text>
               </View>
-            ))}
+            ) : transactions.length > 0 ? (
+              transactions.map((item) => (
+                <View key={item.id} style={styles.transactionItem}>
+                  <View style={styles.transactionIconContainer}>
+                    <Image
+                      source={require('../../assets/Icons/tickmark.png')}
+                      style={styles.checkmarkIcon}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={styles.transactionDetails}>
+                    <Text style={styles.transactionTitle}>{item.title}</Text>
+                    <Text style={styles.transactionDate}>{item.date}</Text>
+                    <Text style={styles.transactionDescription}>{item.description}</Text>
+                  </View>
+                  <Text style={styles.transactionAmount}>{item.amount}</Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyTransactionsContainer}>
+                <Ionicons name="receipt-outline" size={48} color="#7D7D7D" />
+                <Text style={styles.emptyTransactionsText}>No transactions found</Text>
+              </View>
+            )}
           </View>
         </ScrollView>
       </LinearGradient>
@@ -238,6 +377,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     marginBottom: 8,
   },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontFamily: 'Rubik-Regular',
+    fontSize: 14,
+    color: '#7D7D7D',
+    marginTop: 10,
+    textAlign: 'center',
+  },
   lockedBonusContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -334,6 +485,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1A1B20',
     textAlign: 'right',
+  },
+  transactionLoadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+  },
+  transactionLoadingText: {
+    fontFamily: 'Rubik-Regular',
+    fontSize: 14,
+    color: '#7D7D7D',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  emptyTransactionsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyTransactionsText: {
+    fontFamily: 'Rubik-Regular',
+    fontSize: 14,
+    color: '#7D7D7D',
+    marginTop: 10,
+    textAlign: 'center',
   },
 });
 

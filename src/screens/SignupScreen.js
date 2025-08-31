@@ -12,85 +12,75 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { Controller, useForm } from 'react-hook-form';
+import Toast from 'react-native-toast-message';
+import { register, sendOtp, verifyOtp } from '../api/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
+import Loader from '../loader/loader';
+import toastConfig from '../toast/toastConfig';
 
 const SignupScreen = ({ navigation }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [nameError, setNameError] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [phoneError, setPhoneError] = useState('');
-  const [isNameValid, setIsNameValid] = useState(false);
-  const [isEmailValid, setIsEmailValid] = useState(false);
-  const [isPhoneValid, setIsPhoneValid] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const { login } = useAuth();
 
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const { control, handleSubmit, formState: { errors }, reset } = useForm({
+    defaultValues: {
+      name: '',
+      email: '',
+      phoneNumber: '',
+      referralCode: '',
+    },
+  });
 
-  const validatePhoneNumber = (number) => {
-    const phoneRegex = /^\d{10}$/;
-    return phoneRegex.test(number);
-  };
-
-  const handleNameChange = (text) => {
-    setName(text);
-    if (text.length > 0) {
-      if (text.length >= 2) {
-        setNameError('');
-        setIsNameValid(true);
-      } else {
-        setNameError('Name must be at least 2 characters');
-        setIsNameValid(false);
-      }
-    } else {
-      setNameError('');
-      setIsNameValid(false);
+  const onSubmit = async (data) => {
+    if (!agreeToTerms) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please agree to terms and conditions',
+        position: 'bottom',
+      });
+      return;
     }
-  };
 
-  const handleEmailChange = (text) => {
-    setEmail(text);
-    if (text.length > 0) {
-      if (validateEmail(text)) {
-        setEmailError('');
-        setIsEmailValid(true);
-      } else {
-        setEmailError('Please enter a valid email address');
-        setIsEmailValid(false);
-      }
-    } else {
-      setEmailError('');
-      setIsEmailValid(false);
-    }
-  };
+    setLoading(true);
+    try {
+      // Register the user
+      await register({ ...data, otp: '123456' });
 
-  const handlePhoneChange = (text) => {
-    setPhoneNumber(text);
-    if (text.length > 0) {
-      if (validatePhoneNumber(text)) {
-        setPhoneError('');
-        setIsPhoneValid(true);
-      } else {
-        setPhoneError('Please enter a valid 10-digit phone number');
-        setIsPhoneValid(false);
-      }
-    } else {
-      setPhoneError('');
-      setIsPhoneValid(false);
-    }
-  };
+      // Send OTP after registration
+      const response = await sendOtp({ phoneNumber: data.phoneNumber });
+      const receivedOtp = '123456'; // In development, OTP is hardcoded
 
-  const handleSignup = () => {
-    if (isNameValid && isEmailValid && isPhoneValid && agreeToTerms) {
-      // Handle signup logic
-      navigation.navigate('Verification');
-    } else if (!agreeToTerms) {
-      alert('Please agree to terms and conditions');
-    } else {
-      alert('Please fill all fields correctly');
+      // Auto-verify OTP for development
+      const verifyResponse = await verifyOtp({
+        phoneNumber: data.phoneNumber,
+        otp: receivedOtp
+      });
+
+      const userData = verifyResponse.data.user || verifyResponse.data;
+      const token = verifyResponse.data.token;
+
+      await login(userData, token);
+      // Navigation will be handled automatically by AuthNavigator
+
+      Toast.show({
+        type: 'success',
+        text1: 'Registration successful!',
+        position: 'bottom',
+      });
+
+      navigation.navigate('Main');
+      reset();
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: error?.response?.data?.message || error.message || 'Registration failed',
+        position: 'bottom',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -124,50 +114,126 @@ const SignupScreen = ({ navigation }) => {
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Full Name</Text>
             <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter your full name"
-                placeholderTextColor="#9CA3AF"
-                value={name}
-                onChangeText={handleNameChange}
-                autoCapitalize="words"
+              <Controller
+                control={control}
+                rules={{
+                  required: 'Name is required',
+                  minLength: {
+                    value: 2,
+                    message: 'Name must be at least 2 characters',
+                  },
+                }}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter your full name"
+                    placeholderTextColor="#9CA3AF"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    autoCapitalize="words"
+                  />
+                )}
+                name="name"
               />
             </View>
-            {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
+            {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
           </View>
 
           {/* Email Input */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Email</Text>
             <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter your email"
-                placeholderTextColor="#9CA3AF"
-                value={email}
-                onChangeText={handleEmailChange}
-                keyboardType="email-address"
-                autoCapitalize="none"
+              <Controller
+                control={control}
+                rules={{
+                  required: 'Email is required',
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: 'Please enter a valid email address',
+                  },
+                }}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter your email"
+                    placeholderTextColor="#9CA3AF"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                )}
+                name="email"
               />
             </View>
-            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+            {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
           </View>
 
           {/* Phone Number Input */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Phone Number</Text>
             <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter your phone number"
-                placeholderTextColor="#9CA3AF"
-                value={phoneNumber}
-                onChangeText={handlePhoneChange}
-                keyboardType="phone-pad"
-                maxLength={10}
+              <Controller
+                control={control}
+                rules={{
+                  required: 'Phone number is required',
+                  pattern: {
+                    value: /^[6-9]\d{9}$/,
+                    message: 'Please enter a valid 10-digit phone number',
+                  },
+                }}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter your phone number"
+                    placeholderTextColor="#9CA3AF"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                  />
+                )}
+                name="phoneNumber"
               />
             </View>
-            {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
+            {errors.phoneNumber && <Text style={styles.errorText}>{errors.phoneNumber.message}</Text>}
+          </View>
+
+          {/* Referral Code Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Referral Code (Optional)</Text>
+            <View style={styles.inputWrapper}>
+              <Controller
+                control={control}
+                rules={{
+                  minLength: {
+                    value: 9,
+                    message: 'Invalid Referral Code',
+                  },
+                  maxLength: {
+                    value: 9,
+                    message: 'Invalid Referral Code',
+                  },
+                }}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter referral code"
+                    placeholderTextColor="#9CA3AF"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    maxLength={9}
+                    autoCapitalize="characters"
+                  />
+                )}
+                name="referralCode"
+              />
+            </View>
+            {errors.referralCode && <Text style={styles.errorText}>{errors.referralCode.message}</Text>}
           </View>
 
           {/* Terms and Conditions */}
@@ -217,13 +283,9 @@ const SignupScreen = ({ navigation }) => {
           </View>
 
           {/* Signup Button */}
-          <TouchableOpacity 
-            style={[
-              styles.signupButton,
-              (!isNameValid || !isEmailValid || !isPhoneValid || !agreeToTerms) && styles.signupButtonDisabled
-            ]} 
-            onPress={handleSignup}
-            disabled={!isNameValid || !isEmailValid || !isPhoneValid || !agreeToTerms}
+          <TouchableOpacity
+            style={styles.signupButton}
+            onPress={handleSubmit(onSubmit)}
           >
             <Text style={styles.signupButtonText}>
               Sign Up
@@ -239,6 +301,8 @@ const SignupScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+      <Loader loading={loading} />
+      <Toast config={toastConfig} />
     </SafeAreaView>
   );
 };

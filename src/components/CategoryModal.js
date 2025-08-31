@@ -6,14 +6,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const scale = Math.min(screenWidth / 375, screenHeight / 812);
 
-const CategoryModal = ({ visible, onClose, category }) => {
+const CategoryModal = ({ visible, onClose, category, subCategory, subCategoryImage }) => {
   const navigation = useNavigation();
-  
-  if (!category) return null;
+
+  // If we have subcategory info, use that; otherwise fall back to category
+  const displayName = subCategory?.name || category;
+  const displayDescription = subCategory?.description || 'Share services you trust and get paid for every referral';
+  const navigationCategory = subCategory ? subCategory : category;
+  const displayImage = subCategoryImage;
+
+  if (!displayName) return null;
 
   const handleViewCategories = () => {
     onClose();
-    navigation.navigate('Categories', { category });
+    navigation.navigate('Categories', { category: navigationCategory });
   };
 
   return (
@@ -36,21 +42,29 @@ const CategoryModal = ({ visible, onClose, category }) => {
         >
           {/* Icon Section */}
           <View style={styles.iconContainer}>
-            <Image 
-              source={require('../../assets/Icons/viewCateg.png')} 
-              style={styles.categoryIcon}
-              resizeMode="contain"
-            />
+            {displayImage ? (
+              <Image
+                source={{ uri: displayImage }}
+                style={styles.categoryIcon}
+                resizeMode="contain"
+              />
+            ) : (
+              <Image
+                source={require('../../assets/Icons/viewCateg.png')}
+                style={styles.categoryIcon}
+                resizeMode="contain"
+              />
+            )}
           </View>
 
           {/* Content Section */}
           <View style={styles.contentSection}>
             {/* Title */}
-            <Text style={styles.categoryTitle}>{category}</Text>
+            <Text style={styles.categoryTitle}>{displayName}</Text>
 
             {/* Description */}
             <Text style={styles.categoryDescription}>
-              Share services you trust and get paid for every referralShare services you trust and get paid for every referralShare services you trust and get paid for every referral
+              {displayDescription}
             </Text>
           </View>
 
@@ -108,14 +122,14 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   categoryTitle: {
-    fontFamily: 'Rubik',
+    fontFamily: 'Rubik-Medium',
     fontStyle: 'normal',
     fontWeight: '500',
     fontSize: 32 * scale,
     lineHeight: 38 * scale,
     textAlign: 'center',
     color: '#1A1B20',
-    marginBottom: 20 * scale,
+    marginBottom: 8 * scale,
   },
   contentSection: {
     flex: 1,
@@ -125,7 +139,7 @@ const styles = StyleSheet.create({
   },
   categoryDescription: {
     width: 280 * scale,
-    fontFamily: 'Rubik',
+    fontFamily: 'Rubik-Regular',
     fontStyle: 'normal',
     fontWeight: '400',
     fontSize: 14 * scale,
@@ -133,7 +147,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.2 * scale,
     color: '#7D7D7D',
-    marginTop: 20 * scale,
+    marginTop: 8 * scale,
   },
   viewCategoriesButton: {
     width: 261 * scale,
@@ -146,7 +160,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16 * scale,
   },
   buttonText: {
-    fontFamily: 'Rubik',
+    fontFamily: 'Rubik-SemiBold',
     fontStyle: 'normal',
     fontWeight: '600',
     fontSize: 16 * scale,

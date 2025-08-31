@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { View, ActivityIndicator } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
@@ -35,6 +37,7 @@ import VerificationMainScreen from '../screens/verification/VerificationMainScre
 import GovernmentIDScreen from '../screens/verification/GovernmentIDScreen';
 import SelfiePhotoScreen from '../screens/verification/SelfiePhotoScreen';
 import BankDetailsScreen from '../screens/verification/BankDetailsScreen';
+import FAQScreen from '../screens/FAQScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -95,35 +98,89 @@ function AffiliateTabNavigator() {
   );
 }
 
-export default function AppNavigator() {
+// Authentication-aware navigator component
+function AuthNavigator() {
+    const { isAuthenticated, user } = useAuth();
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        console.log('AuthNavigator - isAuthenticated:', isAuthenticated, 'user:', user?.name);
+        // Small delay to allow AuthContext to initialize
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, [isAuthenticated, user]);
+
+    if (isLoading) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FBFBFB' }}>
+                <ActivityIndicator size="large" color="#8F31F9" />
+            </View>
+        );
+    }
+
     return (
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-                <Stack.Screen name="Login" component={LoginScreen} />
-                <Stack.Screen name="Signup" component={SignupScreen} />
-                <Stack.Screen name="Main" component={MainTabNavigator} />
-                <Stack.Screen name="AffiliateHome" component={AffiliateTabNavigator} />
-                <Stack.Screen name="Leads" component={LeadsScreen} />
-                <Stack.Screen name="Calculator" component={CalculatorScreen} />
-                <Stack.Screen name="TermInsuranceCalculator" component={TermInsuranceCalculatorScreen} />
-                <Stack.Screen name="Details" component={DetailScreen} />
-                {/* <Stack.Screen name="Categories" component={CategoriesScreen} /> */}
-                <Stack.Screen name="Insurances" component={InsurancesScreen} />
-                <Stack.Screen name="Investments" component={InvestmentsScreen} />
-                <Stack.Screen name="Loans" component={LoansScreen} />
-                <Stack.Screen name="TransactionsHistory" component={TransactionsHistoryScreen} />
-                <Stack.Screen name="Redeem" component={RedeemScreen} />
-                <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-                <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
-                <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
-                <Stack.Screen name="Categories" component={CategoriesScreen} />
-                <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
-                  <Stack.Screen name="Verification" component={VerificationMainScreen} />
-                <Stack.Screen name="GovernmentIDScreen" component={GovernmentIDScreen} />
-                <Stack.Screen name="SelfiePhotoScreen" component={SelfiePhotoScreen} />
-                <Stack.Screen name="BankDetailsScreen" component={BankDetailsScreen} />
+                {/* Authentication flow */}
+                {!isAuthenticated ? (
+                    <>
+                        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+                        <Stack.Screen name="Login" component={LoginScreen} />
+                        <Stack.Screen name="Signup" component={SignupScreen} />
+                    </>
+                ) : (
+                    <>
+                        {/* Main authenticated screens */}
+                        <Stack.Screen name="Main" component={MainTabNavigator} />
+                        <Stack.Screen name="AffiliateHome" component={AffiliateTabNavigator} />
+                        <Stack.Screen name="Leads" component={LeadsScreen} />
+                        <Stack.Screen name="Calculator" component={CalculatorScreen} />
+                        <Stack.Screen name="TermInsuranceCalculator" component={TermInsuranceCalculatorScreen} />
+                        <Stack.Screen name="Details" component={DetailScreen} />
+                        <Stack.Screen name="Insurances" component={InsurancesScreen} />
+                        <Stack.Screen name="Investments" component={InvestmentsScreen} />
+                        <Stack.Screen name="Loans" component={LoansScreen} />
+                        <Stack.Screen name="TransactionsHistory" component={TransactionsHistoryScreen} />
+                        <Stack.Screen name="FAQ" component={FAQScreen} />
+                        <Stack.Screen name="Redeem" component={RedeemScreen} />
+                        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+                        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+                        <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+                        <Stack.Screen name="Categories" component={CategoriesScreen} />
+                        <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
+                        <Stack.Screen name="Verification" component={VerificationMainScreen} />
+                        <Stack.Screen name="GovernmentIDScreen" component={GovernmentIDScreen} />
+                        <Stack.Screen name="SelfiePhotoScreen" component={SelfiePhotoScreen} />
+                        <Stack.Screen name="BankDetailsScreen" component={BankDetailsScreen} />
+                    </>
+                )}
             </Stack.Navigator>
         </NavigationContainer>
     );
+}
+
+// Wrapper component to handle AuthContext errors gracefully
+function AuthNavigatorWrapper() {
+    try {
+        return <AuthNavigator />;
+    } catch (error) {
+        console.error('AuthNavigator error:', error);
+        // Fallback to basic navigation if AuthContext fails
+        return (
+            <NavigationContainer>
+                <Stack.Navigator screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+                    <Stack.Screen name="Login" component={LoginScreen} />
+                    <Stack.Screen name="Signup" component={SignupScreen} />
+                </Stack.Navigator>
+            </NavigationContainer>
+        );
+    }
+}
+
+export default function AppNavigator() {
+    return <AuthNavigatorWrapper />;
 }

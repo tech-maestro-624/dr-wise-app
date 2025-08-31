@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,34 +10,18 @@ import {
   Dimensions,
   Platform,
   StatusBar,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../context/AuthContext';
+import { getUserData } from '../api/auth';
+import { getLeads } from '../api/lead';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const scale = Math.min(screenWidth / 375, screenHeight / 812);
-
-// --- Mock data for demonstration purposes ---
-const referralData = [
-  {
-    id: '1',
-    statusTitle: 'Status 1',
-    name: 'Punith',
-    phone: '8293742728',
-    category: 'Travel',
-    product: 'Goa',
-    status: 'Pending',
-  },
-  {
-    id: '2',
-    statusTitle: 'Status 2',
-    name: 'Punith',
-    phone: '8293742728',
-    category: 'Travel',
-    product: 'Goa',
-    status: 'Pending',
-  },
-];
 
 // Reusable component for each row in the status card
 const InfoRow = ({ label, value, isStatus = false }) => (
@@ -56,9 +40,130 @@ const InfoRow = ({ label, value, isStatus = false }) => (
 
 const ReferralStatusScreen = () => {
   const [activeTab, setActiveTab] = useState('Pending');
+  const [referralData, setReferralData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const { user: authUser } = useAuth();
 
-  // Filter data based on the active tab
-  const filteredData = referralData.filter(item => item.status === activeTab);
+  // Fetch user data
+  const fetchUserData = async () => {
+    try {
+      const response = await getUserData();
+      if (response && response.data && response.data.user) {
+        setUser(response.data.user);
+      } else {
+        console.error('Invalid user data response format');
+        Alert.alert('Error', 'Failed to load user data. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      const errorMessage = error?.response?.data?.message || error.message || 'Failed to load user data';
+      Alert.alert('Error', errorMessage);
+    }
+  };
+
+  // Fetch referral data
+  const fetchReferralData = async () => {
+    if (!user?._id) return;
+
+    setLoading(true);
+    try {
+      const response = await getLeads({
+        condition: { referrer: user._id },
+        page: 1,
+        limit: 50, // Fetch more items to show all referrals
+      });
+
+      if (response && response.data) {
+        console.log('Referral API response:', response.data);
+
+        // Handle different possible response structures
+        let leads = [];
+        if (response.data.leads && Array.isArray(response.data.leads)) {
+          leads = response.data.leads;
+        } else if (Array.isArray(response.data)) {
+          leads = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          leads = response.data.data;
+        } else {
+          console.error('Unexpected response structure:', response.data);
+          Alert.alert('Error', 'Unexpected data format from server. Please try again.');
+          return;
+        }
+
+        console.log('Leads array:', leads);
+
+        // Transform the data to match the UI structure
+        const transformedData = leads.map((lead, index) => ({
+          id: lead._id || index.toString(),
+          statusTitle: `Status ${index + 1}`,
+          name: lead.name || 'N/A',
+          phone: lead.phoneNumber || lead.phone || 'N/A',
+          category: lead.categoryId?.name || 'N/A',
+          product: lead.productId?.name || 'N/A',
+          status: lead.status || 'Pending',
+          createdAt: lead.createdAt,
+          updatedAt: lead.updatedAt,
+        }));
+
+        setReferralData(transformedData);
+        setFilteredData(transformedData);
+      } else {
+        console.error('Invalid referral data response format');
+        Alert.alert('Error', 'Failed to fetch referral data. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error fetching referral data:', error);
+      const errorMessage = error?.response?.data?.message || error.message || 'Failed to fetch referral data. Please try again.';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  // Fetch referral data when user is available
+  useEffect(() => {
+    if (user?._id) {
+      fetchReferralData();
+    }
+  }, [user]);
+
+  // Re-fetch on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (user?._id) {
+        fetchReferralData();
+      }
+    }, [user])
+  );
+
+  // Filter data based on the active tab and search term
+  useEffect(() => {
+    let filtered = referralData.filter(item => {
+      const statusMatch = item.status === activeTab;
+      const searchMatch = searchTerm === '' || 
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.phone.includes(searchTerm) ||
+        item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.product.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return statusMatch && searchMatch;
+    });
+    
+    setFilteredData(filtered);
+  }, [activeTab, searchTerm, referralData]);
+
+  // Handle search input
+  const handleSearch = (text) => {
+    setSearchTerm(text);
+  };
 
   return (
     <View style={styles.container}>
@@ -100,6 +205,8 @@ const ReferralStatusScreen = () => {
             placeholder="Search.."
             placeholderTextColor="#7D7D7D"
             style={styles.searchInput}
+            value={searchTerm}
+            onChangeText={handleSearch}
           />
         </View>
 
@@ -108,20 +215,35 @@ const ReferralStatusScreen = () => {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}>
-          {filteredData.map(item => (
-            <View key={item.id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>{item.statusTitle}</Text>
-              </View>
-              <View style={styles.cardBody}>
-                <InfoRow label="Name" value={item.name} />
-                <InfoRow label="Phone" value={item.phone} />
-                <InfoRow label="Category" value={item.category} />
-                <InfoRow label="Product" value={item.product} />
-                <InfoRow label="Status" value={item.status} isStatus={true} />
-              </View>
+          
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#8F31F9" />
+              <Text style={styles.loadingText}>Loading referrals...</Text>
             </View>
-          ))}
+          ) : filteredData.length > 0 ? (
+            filteredData.map(item => (
+              <View key={item.id} style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>{item.statusTitle}</Text>
+                </View>
+                <View style={styles.cardBody}>
+                  <InfoRow label="Name" value={item.name} />
+                  <InfoRow label="Phone" value={item.phone} />
+                  <InfoRow label="Category" value={item.category} />
+                  <InfoRow label="Product" value={item.product} />
+                  <InfoRow label="Status" value={item.status} isStatus={true} />
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="document-text-outline" size={48 * scale} color="#7D7D7D" />
+              <Text style={styles.emptyText}>
+                {searchTerm ? 'No referrals found matching your search.' : `No ${activeTab.toLowerCase()} referrals found.`}
+              </Text>
+            </View>
+          )}
         </ScrollView>
       </LinearGradient>
     </View>
@@ -227,6 +349,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20 * scale,
     paddingTop: 10 * scale,
     paddingBottom: 20 * scale,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40 * scale,
+  },
+  loadingText: {
+    fontFamily: 'Rubik',
+    fontSize: 14 * scale,
+    color: '#7D7D7D',
+    marginTop: 10 * scale,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40 * scale,
+  },
+  emptyText: {
+    fontFamily: 'Rubik',
+    fontSize: 14 * scale,
+    color: '#7D7D7D',
+    textAlign: 'center',
+    marginTop: 10 * scale,
   },
   card: {
     backgroundColor: '#FBFBFB',

@@ -8,6 +8,7 @@ import {
   Rubik_700Bold,
 } from '@expo-google-fonts/rubik';
 import { View, Text } from 'react-native';
+import { AuthProvider } from './src/context/AuthContext';
 
 
 
@@ -27,6 +28,10 @@ export default function App() {
     );
   }
 
-  return <AppNavigator />;
+  return (
+    <AuthProvider>
+      <AppNavigator />
+    </AuthProvider>
+  );
 }
 

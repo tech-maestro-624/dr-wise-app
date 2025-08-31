@@ -12,55 +12,85 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { Controller, useForm } from 'react-hook-form';
+import { sendOtp, verifyOtp } from '../api/auth';
+import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
+import Loader from '../loader/loader';
+import toastConfig from '../toast/toastConfig';
 
 const LoginScreen = ({ navigation }) => {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState('');
-  const [showOtp, setShowOtp] = useState(false);
-  const [phoneError, setPhoneError] = useState('');
-  const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const { login } = useAuth();
 
-  const validatePhoneNumber = (number) => {
-    const phoneRegex = /^\d{10}$/;
-    return phoneRegex.test(number);
-  };
+  const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
+    defaultValues: {
+      phoneNumber: '',
+      otp: '',
+    },
+  });
 
-  const handlePhoneChange = (text) => {
-    setPhoneNumber(text);
-    if (text.length > 0) {
-      if (validatePhoneNumber(text)) {
-        setPhoneError('');
-        setIsPhoneValid(true);
-      } else {
-        setPhoneError('Please enter a valid 10-digit phone number');
-        setIsPhoneValid(false);
-      }
-    } else {
-      setPhoneError('');
-      setIsPhoneValid(false);
-    }
-  };
+  const onSubmitPhone = async (data) => {
+    setLoading(true);
+    try {
+      const response = await sendOtp({ phoneNumber: data.phoneNumber });
+      const receivedOtp = response.data.otp;
 
-  const handleSendOtp = () => {
-    if (isPhoneValid) {
-      console.log('OTP Sent to', phoneNumber);
+      setValue('otp', receivedOtp, {
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+
+      Toast.show({
+        type: 'success',
+        text1: 'OTP has been sent to your mobile number',
+        position: 'bottom',
+      });
+
+      setPhoneNumber(data.phoneNumber);
       setOtpSent(true);
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: error.response?.data?.message || 'Unexpected Error, Try again',
+        position: 'bottom',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleLogin = () => {
-    // Mock OTP validation
-    if (isPhoneValid && otp === '1234') {
-      // Check if it's the affiliate phone number
-      if (phoneNumber === '9986914266') {
-        navigation.navigate('AffiliateHome');
-      } else {
-        navigation.navigate('Main');
-      }
-    } else {
-      alert('Invalid OTP');
+  const onSubmitOtp = async (data) => {
+    setLoading(true);
+    try {
+      const otpData = {
+        phoneNumber,
+        otp: data.otp,
+      };
+      const response = await verifyOtp(otpData);
+      const userData = response.data.user || response.data;
+      const token = response.data.token;
+
+      await login(userData, token);
+      // Navigation will be handled automatically by AuthNavigator
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid OTP',
+        position: 'bottom',
+      });
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleLoginClicked = () => {
+    setOtpSent(false);
+    reset();
   };
 
   return (
@@ -93,17 +123,33 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Phone Number</Text>
             <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter your phone number"
-                placeholderTextColor="#9CA3AF"
-                value={phoneNumber}
-                onChangeText={handlePhoneChange}
-                keyboardType="phone-pad"
-                maxLength={10}
+              <Controller
+                control={control}
+                rules={{
+                  required: 'Phone number is required',
+                  pattern: {
+                    value: /^[6-9]\d{9}$/,
+                    message: 'Enter valid Phone number',
+                  },
+                }}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter your phone number"
+                    placeholderTextColor="#9CA3AF"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                  />
+                )}
+                name="phoneNumber"
               />
             </View>
-            {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
+            {errors.phoneNumber && (
+              <Text style={styles.errorText}>{errors.phoneNumber.message}</Text>
+            )}
           </View>
 
           {/* OTP Input - Show only after OTP is sent */}
@@ -111,27 +157,33 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>OTP</Text>
               <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter 4-digit OTP"
-                  placeholderTextColor="#9CA3AF"
-                  value={otp}
-                  onChangeText={setOtp}
-                  secureTextEntry={!showOtp}
-                  keyboardType="number-pad"
-                  maxLength={4}
+                <Controller
+                  control={control}
+                  rules={{
+                    required: 'OTP is required',
+                    pattern: {
+                      value: /^\d{6}$/,
+                      message: 'Enter a valid 6-digit OTP',
+                    },
+                  }}
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Enter 6-digit OTP"
+                      placeholderTextColor="#9CA3AF"
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                      keyboardType="numeric"
+                      maxLength={6}
+                    />
+                  )}
+                  name="otp"
                 />
-                <TouchableOpacity
-                  onPress={() => setShowOtp(!showOtp)}
-                  style={styles.eyeIcon}
-                >
-                  <Ionicons 
-                    name={showOtp ? "eye-off" : "eye"} 
-                    size={20} 
-                    color="#9CA3AF" 
-                  />
-                </TouchableOpacity>
               </View>
+              {errors.otp && (
+                <Text style={styles.errorText}>{errors.otp.message}</Text>
+              )}
             </View>
           )}
 
@@ -169,18 +221,26 @@ const LoginScreen = ({ navigation }) => {
           </View>
 
           {/* Login Button */}
-          <TouchableOpacity 
-            style={[
-              styles.loginButton,
-              !isPhoneValid && styles.loginButtonDisabled
-            ]} 
-            onPress={otpSent ? handleLogin : handleSendOtp}
-            disabled={!isPhoneValid}
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={otpSent ? handleSubmit(onSubmitOtp) : handleSubmit(onSubmitPhone)}
           >
             <Text style={styles.loginButtonText}>
-              {otpSent ? 'Login' : 'Send OTP'}
+              {otpSent ? 'Verify OTP' : 'Send OTP'}
             </Text>
           </TouchableOpacity>
+
+          {/* Back to Login Button - Show only after OTP is sent */}
+          {otpSent && (
+            <TouchableOpacity
+              onPress={handleLoginClicked}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>
+                Back to Login
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Sign Up Link */}
           <View style={styles.signupContainer}>
@@ -191,6 +251,8 @@ const LoginScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+      <Loader loading={loading} />
+      <Toast config={toastConfig} />
     </SafeAreaView>
   );
 };
@@ -373,6 +435,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Rubik-SemiBold',
     color: '#FFFFFF',
+  },
+  secondaryButton: {
+    marginTop: 10,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#8B5CF6',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Rubik-SemiBold',
+    color: '#8B5CF6',
   },
   signupContainer: {
     flexDirection: 'row',
