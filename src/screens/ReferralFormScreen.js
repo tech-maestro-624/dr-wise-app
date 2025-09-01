@@ -186,7 +186,7 @@ const ProductSelectionModal = ({
 };
 
 // Success Modal Component
-const SuccessModal = ({ visible, onClose, referralCount, onNewReferral }) => {
+const SuccessModal = ({ visible, onClose }) => {
   const [animationValue] = useState(new Animated.Value(0));
 
   useEffect(() => {
@@ -195,26 +195,26 @@ const SuccessModal = ({ visible, onClose, referralCount, onNewReferral }) => {
         toValue: 1,
         tension: 50,
         friction: 7,
-        useNativeDriver: true,
+        useNativeDriver: true
       }).start();
     } else {
       Animated.spring(animationValue, {
         toValue: 0,
         tension: 50,
         friction: 7,
-        useNativeDriver: true,
+        useNativeDriver: true
       }).start();
     }
   }, [visible]);
 
   const scale = animationValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.8, 1],
+    outputRange: [0.8, 1]
   });
 
   const opacity = animationValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 1],
+    outputRange: [0, 1]
   });
 
   return (
@@ -231,69 +231,30 @@ const SuccessModal = ({ visible, onClose, referralCount, onNewReferral }) => {
             styles.successModalContainer,
             {
               transform: [{ scale }],
-              opacity,
-            },
+              opacity
+            }
           ]}
         >
-          {/* Success Animation */}
-          <View style={styles.successAnimationContainer}>
-            <View style={styles.successIconWrapper}>
-              <View style={styles.successIconBackground}>
-                <Ionicons name="checkmark" size={40} color="#FFFFFF" />
-              </View>
-            </View>
-            <View style={styles.confettiContainer}>
-              <Ionicons name="sparkles" size={20} color="#FFD700" style={styles.confetti1} />
-              <Ionicons name="sparkles" size={16} color="#FF69B4" style={styles.confetti2} />
-              <Ionicons name="sparkles" size={18} color="#32CD32" style={styles.confetti3} />
-            </View>
+          <View style={styles.imageContainer}>
+            <Image
+              source={require('../../assets/3d_checkmark_2023_4 1.png')}
+              style={styles.successImage}
+            />
+            <LinearGradient
+              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0)']}
+              locations={[0, 0.3654, 0.6154, 0.9856]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={styles.imageShadow}
+            />
           </View>
-
-          {/* Content */}
-          <View style={styles.successContent}>
-            <Text style={styles.successTitle}>🎉 Referral Submitted!</Text>
-            <Text style={styles.successSubtitle}>
-              Great job! You've successfully submitted {referralCount} referral{referralCount > 1 ? 's' : ''}.
-            </Text>
-
-            <View style={styles.successDetails}>
-              <View style={styles.detailItem}>
-                <Ionicons name="people-outline" size={20} color="#8F31F9" />
-                <Text style={styles.detailText}>Your friend will be contacted within 24 hours</Text>
-              </View>
-              <View style={styles.detailItem}>
-                <Ionicons name="gift-outline" size={20} color="#8F31F9" />
-                <Text style={styles.detailText}>You'll earn coins when they convert</Text>
-              </View>
-              <View style={styles.detailItem}>
-                <Ionicons name="notifications-outline" size={20} color="#8F31F9" />
-                <Text style={styles.detailText}>Get notified about progress updates</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.successActions}>
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={onNewReferral}
-            >
-              <Text style={styles.secondaryButtonText}>Make Another Referral</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={onClose}
-            >
-              <LinearGradient
-                colors={['#8F31F9', '#A855F7', '#C084FC']}
-                locations={[0, 0.6, 1]}
-                style={styles.primaryButtonGradient}
-              >
-                <Text style={styles.primaryButtonText}>Continue</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.successTitle}>Congrats!</Text>
+          <Text style={styles.successSubtitle}>
+            Your referral has been sent successfully. Thanks for spreading the word!
+          </Text>
+          <TouchableOpacity style={styles.refreshButton} onPress={onClose}>
+            <Text style={styles.refreshButtonText}>Refresh</Text>
+          </TouchableOpacity>
         </Animated.View>
       </View>
     </Modal>
@@ -314,7 +275,6 @@ const ReferralFormScreen = () => {
     name: '',
     email: '',
     phone: '',
-    message: '',
     productIds: [] // Changed to array for multiple products
   });
 
@@ -774,7 +734,7 @@ const ReferralFormScreen = () => {
         name: formData.name.trim(),
         phoneNumber: formData.phone.trim(),
         email: formData.email.trim() || undefined, // Optional field
-        message: formData.message.trim() || undefined, // Optional field
+        message: formData.message?.trim() || undefined, // Optional field
         referrer: user?._id, // Authenticated user's ID
         categoryId: primaryCategoryId, // Use primary category from first selected product
         productIds: formData.productIds, // Send array of product IDs
@@ -816,7 +776,6 @@ const ReferralFormScreen = () => {
           name: '',
           email: '',
           phone: '',
-          message: '',
           productIds: []
         });
 
@@ -846,8 +805,11 @@ const ReferralFormScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8F6FF" />
+    <LinearGradient
+        colors={['#F3ECFE', '#F6F6FE']}
+        style={styles.container}
+      >
+      <StatusBar barStyle="dark-content" backgroundColor="#F3ECFE" />
       <SafeAreaView style={styles.safeArea}>
 
         {/* Header */}
@@ -856,34 +818,32 @@ const ReferralFormScreen = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={24} color="#1A1B20" />
+            <Ionicons name="chevron-back" size={24} color="#1A1B20" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Categories</Text>
           <View style={styles.headerSpacer} />
         </View>
 
-        {/* Top Card with Illustration and Pick from Contacts */}
-        <View style={styles.topCard}>
-          <Image
-            source={require('../../assets/Icons/referal.png')}
-            style={styles.illustrationImage}
-            resizeMode="contain"
-          />
-
-          {/* Pick from Contacts Button */}
-          <TouchableOpacity
-            style={styles.pickContactsButton}
-            onPress={pickContact}
-          >
-            <Ionicons name="people-outline" size={18} color="#8F31F9" />
-            <Text style={styles.pickContactsButtonText}>Pick from contacts</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Form Content */}
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.contentContainer}>
+            {/* Top Card with Illustration and Pick from Contacts */}
+            <View style={styles.topCard}>
+            <Image
+                source={require('../../assets/Icons/referal.png')}
+                style={styles.illustrationImage}
+                resizeMode="contain"
+            />
 
+            {/* Pick from Contacts Button */}
+            <TouchableOpacity
+                style={styles.pickContactsButton}
+                onPress={pickContact}
+            >
+                <Text style={styles.pickContactsButtonText}>Pick from contacts</Text>
+            </TouchableOpacity>
+            </View>
+
+            {/* Form Content */}
+            <View style={styles.contentContainer}>
             {/* Product Selection */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Select Products (Multiple)</Text>
@@ -891,7 +851,7 @@ const ReferralFormScreen = () => {
                 style={[styles.dropdownButton, errors.productIds && styles.inputError]}
                 onPress={() => setShowProductModal(true)}
               >
-                <Text style={styles.dropdownButtonText}>
+                <Text style={[styles.dropdownButtonText, { color: '#7D7D7D' }]}>
                   {formData.productIds.length > 0
                     ? `${formData.productIds.length} product${formData.productIds.length > 1 ? 's' : ''} selected`
                     : 'Select Products'
@@ -912,6 +872,21 @@ const ReferralFormScreen = () => {
               Fill the details for referral
             </Text>
 
+             {/* Email Input */}
+             <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <TextInput
+                style={[styles.textInput, errors.email && styles.inputError]}
+                placeholder="Enter your email"
+                value={formData.email}
+                onChangeText={(value) => handleInputChange('email', value)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholderTextColor="#7D7D7D"
+              />
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            </View>
+
             {/* Name Input */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Full Name</Text>
@@ -924,7 +899,7 @@ const ReferralFormScreen = () => {
               />
               {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
             </View>
-
+            
             {/* Phone Number Input */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Phone Number</Text>
@@ -939,37 +914,6 @@ const ReferralFormScreen = () => {
               />
               {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
             </View>
-
-            {/* Email Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                style={[styles.textInput, errors.email && styles.inputError]}
-                placeholder="Enter your email"
-                value={formData.email}
-                onChangeText={(value) => handleInputChange('email', value)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                placeholderTextColor="#7D7D7D"
-              />
-              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-            </View>
-
-            {/* Message Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Message (Optional)</Text>
-              <TextInput
-                style={[styles.textInput, errors.message && styles.inputError]}
-                placeholder="Enter your message"
-                value={formData.message}
-                onChangeText={(value) => handleInputChange('message', value)}
-                multiline={true}
-                numberOfLines={3}
-                placeholderTextColor="#7D7D7D"
-              />
-              {errors.message && <Text style={styles.errorText}>{errors.message}</Text>}
-            </View>
-
             {/* Action Buttons */}
             <View style={styles.actionButtonsContainer}>
               <TouchableOpacity
@@ -1017,30 +961,15 @@ const ReferralFormScreen = () => {
           setShowSuccessModal(false);
           navigation.goBack();
         }}
-        referralCount={formData.productIds.length}
-        onNewReferral={() => {
-          setShowSuccessModal(false);
-          // Reset form for new referral
-          setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            message: '',
-            productIds: []
-          });
-          setSearchQuery('');
-          setErrors({});
-        }}
       />
 
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F6FF',
   },
   safeArea: {
     flex: 1,
@@ -1049,58 +978,65 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#F8F6FF',
+    paddingHorizontal: 16, // Adjust horizontal padding
+    height: 60,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   backButton: {
     padding: 8,
+    marginRight: 8, // Add some margin to space it from the title
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1A1B20',
     fontFamily: 'Rubik-SemiBold',
+    fontSize: 24,
+    lineHeight: 28,
+    color: '#1A1B20',
+    textAlign: 'center',
   },
   headerSpacer: {
     width: 40,
   },
-
-  // Top Card with Illustration and Pick from Contacts
   topCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    margin: 20,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: '#000',
+    width: screenWidth - 40, // 20px margin on each side
+    height: 230,
+    alignSelf: 'center',
+    backgroundColor: '#FBFBFB',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    shadowColor: 'rgba(143, 49, 249, 0.1)',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 0,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 5,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
   },
   illustrationImage: {
-    width: screenWidth * 0.5,
-    height: 160,
-    marginBottom: 20,
+    width: 139,
+    height: 139,
+    position: 'absolute',
+    top: 16,
   },
   pickContactsButton: {
-    flexDirection: 'row',
+    width: '90%', // Use percentage for responsiveness
+    height: 47,
+    backgroundColor: 'rgba(150, 61, 251, 0.05)',
+    borderRadius: 8,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F6FF',
-    borderWidth: 1,
-    borderColor: '#8F31F9',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    gap: 8,
+    position: 'absolute',
+    bottom: 16, // Position from bottom for consistency
   },
   pickContactsButtonText: {
-    fontFamily: 'Rubik-Medium',
+    fontFamily: 'Rubik-SemiBold',
     fontSize: 16,
+    lineHeight: 19,
+    letterSpacing: 0.2,
     color: '#8F31F9',
   },
   scrollView: {
@@ -1108,39 +1044,46 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
+    paddingTop: 30,
   },
   sectionTitle: {
+    fontFamily: 'Rubik-Medium',
     fontSize: 24,
-    fontWeight: '600',
+    lineHeight: 28,
     color: '#1A1B20',
-    marginBottom: 8,
-    fontFamily: 'Rubik-SemiBold',
   },
   sectionSubtitle: {
-    fontSize: 16,
-    color: '#7D7D7D',
-    marginBottom: 24,
     fontFamily: 'Rubik-Regular',
-  },
-  inputContainer: {
+    fontSize: 18,
+    lineHeight: 28,
+    letterSpacing: 0.2,
+    color: '#7D7D7D',
+    marginTop: 4,
     marginBottom: 20,
   },
+  inputContainer: {
+    marginBottom: 19,
+  },
   inputLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1A1B20',
-    marginBottom: 8,
     fontFamily: 'Rubik-Medium',
+    fontSize: 16,
+    lineHeight: 19,
+    letterSpacing: 0.2,
+    color: '#1A1B20',
+    marginBottom: 4,
   },
   textInput: {
+    width: '100%',
+    height: 50,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1A1B20',
+    borderColor: '#1A1B20',
+    borderRadius: 8,
+    paddingHorizontal: 16,
     fontFamily: 'Rubik-Regular',
-    backgroundColor: '#FFFFFF',
+    fontSize: 16,
+    lineHeight: 19,
+    letterSpacing: 0.2,
+    color: '#7D7D7D',
   },
   inputError: {
     borderColor: '#FF6B6B',
@@ -1151,8 +1094,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Rubik-Regular',
     marginTop: 4,
   },
-
-  // Action Buttons
   actionButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1161,32 +1102,26 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#F8F6FF',
-    borderWidth: 1,
-    borderColor: '#8F31F9',
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: 'rgba(150, 61, 251, 0.05)',
+    borderRadius: 8,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 14,
   },
   cancelButtonText: {
-    fontFamily: 'Rubik-Medium',
+    fontFamily: 'Rubik-SemiBold',
     fontSize: 16,
+    lineHeight: 19,
+    letterSpacing: 0.2,
     color: '#8F31F9',
   },
   submitButton: {
     flex: 1,
     backgroundColor: '#8F31F9',
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingVertical: 14,
   },
   submitButtonDisabled: {
     opacity: 0.6,
@@ -1194,7 +1129,9 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontFamily: 'Rubik-SemiBold',
     fontSize: 16,
-    color: '#FFFFFF',
+    lineHeight: 19,
+    letterSpacing: 0.2,
+    color: '#FBFBFB',
   },
 
   // Success Modal Styles
@@ -1208,22 +1145,20 @@ const styles = StyleSheet.create({
 
   // Dropdown Button Styles
   dropdownButton: {
+    height: 50,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1A1B20',
-    fontFamily: 'Rubik-Regular',
-    backgroundColor: '#FFFFFF',
+    borderColor: '#1A1B20',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    backgroundColor: 'transparent',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   dropdownButtonText: {
     fontSize: 16,
-    color: '#1A1B20',
     fontFamily: 'Rubik-Regular',
+    flex: 1,
   },
   selectedProductsText: {
     fontSize: 14,
@@ -1386,166 +1321,78 @@ const styles = StyleSheet.create({
   // Success Modal Styles
   successModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   successModalContainer: {
-    width: '90%',
-    maxWidth: 380,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 30,
+    width: 324,
+    height: 673,
+    backgroundColor: '#FBFBFB',
+    borderRadius: 20,
     alignItems: 'center',
+    paddingTop: 134,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 20,
+      height: 20
     },
     shadowOpacity: 0.4,
     shadowRadius: 30,
-    elevation: 25,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
+    elevation: 25
   },
-  successAnimationContainer: {
-    alignItems: 'center',
-    marginBottom: 25,
-    position: 'relative',
+  imageContainer: {
+    width: 135.21,
+    height: 153,
+    marginBottom: 129
   },
-  successIconWrapper: {
-    position: 'relative',
-    zIndex: 2,
-  },
-  successIconBackground: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#4CAF50',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4CAF50',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  confettiContainer: {
+  successImage: {
+    width: 130,
+    height: 130,
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    top: 0
+  },
+  imageShadow: {
+    width: 96,
+    height: 10,
+    borderRadius: 5,
+    position: 'absolute',
     bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confetti1: {
-    position: 'absolute',
-    top: -10,
-    right: -10,
-  },
-  confetti2: {
-    position: 'absolute',
-    top: 10,
-    left: -8,
-  },
-  confetti3: {
-    position: 'absolute',
-    bottom: -8,
-    left: -5,
-  },
-  successContent: {
-    alignItems: 'center',
-    marginBottom: 30,
+    left: (135.21 - 96) / 2,
+    opacity: 0.5
   },
   successTitle: {
-    fontFamily: 'Rubik-Bold',
-    fontSize: 26,
+    fontFamily: 'Rubik-Medium',
+    fontWeight: '500',
+    fontSize: 32,
+    lineHeight: 38,
     color: '#1A1B20',
-    marginBottom: 12,
     textAlign: 'center',
+    marginBottom: 30
   },
   successSubtitle: {
-    fontFamily: 'Rubik-Medium',
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 25,
-    lineHeight: 24,
-  },
-  successDetails: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-    paddingHorizontal: 10,
-  },
-  detailText: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 14,
-    color: '#1A1B20',
-    marginLeft: 12,
-    flex: 1,
-    lineHeight: 20,
+    fontSize: 18,
+    color: '#7D7D7D',
+    textAlign: 'center',
+    lineHeight: 28,
+    letterSpacing: 0.2,
+    width: 291,
+    marginBottom: 20
   },
-  successActions: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: '#F8F6FF',
-    borderWidth: 1,
-    borderColor: '#8F31F9',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  secondaryButtonText: {
-    fontFamily: 'Rubik-SemiBold',
-    fontSize: 14,
-    color: '#8F31F9',
-  },
-  primaryButton: {
-    flex: 1,
-    borderRadius: 16,
-    alignItems: 'center',
-    shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 10,
-    overflow: 'hidden',
-  },
-  primaryButtonGradient: {
-    width: '100%',
-    paddingVertical: 16,
-    alignItems: 'center',
+  refreshButton: {
+    width: 261,
+    height: 47,
+    backgroundColor: '#8F31F9',
+    borderRadius: 8,
     justifyContent: 'center',
+    alignItems: 'center'
   },
-  primaryButtonText: {
+  refreshButtonText: {
     fontFamily: 'Rubik-SemiBold',
-    fontSize: 14,
-    color: '#FFFFFF',
+    fontSize: 16,
+    color: '#FBFBFC',
+    letterSpacing: 0.2
   },
 
   // Search Styles

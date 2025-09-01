@@ -255,6 +255,17 @@ const HomeScreen = () => {
     return activeFilter === sectionType;
   };
 
+  // Filter items based on search query
+  const filterItemsBySearch = (items) => {
+    if (!searchQuery || searchQuery.trim().length < 2) return items;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return items.filter(item => 
+      item.title.toLowerCase().includes(query) ||
+      (item.description && item.description.toLowerCase().includes(query))
+    );
+  };
+
   // Get filtered categories based on active filter
   const getFilteredCategories = () => {
     if (activeFilter === 'all') return categories;
@@ -678,9 +689,11 @@ const HomeScreen = () => {
 
     insuranceSubs = insuranceSubs.slice(0, 5); // limit to 5 items
 
-    return insuranceSubs.length > 0
+    const items = insuranceSubs.length > 0
       ? insuranceSubs.map(sub => ({ title: sub.name, id: sub._id, description: sub.description, image: sub.image }))
       : insuranceItems;
+    
+    return filterItemsBySearch(items);
   };
 
   const getInvestmentItems = () => {
@@ -718,9 +731,11 @@ const HomeScreen = () => {
 
     investmentSubs = investmentSubs.slice(0, 7); // limit to 7 items
 
-    return investmentSubs.length > 0
+    const items = investmentSubs.length > 0
       ? investmentSubs.map(sub => ({ title: sub.name, id: sub._id, description: sub.description, image: sub.image }))
       : investmentItems;
+    
+    return filterItemsBySearch(items);
   };
 
   const getLoanItems = () => {
@@ -755,9 +770,11 @@ const HomeScreen = () => {
 
     loanSubs = loanSubs.slice(0, 4); // limit to 4 items
 
-    return loanSubs.length > 0
+    const items = loanSubs.length > 0
       ? loanSubs.map(sub => ({ title: sub.name, id: sub._id, description: sub.description, image: sub.image }))
       : loanItems;
+    
+    return filterItemsBySearch(items);
   };
 
   // ------------------------------------------------------------------
@@ -1058,13 +1075,21 @@ const HomeScreen = () => {
                           key={product._id || index}
                           style={styles.dropdownItem}
                           onPress={() => {
-                            // Handle product selection - you can navigate to product details
-                            Toast.show({
-                              type: 'info',
-                              text1: 'Product selected',
-                              text2: product.name,
-                              position: 'bottom',
-                            });
+                            // Navigate to category details screen with product info
+                            if (product.categoryId) {
+                              navigation.navigate('CategoryDetail', {
+                                category: product.categoryId.name,
+                                product: product.name,
+                                planName: product.name
+                              });
+                            } else {
+                              // Fallback navigation if no category
+                              navigation.navigate('CategoryDetail', {
+                                category: 'General',
+                                product: product.name,
+                                planName: product.name
+                              });
+                            }
                             setShowSearchResults(false);
                             setSearchQuery('');
                           }}
@@ -1141,7 +1166,7 @@ const HomeScreen = () => {
         {/* Content Sections */}
         <View style={styles.contentContainer}>
           {/* Insurance Section */}
-          {shouldShowSection('ins') && (
+          {shouldShowSection('ins') && getInsuranceItems().length > 0 && (
           <View style={styles.sectionCard}>
             <Image 
               source={require('../../assets/Icons/insurancesBack.png')} 
@@ -1384,7 +1409,7 @@ const HomeScreen = () => {
           )}
 
           {/* Investment Section */}
-          {shouldShowSection('inv') && (
+          {shouldShowSection('inv') && getInvestmentItems().length > 0 && (
           <View style={styles.sectionCard}>
             <Image 
               source={require('../../assets/Icons/investmentsBack.png')} 
@@ -1588,7 +1613,7 @@ const HomeScreen = () => {
           )}
 
           {/* Loans Section */}
-          {shouldShowSection('loans') && (
+          {shouldShowSection('loans') && getLoanItems().length > 0 && (
           <View style={styles.sectionCard}>
             <Image 
               source={require('../../assets/Icons/loansBack.png')} 
