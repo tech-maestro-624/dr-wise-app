@@ -19,6 +19,10 @@ const CircularSlider = ({
   
   // Convert value to angle (0-360 degrees)
   const valueToAngle = (value) => {
+    // Ensure we get exactly 360 degrees when value equals maxValue
+    if (value >= maxValue) {
+      return 360;
+    }
     return (value / maxValue) * 360;
   };
   
@@ -111,7 +115,11 @@ const CircularSlider = ({
   const largeArcFlag = currentAngle > 180 ? 1 : 0;
   
   const pathData = currentAngle > 0 
-    ? `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`
+    ? currentAngle >= 360
+      ? // When angle is 360 degrees, create a complete circle using two arcs
+        `M ${centerX} ${centerY - radius} A ${radius} ${radius} 0 1 1 ${centerX} ${centerY + radius} A ${radius} ${radius} 0 1 1 ${centerX} ${centerY - radius}`
+      : // Normal arc path
+        `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`
     : '';
 
   // Calculate knob position

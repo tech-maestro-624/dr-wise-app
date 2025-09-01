@@ -1903,15 +1903,7 @@ const HomeScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Floating Action Button */}
-      <TouchableOpacity style={styles.fab}>
-        <View style={styles.fabIcon}>
-          <Image 
-            source={require('../../assets/Icons/hoveringVector.png')} 
-            style={styles.fabImage}
-          />
-        </View>
-      </TouchableOpacity>
+
 
       {/* Category Modal */}
       <CategoryModal
@@ -2703,32 +2695,7 @@ const styles = StyleSheet.create({
     height: 312,
     resizeMode: 'contain',
   },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 40,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    shadowColor: '#1187FE',
-    shadowOffset: { width: 0, height: 3.077 },
-    shadowOpacity: 0.5,
-    shadowRadius: 7.692,
-    elevation: 8,
-  },
-  fabIcon: {
-    flex: 1,
-    backgroundColor: '#1187FE',
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabImage: {
-    width: 70,
-    height: 70,
-    resizeMode: 'contain',
-    marginTop: 5
-  },
+
   categoryOverlay: {
     position: 'absolute',
     backgroundColor: 'transparent',
