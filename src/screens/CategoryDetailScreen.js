@@ -121,6 +121,8 @@ const CategoryDetailScreen = () => {
     }
   };
 
+
+
   // Fetch product data if not provided
   useEffect(() => {
     const fetchProductData = async () => {
@@ -193,7 +195,7 @@ const CategoryDetailScreen = () => {
               <Ionicons name="chevron-back-outline" size={20} color="#FFFFFF" />
             </TouchableOpacity>
             <Text style={styles.headerTitle} numberOfLines={2}>{displayTitle}</Text>
-            <View style={{ width: 40 }} /> 
+            <View style={{ width: 40 }} />
           </View>
           
           {/* Promo Card */}
@@ -289,14 +291,16 @@ const CategoryDetailScreen = () => {
 
                         {/* Referral Card */}
             <View style={styles.referralCard}>
-              <Image 
-                source={require('../../assets/Icons/vectorCategoryDetails.png')} 
-                style={styles.referralCardBackground} 
+              <Image
+                source={require('../../assets/Icons/vectorCategoryDetails.png')}
+                style={styles.referralCardBackground}
               />
               <View style={styles.iconContainer}>
                 <Image source={require('../../assets/Icons/money_2656371 1.png')} style={styles.referralIcon} />
               </View>
-              <Text style={styles.referralText}>Earn upto $120.00 for{'\n'}your referral</Text>
+              <Text style={styles.referralText}>
+                Earn upto ₹{productData?.estimatedPrice || 0} for{'\n'}your referral
+              </Text> 
             </View>
 
             {/* Refer a Friend Button */}

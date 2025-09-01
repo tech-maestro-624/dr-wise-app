@@ -13,6 +13,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +27,7 @@ import { getUserData } from '../api/auth';
 import { updateUser } from '../api/user';
 import { getAffiliates } from '../api/affiliate';
 import { customerLogout } from '../api/auth';
+import { getUserSubscriptions } from '../api/subscription';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const scale = Math.min(screenWidth / 375, screenHeight / 812);
@@ -57,6 +59,10 @@ const ProfileScreen = () => {
   const [imagePickerModalVisible, setImagePickerModalVisible] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
+
+  // State for subscription data
+  const [subscription, setSubscription] = useState(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   // Fetch user data from backend
   const fetchUserData = async () => {
@@ -93,6 +99,9 @@ const ProfileScreen = () => {
         }
 
         console.log('User data fetched:', userData);
+
+        // Fetch subscription data immediately with the user ID
+        fetchSubscriptionData(userData._id);
       } else {
         console.error('Invalid response format for user data');
         Alert.alert('Error', 'Failed to load user data. Please try again.');
@@ -103,6 +112,41 @@ const ProfileScreen = () => {
       Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch subscription data
+  const fetchSubscriptionData = async (userId = null) => {
+    // Use provided userId or fallback to state
+    const currentUserId = userId || user?._id;
+    if (!currentUserId) return;
+
+    setSubscriptionLoading(true);
+    try {
+      const response = await getUserSubscriptions(currentUserId);
+
+      if (response && response.data && response.data.success && response.data.data) {
+        // Get the most recent active subscription
+        const subscriptions = response.data.data;
+
+        const activeSubscription = subscriptions.find(sub =>
+          sub.status === 'active' && (sub.userId === user._id || sub.userId?._id === user._id)
+        );
+
+        if (activeSubscription) {
+          setSubscription(activeSubscription);
+        } else {
+          setSubscription(null);
+        }
+      } else {
+        setSubscription(null);
+      }
+    } catch (error) {
+      console.error('Error fetching subscription data:', error);
+      // Don't show alert for subscription fetch errors to avoid spam
+      setSubscription(null);
+    } finally {
+      setSubscriptionLoading(false);
     }
   };
 
@@ -130,11 +174,23 @@ const ProfileScreen = () => {
     fetchUserData();
   }, []);
 
+  // Fetch subscription data when user state changes
+  useEffect(() => {
+    if (user?._id && !subscription && !subscriptionLoading) {
+      // Only fetch if we don't already have subscription data and not currently loading
+      fetchSubscriptionData(user._id);
+    }
+  }, [user?._id, subscription, subscriptionLoading]);
+
   // Re-fetch on focus
   useFocusEffect(
     useCallback(() => {
       fetchUserData();
-    }, [])
+      // Also refresh subscription data on focus
+      if (user?._id) {
+        fetchSubscriptionData(user._id);
+      }
+    }, [user?._id])
   );
 
   const handleLogout = async () => {
@@ -304,7 +360,24 @@ const ProfileScreen = () => {
         locations={[0, 0.4917]}
         style={styles.background}
       >
-        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading || subscriptionLoading}
+              onRefresh={() => {
+                fetchUserData();
+                // Also fetch subscription data if user exists
+                if (user?._id) {
+                  fetchSubscriptionData(user._id);
+                }
+              }}
+              colors={['#8F31F9']}
+              tintColor="#8F31F9"
+            />
+          }
+        >
           
           {/* --- Header Section --- */}
           <LinearGradient
@@ -385,13 +458,60 @@ const ProfileScreen = () => {
             {/* Subscription Status Card */}
             <TouchableOpacity style={styles.card}>
               <View style={styles.policyIconContainer}>
-                <Image 
+                <Image
                   source={require('../../assets/Icons/subs.png')}
                   style={styles.policyIcon}
                   resizeMode="contain"
                 />
               </View>
-              <Text style={styles.policyText}>Subscription Status</Text>
+              <View style={styles.subscriptionContent}>
+                <Text style={styles.policyText}>Subscription Status</Text>
+                {subscriptionLoading ? (
+                  <ActivityIndicator size="small" color="#8F31F9" />
+                ) : subscription ? (
+                  <View style={styles.subscriptionDetails}>
+                    <Text style={styles.subscriptionType}>
+                      {subscription.subscriptionType === 'ambassador' ? 'Ambassador' : 'Affiliate'}
+                    </Text>
+                    <View style={styles.statusContainer}>
+                      <Text style={[
+                        styles.subscriptionStatus,
+                        subscription.status === 'active' && styles.activeStatus,
+                        subscription.status === 'expired' && styles.expiredStatus,
+                        subscription.status === 'pending' && styles.pendingStatus,
+                        subscription.status === 'cancelled' && styles.cancelledStatus
+                      ]}>
+                        {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
+                      </Text>
+                      <View style={[
+                        styles.statusIndicator,
+                        subscription.status === 'active' && styles.activeIndicator,
+                        subscription.status === 'expired' && styles.expiredIndicator,
+                        subscription.status === 'pending' && styles.pendingIndicator,
+                        subscription.status === 'cancelled' && styles.cancelledIndicator
+                      ]} />
+                    </View>
+                    {subscription.endDate && (
+                      <Text style={[
+                        styles.subscriptionExpiry,
+                        new Date(subscription.endDate) < new Date() && styles.expiredText
+                      ]}>
+                        {new Date(subscription.endDate) < new Date()
+                          ? `Expired: ${new Date(subscription.endDate).toLocaleDateString()}`
+                          : `Expires: ${new Date(subscription.endDate).toLocaleDateString()}`
+                        }
+                      </Text>
+                    )}
+                    {subscription.planDetails?.name && (
+                      <Text style={styles.planName}>
+                        Plan: {subscription.planDetails.name}
+                      </Text>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={styles.noSubscriptionText}>No active subscription</Text>
+                )}
+              </View>
               <Ionicons name="chevron-forward" size={20 * scale} color="#1A1B20" />
             </TouchableOpacity>
 
@@ -619,6 +739,95 @@ const styles = StyleSheet.create({
     elevation: 3,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  subscriptionContent: {
+    flex: 1,
+    marginLeft: 16 * scale,
+  },
+  subscriptionDetails: {
+    marginTop: 4 * scale,
+  },
+  subscriptionType: {
+    fontFamily: 'Rubik',
+    fontSize: 12 * scale,
+    fontWeight: '500',
+    color: '#8F31F9',
+    lineHeight: 14 * scale,
+    textTransform: 'capitalize',
+  },
+  subscriptionStatus: {
+    fontFamily: 'Rubik',
+    fontSize: 14 * scale,
+    fontWeight: '600',
+    color: '#1A1B20',
+    lineHeight: 17 * scale,
+    marginTop: 2 * scale,
+  },
+  subscriptionExpiry: {
+    fontFamily: 'Rubik',
+    fontSize: 12 * scale,
+    fontWeight: '400',
+    color: '#666666',
+    lineHeight: 14 * scale,
+    marginTop: 2 * scale,
+  },
+  expiredText: {
+    color: '#F44336',
+    fontWeight: '500',
+  },
+  planName: {
+    fontFamily: 'Rubik',
+    fontSize: 12 * scale,
+    fontWeight: '500',
+    color: '#8F31F9',
+    lineHeight: 14 * scale,
+    marginTop: 2 * scale,
+  },
+  noSubscriptionText: {
+    fontFamily: 'Rubik',
+    fontSize: 12 * scale,
+    fontWeight: '400',
+    color: '#666666',
+    lineHeight: 14 * scale,
+    marginTop: 4 * scale,
+    fontStyle: 'italic',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2 * scale,
+  },
+  statusIndicator: {
+    width: 8 * scale,
+    height: 8 * scale,
+    borderRadius: 4 * scale,
+    marginLeft: 8 * scale,
+  },
+  // Status text colors
+  activeStatus: {
+    color: '#4CAF50',
+  },
+  expiredStatus: {
+    color: '#F44336',
+  },
+  pendingStatus: {
+    color: '#FF9800',
+  },
+  cancelledStatus: {
+    color: '#9E9E9E',
+  },
+  // Status indicator colors
+  activeIndicator: {
+    backgroundColor: '#4CAF50',
+  },
+  expiredIndicator: {
+    backgroundColor: '#F44336',
+  },
+  pendingIndicator: {
+    backgroundColor: '#FF9800',
+  },
+  cancelledIndicator: {
+    backgroundColor: '#9E9E9E',
   },
   sectionTitle: {
     fontFamily: 'Rubik',
