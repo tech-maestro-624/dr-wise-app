@@ -13,16 +13,24 @@ import {
   Dimensions,
   Modal,
   Image,
+  ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getUserData } from '../api/auth';
+import { updateUser } from '../api/user';
+import { useAuth } from '../context/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const scale = Math.min(screenWidth / 375, screenHeight / 812);
 
 const EditProfileScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { user: authUser } = useAuth();
+  const { userData: initialUserData } = route.params || {};
+
   const [formData, setFormData] = useState({
     name: '',
     phoneNumber: '',
@@ -31,19 +39,61 @@ const EditProfileScreen = () => {
     ifscCode: '',
     upiId: '',
   });
+  const [originalData, setOriginalData] = useState({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState(null);
 
-  // Pre-fill existing user details (you would typically get this from API/context)
+  // Fetch user data from API
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+
+      // Try to get user data from route params first, then fallback to API
+      let userData = initialUserData;
+
+      if (!userData) {
+        const response = await getUserData();
+        if (response.data && response.data.user) {
+          userData = response.data.user;
+        } else if (authUser) {
+          userData = authUser;
+        }
+      }
+
+      if (userData) {
+        const formattedData = {
+          name: userData.name || '',
+          phoneNumber: userData.phoneNumber || '',
+          email: userData.email || '',
+          accountNumber: userData.accountNumber || '',
+          ifscCode: userData.ifscCode || '',
+          upiId: userData.upiId || '',
+        };
+
+        setFormData(formattedData);
+        setOriginalData(formattedData);
+        setUserId(userData._id || userData.id);
+
+        console.log('User data loaded:', userData);
+      } else {
+        Alert.alert('Error', 'Failed to load user data. Please try again.');
+        navigation.goBack();
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      const errorMessage = error?.response?.data?.message || error.message || 'Failed to load user data';
+      Alert.alert('Error', errorMessage);
+      navigation.goBack();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load user data on component mount
   useEffect(() => {
-    // Simulating existing user data - replace with actual data from your app
-    setFormData({
-      name: 'Punith',
-      phoneNumber: '9739993341',
-      email: 'punithpuni7892@gmail.com',
-      accountNumber: '',
-      ifscCode: '',
-      upiId: '',
-    });
+    fetchUserData();
   }, []);
 
   const formatPhoneNumber = (text) => {
@@ -102,7 +152,7 @@ const EditProfileScreen = () => {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validate required fields
     if (!formData.name.trim()) {
       Alert.alert('Error', 'Please enter your name');
@@ -129,17 +179,58 @@ const EditProfileScreen = () => {
       return;
     }
 
-    // Here you would typically make an API call to update the profile
-    console.log('Profile data to save:', formData);
-    
-    // Show success modal
-    setShowSuccessModal(true);
-    
-    // Auto hide after 3 seconds and navigate back
-    setTimeout(() => {
-      setShowSuccessModal(false);
-      navigation.goBack();
-    }, 3000);
+    // Check if data has actually changed
+    const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
+    if (!hasChanges) {
+      Alert.alert('Info', 'No changes detected. Please modify at least one field.');
+      return;
+    }
+
+    if (!userId) {
+      Alert.alert('Error', 'User ID not found. Please try again.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Prepare data to send (only changed fields)
+      const updateData = {};
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== originalData[key]) {
+          updateData[key] = formData[key];
+        }
+      });
+
+      console.log('Updating user profile:', { userId, updateData });
+
+      const response = await updateUser(userId, updateData);
+
+      if (response && (response.status === 200 || response.status === 201)) {
+        console.log('Profile updated successfully:', response.data);
+
+        // Update original data to reflect changes
+        setOriginalData(formData);
+
+        // Show success modal
+        setShowSuccessModal(true);
+
+        // Auto hide after 3 seconds and navigate back
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          navigation.goBack();
+        }, 3000);
+      } else {
+        const errorMessage = response?.data?.message || 'Failed to update profile';
+        Alert.alert('Error', errorMessage);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      const errorMessage = error?.response?.data?.message || error.message || 'Failed to update profile. Please try again.';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -169,17 +260,27 @@ const EditProfileScreen = () => {
             <View style={styles.placeholder} />
           </View>
 
-          <ScrollView 
+          <ScrollView
             contentContainerStyle={styles.scrollContainer}
             showsVerticalScrollIndicator={false}
           >
-            {/* Section Title */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Enter new details</Text>
-              <Text style={styles.sectionDescription}>
-                Enter your new details to update your profile.
-              </Text>
-            </View>
+            {/* Loading Indicator */}
+            {loading && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#8F31F9" />
+                <Text style={styles.loadingText}>Loading profile data...</Text>
+              </View>
+            )}
+
+            {!loading && (
+              <>
+                {/* Section Title */}
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Edit profile details</Text>
+                  <Text style={styles.sectionDescription}>
+                    Update your information to keep your profile current.
+                  </Text>
+                </View>
 
             {/* Form Fields */}
             <View style={styles.formContainer}>
@@ -267,6 +368,8 @@ const EditProfileScreen = () => {
                 />
               </View>
             </View>
+              </>
+            )}
           </ScrollView>
 
           {/* Action Buttons */}
@@ -274,8 +377,16 @@ const EditProfileScreen = () => {
             <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>Save</Text>
+            <TouchableOpacity
+              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={saving || loading}
+            >
+              {saving ? (
+                <ActivityIndicator color="#FBFBFB" size="small" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save</Text>
+              )}
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -437,6 +548,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 47 * scale,
   },
+  saveButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
   saveButtonText: {
     fontFamily: 'Rubik-SemiBold',
     fontSize: 16 * scale,
@@ -498,6 +612,19 @@ const styles = StyleSheet.create({
     color: '#7D7D7D',
     lineHeight: 13 * scale,
     letterSpacing: 0.2,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60 * scale,
+  },
+  loadingText: {
+    fontSize: 16 * scale,
+    fontWeight: '500',
+    color: '#7D7D7D',
+    fontFamily: 'Rubik',
+    marginTop: 16 * scale,
+    textAlign: 'center',
   },
 });
 

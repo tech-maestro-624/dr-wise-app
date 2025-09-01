@@ -16,23 +16,35 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const scale = Math.min(screenWidth / 375, screenHeight / 812);
 
 const TermInsuranceCalculatorScreen = ({ navigation, route }) => {
-  const { serviceName, leadName } = route.params || {};
-  const [referralCount, setReferralCount] = useState(0);
-  const [coins, setCoins] = useState(0);
+  const { serviceName, leadName, productId, productData } = route.params || {};
+  const [referralCount, setReferralCount] = useState(1); // Start with 1 instead of 0
+
+  // Get estimated price from product data, default to 0 if not available
+  const estimatedPrice = productData?.estimatedPrice || 0;
+
+  // Calculate total earnings
+  const totalEarnings = estimatedPrice * referralCount;
 
   const incrementReferral = () => {
     setReferralCount(referralCount + 1);
   };
 
   const decrementReferral = () => {
-    if (referralCount > 0) {
+    if (referralCount > 1) {
       setReferralCount(referralCount - 1);
     }
   };
 
-  const handleRedeem = () => {
-    // Handle redeem functionality
-    console.log('Redeem pressed');
+  const handleProceed = () => {
+    // Navigate to referral form with calculated data
+    navigation.navigate('ReferralForm', {
+      product: productData,
+      serviceName: serviceName,
+      referralCount: referralCount,
+      estimatedPrice: estimatedPrice,
+      totalEarnings: totalEarnings,
+      leadName: leadName
+    });
   };
 
   return (
@@ -47,48 +59,72 @@ const TermInsuranceCalculatorScreen = ({ navigation, route }) => {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Calculator</Text>
+        <Text style={styles.headerTitle}>Earnings Calculator</Text>
       </View>
 
       {/* Main Content */}
       <View style={styles.mainContainer}>
-        {/* Term Insurance Icon */}
+        {/* Earnings Calculator Icon */}
         <View style={styles.iconContainer}>
-          <Image 
-            source={require('../../assets/Icons/TERM 1.png')}
+          <Image
+            source={require('../../assets/Icons/earning.png')}
             style={styles.termIcon}
             resizeMode="contain"
           />
         </View>
 
-        {/* Term Insurance Title */}
-        <Text style={styles.termInsuranceTitle}>Term Insurance</Text>
+        {/* Service Title */}
+        <Text style={styles.termInsuranceTitle}>{serviceName || 'Service Calculator'}</Text>
 
         {/* Description */}
         <Text style={styles.description}>
-          Great You've selected Term Insurance Now{'\n'}add the members you want to include
+          Great! You've selected {serviceName || 'this service'}.{'\n'}Add the number of referrals to calculate your earnings.
         </Text>
 
         {/* Number of Referrals Section */}
         <View style={styles.referralsSection}>
           <Text style={styles.referralsLabel}>Number of referrals</Text>
           <View style={styles.counterContainer}>
-            <TouchableOpacity style={[styles.counterButton, styles.leftButton]} onPress={decrementReferral}>
-              <Text style={styles.counterButtonText}>-</Text>
+            <TouchableOpacity
+              style={[styles.counterButton, styles.leftButton]}
+              onPress={decrementReferral}
+              disabled={referralCount <= 1}
+            >
+              <Text style={[styles.counterButtonText, referralCount <= 1 && styles.disabledButtonText]}>-</Text>
             </TouchableOpacity>
-            <Text style={styles.counterValue}>{referralCount.toString().padStart(2, '0')}</Text>
+            <View style={styles.counterDisplay}>
+              <Text style={styles.counterValue}>{referralCount.toString().padStart(2, '0')}</Text>
+              {estimatedPrice > 0 && (
+                <Text style={styles.priceInfo}>
+                  × ₹{estimatedPrice.toLocaleString()}
+                </Text>
+              )}
+            </View>
             <TouchableOpacity style={[styles.counterButton, styles.rightButton]} onPress={incrementReferral}>
               <Text style={styles.counterButtonText}>+</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Your Coins Card */}
+        {/* Estimated Total Earnings Card */}
         <View style={styles.coinsCard}>
-          <Text style={styles.coinsLabel}>Your Coins</Text>
-          <Text style={styles.coinsValue}>{coins.toString().padStart(2, '0')}</Text>
-          <TouchableOpacity style={styles.redeemButton} onPress={handleRedeem}>
-            <Text style={styles.redeemButtonText}>Redeem</Text>
+          <Text style={styles.coinsLabel}>Estimated Total Earnings</Text>
+          <Text style={styles.coinsValue}>₹{totalEarnings.toLocaleString()}</Text>
+          {estimatedPrice > 0 ? (
+            <Text style={styles.earningsBreakdown}>
+              ₹{estimatedPrice.toLocaleString()} × {referralCount} = ₹{totalEarnings.toLocaleString()}
+            </Text>
+          ) : (
+            <Text style={styles.noPriceText}>
+              Price not available for this service
+            </Text>
+          )}
+          <TouchableOpacity
+            style={[styles.redeemButton, (!estimatedPrice || referralCount <= 0) && styles.disabledButton]}
+            onPress={handleProceed}
+            disabled={!estimatedPrice || referralCount <= 0}
+          >
+            <Text style={styles.redeemButtonText}>Proceed to Referral</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -219,6 +255,21 @@ const styles = StyleSheet.create({
     lineHeight: 26 * scale,
     textAlign: 'center',
   },
+  counterDisplay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  priceInfo: {
+    fontSize: 12 * scale,
+    fontWeight: '500',
+    color: '#8F31F9',
+    fontFamily: 'Rubik',
+    marginTop: 4 * scale,
+  },
+  disabledButtonText: {
+    color: '#CCCCCC',
+  },
   coinsCard: {
     backgroundColor: '#FBFBFB',
     borderWidth: 1,
@@ -255,7 +306,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Rubik',
     lineHeight: 38 * scale,
     textAlign: 'center',
-    marginBottom: 24 * scale,
+    marginBottom: 8 * scale,
+  },
+  earningsBreakdown: {
+    fontSize: 12 * scale,
+    fontWeight: '500',
+    color: '#7D7D7D',
+    fontFamily: 'Rubik',
+    textAlign: 'center',
+    marginBottom: 16 * scale,
+    lineHeight: 16 * scale,
+  },
+  noPriceText: {
+    fontSize: 12 * scale,
+    fontWeight: '400',
+    color: '#FF6B6B',
+    fontFamily: 'Rubik',
+    textAlign: 'center',
+    marginBottom: 16 * scale,
+    fontStyle: 'italic',
   },
   redeemButton: {
     backgroundColor: '#8F31F9',
@@ -264,6 +333,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16 * scale,
     width: 303 * scale,
     alignItems: 'center',
+  },
+  disabledButton: {
+    backgroundColor: '#CCCCCC',
   },
   redeemButtonText: {
     fontSize: 16 * scale,

@@ -228,6 +228,7 @@ const CalculatorScreen = ({ navigation, route }) => {
                                   key={product._id || productIndex}
                                   style={styles.planItem}
                                   onPress={() => {
+                                    console.log('Navigating to calculator with product:', product);
                                     navigation.navigate('TermInsuranceCalculator', {
                                       serviceName: product.name,
                                       leadName: leadName,
