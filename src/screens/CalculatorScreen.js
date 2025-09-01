@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getCategories, getProductsBySubCategory } from '../api/categorys';
+import { getSubCategories } from '../api/subCategories';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const scale = Math.min(screenWidth / 375, screenHeight / 812);
@@ -21,52 +23,102 @@ const CalculatorScreen = ({ navigation, route }) => {
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showSubCategory, setShowSubCategory] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [subCategoriesData, setSubCategoriesData] = useState({});
+  const [productsData, setProductsData] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  const mainCategories = [
-    'INSURANCE',
-    'TAX', 
-    'INVESTMENTS',
-    'TRAVEL',
-    'LOAN'
-  ];
-
-  const subCategories = {
-    'INSURANCE': ['Travel', 'Health', 'Life', 'Motor', 'General'],
-    'TAX': ['Income Tax', 'GST', 'TDS', 'Property Tax'],
-    'INVESTMENTS': ['Mutual Funds', 'Stocks', 'Bonds', 'Real Estate'],
-    'TRAVEL': ['International', 'Domestic', 'Business', 'Leisure'],
-    'LOAN': ['Home Loan', 'Personal Loan', 'Business Loan', 'Education Loan']
+  // Fetch all categories
+  const fetchCategories = async () => {
+    try {
+      const response = await getCategories();
+      if (response.data) {
+        setCategories(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setCategories([]); // Set empty array on error
+    }
   };
 
-  const insurancePlans = [
-    'Term Insurance',
-    'ULIPs',
-    'Children Plan',
-    'Retirement Plan',
-    'Savings Plan',
-    'Investment Plan',
-    'Endowment / Guranteed Plan',
-    'Income / Money back Plan',
-    'Whole Life Plan'
-  ];
+  // Fetch subcategories for a specific category
+  const fetchSubCategories = async (categoryId) => {
+    try {
+      const condition = { parentCategory: categoryId };
+      const response = await getSubCategories({
+        condition: JSON.stringify(condition),
+        limit: 100 // Fetch all subcategories for this category
+      });
 
-  const handleCategorySelect = (category) => {
-    if (selectedCategory === category) {
+      if (response.data && response.data.success) {
+        return response.data.data || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching subcategories:', error);
+      return [];
+    }
+  };
+
+  // Fetch products for a specific subcategory
+  const fetchProducts = async (subCategoryId) => {
+    try {
+      const response = await getProductsBySubCategory(subCategoryId);
+
+      if (response.data) {
+        return response.data || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      return [];
+    }
+  };
+
+  const handleCategorySelect = async (category) => {
+    if (selectedCategory && selectedCategory._id === category._id) {
       setSelectedCategory(null);
       setShowSubCategory(null);
     } else {
       setSelectedCategory(category);
       setShowSubCategory(null);
+
+      // Fetch subcategories if not already fetched
+      if (!subCategoriesData[category._id]) {
+        const subCategories = await fetchSubCategories(category._id);
+        setSubCategoriesData(prev => ({
+          ...prev,
+          [category._id]: subCategories
+        }));
+      }
     }
   };
 
-  const handleSubCategorySelect = (subCategory) => {
-    if (showSubCategory === subCategory) {
+  const handleSubCategorySelect = async (subCategory) => {
+    if (showSubCategory && showSubCategory._id === subCategory._id) {
       setShowSubCategory(null);
     } else {
       setShowSubCategory(subCategory);
+
+      // Fetch products if not already fetched
+      if (!productsData[subCategory._id]) {
+        const products = await fetchProducts(subCategory._id);
+        setProductsData(prev => ({
+          ...prev,
+          [subCategory._id]: products
+        }));
+      }
     }
   };
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      await fetchCategories();
+      setLoading(false);
+    };
+    loadCategories();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -87,11 +139,19 @@ const CalculatorScreen = ({ navigation, route }) => {
 
       {/* Main Content */}
       <ScrollView style={styles.mainContainer} showsVerticalScrollIndicator={false}>
+        {/* Loading Indicator */}
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading services...</Text>
+          </View>
+        )}
+
         {/* Service Selection Dropdown */}
         <View style={styles.serviceSelectionContainer}>
-          <TouchableOpacity 
-            style={styles.serviceDropdown}
-            onPress={() => setShowServiceDropdown(!showServiceDropdown)}
+          <TouchableOpacity
+            style={[styles.serviceDropdown, loading && styles.disabledDropdown]}
+            onPress={() => !loading && setShowServiceDropdown(!showServiceDropdown)}
+            disabled={loading}
           >
             <Text style={styles.serviceDropdownText}>Select Your Service</Text>
             <View style={styles.chevronIcon}>
@@ -107,78 +167,92 @@ const CalculatorScreen = ({ navigation, route }) => {
         {/* Main Categories - Only show when service dropdown is clicked */}
         {showServiceDropdown && (
           <View style={styles.categoriesContainer}>
-            {mainCategories.map((category, index) => (
-              <View key={index} style={styles.categoryCard}>
-                <TouchableOpacity 
+            {categories.map((category, index) => (
+              <View key={category._id || index} style={styles.categoryCard}>
+                <TouchableOpacity
                   style={[
                     styles.categoryHeader,
-                    selectedCategory === category && styles.selectedCategoryHeader
+                    selectedCategory && selectedCategory._id === category._id && styles.selectedCategoryHeader
                   ]}
                   onPress={() => handleCategorySelect(category)}
                 >
                   <Text style={[
                     styles.categoryTitle,
-                    selectedCategory === category && styles.selectedCategoryTitle
+                    selectedCategory && selectedCategory._id === category._id && styles.selectedCategoryTitle
                   ]}>
-                    {category}
+                    {category.name}
                   </Text>
                   <View style={styles.chevronIcon}>
-                    <Ionicons 
-                      name={selectedCategory === category ? "chevron-up" : "chevron-down"} 
-                      size={20} 
-                      color={selectedCategory === category ? "#FBFBFB" : "#1A1B20"} 
+                    <Ionicons
+                      name={selectedCategory && selectedCategory._id === category._id ? "chevron-up" : "chevron-down"}
+                      size={20}
+                      color={selectedCategory && selectedCategory._id === category._id ? "#FBFBFB" : "#1A1B20"}
                     />
                   </View>
                 </TouchableOpacity>
 
                 {/* Sub Categories - Only show when category is selected */}
-                {selectedCategory === category && (
+                {selectedCategory && selectedCategory._id === category._id && (
                   <View style={styles.subCategoriesContainer}>
-                    {subCategories[category].map((subCategory, subIndex) => (
-                      <View key={subIndex} style={styles.subCategoryCard}>
-                        <TouchableOpacity 
+                    {subCategoriesData[category._id]?.length > 0 ? (
+                      subCategoriesData[category._id].map((subCategory, subIndex) => (
+                      <View key={subCategory._id || subIndex} style={styles.subCategoryCard}>
+                        <TouchableOpacity
                           style={[
                             styles.subCategoryHeader,
-                            showSubCategory === subCategory && styles.selectedSubCategoryHeader
+                            showSubCategory && showSubCategory._id === subCategory._id && styles.selectedSubCategoryHeader
                           ]}
                           onPress={() => handleSubCategorySelect(subCategory)}
                         >
                           <Text style={[
                             styles.subCategoryTitle,
-                            showSubCategory === subCategory && styles.selectedSubCategoryTitle
+                            showSubCategory && showSubCategory._id === subCategory._id && styles.selectedSubCategoryTitle
                           ]}>
-                            {subCategory}
+                            {subCategory.name}
                           </Text>
                           <View style={styles.chevronIcon}>
-                            <Ionicons 
-                              name={showSubCategory === subCategory ? "chevron-up" : "chevron-down"} 
-                              size={20} 
-                              color={showSubCategory === subCategory ? "#1A1B20" : "#1A1B20"} 
+                            <Ionicons
+                              name={showSubCategory && showSubCategory._id === subCategory._id ? "chevron-up" : "chevron-down"}
+                              size={20}
+                              color={showSubCategory && showSubCategory._id === subCategory._id ? "#1A1B20" : "#1A1B20"}
                             />
                           </View>
                         </TouchableOpacity>
 
-                        {/* Insurance Plans - Only show when Travel subcategory is selected under INSURANCE */}
-                        {category === 'INSURANCE' && subCategory === 'Travel' && showSubCategory === subCategory && (
+                        {/* Products - Show when subcategory is selected */}
+                        {showSubCategory && showSubCategory._id === subCategory._id && (
                           <View style={styles.plansContainer}>
-                            {insurancePlans.map((plan, planIndex) => (
-                              <TouchableOpacity 
-                                key={planIndex} 
-                                style={styles.planItem}
-                                                                 onPress={() => {
-                                   navigation.navigate('TermInsuranceCalculator', { 
-                                     serviceName: plan,
-                                     leadName: leadName 
-                                   });
-                                 }}
-                              >
-                                <Text style={styles.planText}>{plan}</Text>
-                              </TouchableOpacity>
-                            ))}
+                            {productsData[subCategory._id]?.length > 0 ? (
+                              productsData[subCategory._id].map((product, productIndex) => (
+                                <TouchableOpacity
+                                  key={product._id || productIndex}
+                                  style={styles.planItem}
+                                  onPress={() => {
+                                    navigation.navigate('TermInsuranceCalculator', {
+                                      serviceName: product.name,
+                                      leadName: leadName,
+                                      productId: product._id,
+                                      productData: product
+                                    });
+                                  }}
+                                >
+                                  <Text style={styles.planText}>{product.name}</Text>
+                                </TouchableOpacity>
+                              ))
+                            ) : (
+                              <View style={styles.emptyProductsContainer}>
+                                <Text style={styles.emptyProductsText}>No products available</Text>
+                              </View>
+                            )}
                           </View>
                         )}
                       </View>
-                    ))}
+                      ))
+                    ) : (
+                      <View style={styles.emptySubCategoriesContainer}>
+                        <Text style={styles.emptySubCategoriesText}>No subcategories available</Text>
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
@@ -360,6 +434,42 @@ const styles = StyleSheet.create({
     fontFamily: 'Rubik',
     lineHeight: 15 * scale,
     letterSpacing: 0.176 * scale,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40 * scale,
+  },
+  loadingText: {
+    fontSize: 16 * scale,
+    fontWeight: '500',
+    color: '#7D7D7D',
+    fontFamily: 'Rubik',
+  },
+  disabledDropdown: {
+    opacity: 0.6,
+  },
+  emptySubCategoriesContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20 * scale,
+  },
+  emptySubCategoriesText: {
+    fontSize: 14 * scale,
+    fontWeight: '400',
+    color: '#7D7D7D',
+    fontFamily: 'Rubik',
+  },
+  emptyProductsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20 * scale,
+  },
+  emptyProductsText: {
+    fontSize: 14 * scale,
+    fontWeight: '400',
+    color: '#7D7D7D',
+    fontFamily: 'Rubik',
   },
 
 });

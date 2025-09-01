@@ -1,20 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, StatusBar, Image, Dimensions, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import CircularSlider from '../components/CircularSlider';
+import { getWallet } from '../api/wallet';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const RedeemScreen = () => {
   const navigation = useNavigation();
-  const balance = 1200;
+  const [balance, setBalance] = useState(0);
   const [selectedAmount, setSelectedAmount] = useState(0);
   
   // Responsive dimensions based on screen size
   const scale = Math.min(screenWidth / 375, screenHeight / 812);
   const imageSize = 226 * scale;
+
+  // Fetch wallet balance from backend
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      try {
+        const response = await getWallet();
+        console.log('Wallet API response:', response);
+        
+        if (response.data) {
+          // Try different possible response structures
+          let walletBalance = 0;
+          
+          if (response.data.data) {
+            // Structure: { data: { data: { balance: 1000 } } }
+            const walletData = response.data.data;
+            walletBalance = walletData.balance || walletData.coins || walletData.amount || walletData.total || 0;
+          } else if (response.data.balance !== undefined) {
+            // Structure: { data: { balance: 1000 } }
+            walletBalance = response.data.balance;
+          } else if (response.data.coins !== undefined) {
+            // Structure: { data: { coins: 1000 } }
+            walletBalance = response.data.coins;
+          } else if (response.data.amount !== undefined) {
+            // Structure: { data: { amount: 1000 } }
+            walletBalance = response.data.amount;
+          }
+          
+          console.log('Extracted wallet balance:', walletBalance);
+          setBalance(walletBalance);
+          setSelectedAmount(walletBalance); // Initialize selectedAmount with the fetched balance
+        }
+      } catch (error) {
+        console.error('Error fetching wallet balance:', error);
+        // Don't change balance on error, keep it as is
+      }
+    };
+
+    fetchWalletBalance();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -51,7 +91,7 @@ const RedeemScreen = () => {
               maxValue={balance}
               initialValue={selectedAmount}
               onValueChange={setSelectedAmount}
-              step={10}
+              step={Math.max(1, Math.floor(balance / 360))} // Dynamic step based on balance/360
             />
           </View>
           
@@ -173,6 +213,7 @@ const styles = StyleSheet.create({
     color: '#FBFBFB',
     letterSpacing: 0.2,
   },
+
 });
 
 export default RedeemScreen;

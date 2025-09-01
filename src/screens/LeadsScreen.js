@@ -21,50 +21,6 @@ import { getLeads } from '../api/lead';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const scale = Math.min(screenWidth / 375, screenHeight / 812);
 
-// Lead data - you can replace this with actual data
-const leadsData = [
-  {
-    id: 1,
-    name: 'Kumar',
-    type: 'Individual Plan Insurance',
-    date: '25-03-2025, 10:43 PM',
-    status: 'Converted',
-    icon: require('../../assets/Icons/image.png'),
-  },
-  {
-    id: 2,
-    name: 'Kiran',
-    type: 'Car-Private Vehicle Insurance',
-    date: '25-03-2025, 10:43 PM',
-    status: 'Converted',
-    icon: require('../../assets/Icons/Group 9167.png'),
-  },
-  {
-    id: 3,
-    name: 'Rahul',
-    type: 'Home Loan',
-    date: '25-03-2025, 10:43 PM',
-    status: 'Converted',
-    icon: require('../../assets/Icons/Group 9167 (1).png'),
-  },
-  {
-    id: 4,
-    name: 'Priya',
-    type: 'Gold Investments',
-    date: '25-03-2025, 10:43 PM',
-    status: 'Converted',
-    icon: require('../../assets/Icons/Group 9167 (2).png'),
-  },
-  {
-    id: 5,
-    name: 'Amit',
-    type: 'Individual Plan Insurance',
-    date: '25-03-2025, 10:43 PM',
-    status: 'Converted',
-    icon: require('../../assets/Icons/image.png'),
-  },
-];
-
 const LeadItem = ({ lead, onPress }) => {
   // Get status color and icon
   const getStatusStyle = (status) => {
@@ -106,12 +62,12 @@ const LeadItem = ({ lead, onPress }) => {
       <View style={styles.leadInfo}>
         <Text style={styles.leadName}>{lead.name || 'Unknown'}</Text>
         <Text style={styles.leadType}>
-          {lead.productId?.name || lead.categoryId?.name || 'General Lead'}
+          {lead.productId?.name || lead.categoryId?.name || lead.type || 'General Lead'}
         </Text>
       </View>
 
       <View style={styles.leadRight}>
-        <Text style={styles.leadDate}>{formatDate(lead.createdAt || lead.updatedAt)}</Text>
+        <Text style={styles.leadDate}>{formatDate(lead.createdAt || lead.updatedAt || lead.date)}</Text>
         <View style={styles.statusContainer}>
           <Text style={[styles.statusText, { color: statusStyle.color }]}>
             {lead.status || 'Unknown'}
@@ -147,10 +103,12 @@ const LeadsScreen = () => {
 
       if (response.data && response.data.leads) {
         setLeads(response.data.leads);
+      } else if (response.data && response.data.data) {
+        setLeads(response.data.data);
       }
     } catch (error) {
       console.error('Error fetching leads:', error);
-      Alert.alert('Error', 'Failed to load leads data');
+      Alert.alert('Error', error?.response?.data?.message || error.message || 'Failed to load leads data');
     } finally {
       setLoading(false);
     }

@@ -15,92 +15,211 @@ import {
   FlatList,
   Easing,
   ActivityIndicator,
-  Alert
+  Alert,
+  RefreshControl
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radii, type } from '../theme/tokens';
 import BottomBar from '../components/BottomBar';
 import CategoryModal from '../components/CategoryModal';
 import { getAffiliates } from '../api/affiliate';
+import { getUsers } from '../api/user';
+import { getUserData } from '../api/auth';
+import { getconfig } from '../api/configuration';
 import { useAuth } from '../context/AuthContext';
 
 const { width: W } = Dimensions.get('window');
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
-// Slider cards data
-const sliderCards = [
-  {
-    id: 1,
-    backgroundColor: ['#4CAF50', '#66BB6A'],
-    title: 'Earn While You Refer',
-    subtitle: 'Share services you trust and\nget paid for every referral',
-    buttonText: 'Start Now',
-    image: 'https://api.builder.io/api/v1/image/assets/TEMP/5ee1f76dd94b467d35cd958b74224a628b637374?width=284',
-    badge: 'Popular'
-  },
-  {
-    id: 2,
-    backgroundColor: ['#9D4BFA', '#AF6CFA'],
-    title: 'Earn While You Refer',
-    subtitle: 'Share services you trust and\nget paid for every referral',
-    buttonText: 'Start Now',
-    image: 'https://api.builder.io/api/v1/image/assets/TEMP/5ee1f76dd94b467d35cd958b74224a628b637374?width=284',
-    badge: 'Popular'
-  },
-  {
-    id: 3,
-    backgroundColor: ['#F6AC11', '#FFB84D'],
-    title: 'Earn While You Refer',
-    subtitle: 'Share services you trust and\nget paid for every referral',
-    buttonText: 'Start Now',
-    image: 'https://api.builder.io/api/v1/image/assets/TEMP/5ee1f76dd94b467d35cd958b74224a628b637374?width=284',
-    badge: 'Popular'
-  }
-];
+// AutoSwiper Component - Same as drwise-user
+const AutoSwiper = ({ images }) => {
+  const scrollRef = useRef(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const windowWidth = Dimensions.get('window').width;
+  // Add margins for better visual spacing
+  const marginHorizontal = 20; // 20px margin on each side
+  const containerWidth = windowWidth - (marginHorizontal * 2);
+  // Banner width should match container exactly for perfect snapping
+  const bannerWidth = containerWidth;
 
-// Affiliates data
-const affiliatesData = [
-  { id: 1, name: 'Suhas', phone: '9736377448', date: '25-03-2025' },
-  { id: 2, name: 'Punith', phone: '9736377448', date: '25-03-2025' },
-  { id: 3, name: 'Murali', phone: '9736377448', date: '25-03-2025' },
-  { id: 4, name: 'Satish', phone: '9736377448', date: '25-03-2025' },
-  { id: 5, name: 'Dhananjaya', phone: '9736377448', date: '25-03-2025' },
-];
+  useEffect(() => {
+    const timer = setInterval(() => {
+      let nextIndex = currentIndex + 1;
+      if (nextIndex >= images.length) {
+        nextIndex = 0;
+      }
+      setCurrentIndex(nextIndex);
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ x: nextIndex * bannerWidth, animated: true });
+      }
+    }, 5000);
+
+    // Store timer reference for cleanup
+    if (scrollRef.current) {
+      scrollRef.current.autoScrollTimer = timer;
+    }
+
+    return () => {
+      clearInterval(timer);
+      if (scrollRef.current && scrollRef.current.autoScrollTimer) {
+        clearInterval(scrollRef.current.autoScrollTimer);
+      }
+    };
+  }, [currentIndex, images.length, bannerWidth]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollRef.current && scrollRef.current.autoScrollTimer) {
+        clearInterval(scrollRef.current.autoScrollTimer);
+      }
+    };
+  }, []);
+
+  if (images.length === 0) return null;
+
+  return (
+    <View style={{ marginBottom: 20 }}>
+      <View style={{ height: 240, width: containerWidth, marginHorizontal: marginHorizontal }}>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{}}
+          decelerationRate="fast"
+          snapToInterval={bannerWidth}
+          snapToAlignment="start"
+          onMomentumScrollEnd={(event) => {
+            const slideSize = bannerWidth;
+            const slideIndex = Math.round(event.nativeEvent.contentOffset.x / slideSize);
+            setCurrentIndex(Math.min(Math.max(slideIndex, 0), images.length - 1));
+          }}
+          onScrollBeginDrag={() => {
+            // Pause auto-scroll when user starts dragging
+            if (scrollRef.current) {
+              clearInterval(scrollRef.current.autoScrollTimer);
+            }
+          }}
+          onScrollEndDrag={() => {
+            // Resume auto-scroll after user stops dragging
+            const timer = setInterval(() => {
+              let nextIndex = currentIndex + 1;
+              if (nextIndex >= images.length) {
+                nextIndex = 0;
+              }
+              setCurrentIndex(nextIndex);
+              if (scrollRef.current) {
+                scrollRef.current.scrollTo({ x: nextIndex * bannerWidth, animated: true });
+              }
+            }, 5000);
+            if (scrollRef.current) {
+              scrollRef.current.autoScrollTimer = timer;
+            }
+          }}
+        >
+          {images.map((img, index) => (
+            <View
+              key={index}
+              style={{
+                width: bannerWidth, // Exact banner width for perfect fit
+                height: 240,
+                borderRadius: 20,
+                overflow: 'hidden',
+              }}
+            >
+              <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Slide Indicator Dots */}
+      <View style={{
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 15,
+        marginBottom: 10,
+      }}>
+        {images.map((_, index) => (
+          <TouchableOpacity
+            key={index}
+            onPress={() => {
+              setCurrentIndex(index);
+              if (scrollRef.current) {
+                scrollRef.current.scrollTo({ x: index * bannerWidth, animated: true });
+              }
+            }}
+            style={{
+              width: index === currentIndex ? 24 : 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: index === currentIndex ? '#FFFFFF' : '#FFFFFF80',
+              marginHorizontal: 4,
+              shadowColor: index === currentIndex ? '#FFFFFF' : 'transparent',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: index === currentIndex ? 0.5 : 0,
+              shadowRadius: 6,
+              elevation: index === currentIndex ? 4 : 0,
+            }}
+          />
+        ))}
+      </View>
+    </View>
+  );
+};
 
 const AffiliateHomeScreen = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
-  const [currentSlide, setCurrentSlide] = useState(0);
   const [affiliates, setAffiliates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [userName, setUserName] = useState(null);
+  const [profileImage, setProfileImage] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [featuredImages, setFeaturedImages] = useState([]);
+  const [ambassadorRoleId, setAmbassadorRoleId] = useState('');
 
   const scrollY = useRef(new Animated.Value(0)).current;
-  const sliderRef = useRef(null);
 
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50,
-  }).current;
-
-  const onSliderViewableItemsChanged = useRef(({ viewableItems }) => {
-    if (viewableItems.length > 0) {
-      setCurrentSlide(viewableItems[0].index);
-    }
-  }).current;
-
-  // Fetch affiliates data
-  const fetchAffiliates = async () => {
+  // Fetch user data and affiliates
+  const fetchUserData = async (page = 1) => {
     try {
       setLoading(true);
-      const response = await getAffiliates();
-      if (response.data && response.data.affiliates) {
-        setAffiliates(response.data.affiliates);
+      const response = await getUserData();
+      const userData = response.data.user;
+      setUserName(userData.name);
+      
+      if (userData.image) {
+        if (userData.image.startsWith('data:')) {
+          setProfileImage(userData.image);
+        } else {
+          const imageUri = `data:image/jpeg;base64,${userData.image}`;
+          setProfileImage(imageUri);
+        }
+      } else {
+        setProfileImage(null);
+      }
+
+      const affiliatesResponse = await getUsers({
+        condition: { ambassadorId: userData._id },
+        page: page,
+        limit: 10,
+      });
+      
+      if (affiliatesResponse.data && affiliatesResponse.data.data) {
+        setAffiliates(affiliatesResponse.data.data);
+        setTotalPages(affiliatesResponse.data.totalPages);
+        setCurrentPage(affiliatesResponse.data.currentPage);
       }
     } catch (error) {
-      console.error('Error fetching affiliates:', error);
-      Alert.alert('Error', 'Failed to load affiliates data');
+      console.error('Error fetching user data:', error);
+      Alert.alert('Error', error?.response?.data?.message || error.message || 'Failed to load user data');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -110,40 +229,61 @@ const AffiliateHomeScreen = () => {
   // Handle refresh
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchAffiliates();
+    await fetchUserData(currentPage);
+  };
+
+  // Handle pagination
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // ------------------------------------------------------------------
+  // Fetch config
+  const fetchConfig = async () => {
+    try {
+      const response = await getconfig();
+      const configData = response.data;
+
+      const ambassadorRoleConfig = configData.find(
+        (item) => item.key === 'AMBASSADOR_ROLE_ID'
+      );
+      if (ambassadorRoleConfig) {
+        setAmbassadorRoleId(ambassadorRoleConfig.value);
+      }
+
+      const featuredImagesConfig = configData.find(
+        (item) => item.key === 'FEATURED_IMAGES'
+      );
+      if (featuredImagesConfig) {
+        setFeaturedImages(featuredImagesConfig.value || []);
+      }
+    } catch (error) {
+      console.error('Error fetching config:', error);
+    }
   };
 
   useEffect(() => {
-    fetchAffiliates();
+    fetchUserData(currentPage);
+  }, [currentPage]);
+
+  // Load config on component mount
+  useEffect(() => {
+    fetchConfig();
   }, []);
 
-  const renderSliderCard = ({ item, index }) => (
-    <View style={styles.heroCard}>
-      <LinearGradient
-        colors={item.backgroundColor}
-        style={styles.heroGradient}
-      >
-        <Image 
-          source={require('../../assets/Icons/vectorForHero.png')}
-          style={styles.heroBackgroundVector}
-        />
-        <View style={styles.heroContent}>
-          <View style={styles.popularBadge}>
-            <Text style={styles.popularText}>{item.badge}</Text>
-          </View>
-          <Text style={styles.heroTitle}>{item.title}</Text>
-          <Text style={styles.heroSubtitle}>{item.subtitle}</Text>
-          <TouchableOpacity style={styles.startButton}>
-            <Text style={styles.startButtonText}>{item.buttonText}</Text>
-          </TouchableOpacity>
-        </View>
-        <Image 
-          source={{ uri: item.image }}
-          style={styles.heroImage}
-        />
-      </LinearGradient>
-    </View>
-  );
+  // ------------------------------------------------------------------
+  // Render swiper using the AutoSwiper component
+  const renderSwiper = () => {
+    return <AutoSwiper images={featuredImages} />;
+  };
 
   const renderAffiliateItem = (affiliate, index) => (
     <TouchableOpacity
@@ -157,11 +297,23 @@ const AffiliateHomeScreen = () => {
     >
       <View style={styles.affiliateContent}>
         <View style={styles.affiliateAvatar}>
-          <Image
-            source={require('../../assets/Icons/profile-avatar.png')}
-            style={styles.avatarImage}
-            resizeMode="contain"
-          />
+          {affiliate.image ? (
+            <Image
+              source={{ 
+                uri: affiliate.image.startsWith('data:') 
+                  ? affiliate.image 
+                  : `data:image/jpeg;base64,${affiliate.image}` 
+              }}
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Image
+              source={require('../../assets/Icons/profile-avatar.png')}
+              style={styles.avatarImage}
+              resizeMode="contain"
+            />
+          )}
         </View>
         <View style={styles.affiliateInfo}>
           <Text style={styles.affiliateName}>{affiliate.name}</Text>
@@ -214,45 +366,22 @@ const AffiliateHomeScreen = () => {
           { useNativeDriver: false }
         )}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#8F31F9']}
+            tintColor="#8F31F9"
+          />
+        }
       >
-        {/* Header Section with Hero Slider Only */}
+        {/* Header Section with AutoSwiper */}
         <LinearGradient
           colors={['#8638EE', '#9553F5', '#8D30FC']}
           style={styles.headerSection}
         >
-          {/* Hero Referral Cards Slider */}
-          <View style={styles.heroSliderContainer}>
-            <FlatList
-              ref={sliderRef}
-              data={sliderCards}
-              renderItem={renderSliderCard}
-              keyExtractor={(item) => item.id.toString()}
-              horizontal
-              pagingEnabled={false}
-              showsHorizontalScrollIndicator={false}
-              onViewableItemsChanged={onSliderViewableItemsChanged}
-              viewabilityConfig={viewabilityConfig}
-              contentContainerStyle={styles.sliderContent}
-              snapToInterval={W - 20}
-              snapToAlignment="start"
-              decelerationRate="fast"
-              scrollEventThrottle={16}
-              bounces={false}
-            />
-          </View>
-
-          {/* Page Dots */}
-          <View style={styles.pageDots}>
-            {sliderCards.map((_, index) => (
-              <View 
-                key={index}
-                style={[
-                  styles.pageDot, 
-                  currentSlide === index && styles.pageDotActive
-                ]} 
-              />
-            ))}
-          </View>
+          {/* Featured Images Swiper */}
+          {renderSwiper()}
         </LinearGradient>
 
         {/* Your Affiliates Section */}
@@ -272,8 +401,54 @@ const AffiliateHomeScreen = () => {
               {affiliates.map((a, i) => renderAffiliateItem(a, i))}
             </View>
           )}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <View style={styles.paginationContainer}>
+              <TouchableOpacity
+                style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
+                onPress={handlePrevPage}
+                disabled={currentPage === 1}
+              >
+                <Ionicons 
+                  name="chevron-back" 
+                  size={24} 
+                  color={currentPage === 1 ? '#cccccc' : '#000000'} 
+                />
+              </TouchableOpacity>
+              
+              <Text style={styles.paginationText}>
+                Page {currentPage} of {totalPages}
+              </Text>
+              
+              <TouchableOpacity
+                style={[styles.paginationButton, currentPage === totalPages && styles.paginationButtonDisabled]}
+                onPress={handleNextPage}
+                disabled={currentPage === totalPages}
+              >
+                <Ionicons 
+                  name="chevron-forward" 
+                  size={24} 
+                  color={currentPage === totalPages ? '#cccccc' : '#000000'} 
+                />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => navigation.navigate('Calculator')}
+      >
+        <View style={styles.fabIcon}>
+          <Image 
+            source={require('../../assets/Icons/hoveringVector.png')} 
+            style={styles.fabImage}
+          />
+        </View>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -339,114 +514,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#EE5855',
   },
-  heroSliderContainer: {
-    height: 220,
-    marginTop: 5,
-    marginBottom: 10,
-    paddingTop: 0,
-  },
-  sliderContent: {
-    paddingHorizontal: 15,
-    alignItems: 'center',
-  },
-  heroCard: {
-    marginHorizontal: 8,
-    borderRadius: 20,
-    overflow: 'hidden',
-    height: 200,
-    width: W - 50,
-  },
-  heroGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    padding: 16,
-    paddingBottom: 20,
-  },
-  heroContent: {
-    flex: 1,
-    paddingRight: 10,
-    justifyContent: 'space-between',
-    paddingBottom: 10,
-  },
-  popularBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.20)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 100,
-    alignSelf: 'flex-start',
-  },
-  popularText: {
-    color: '#FBFBFB',
-    fontSize: 11,
-    fontWeight: '400',
-    fontFamily: 'Rubik-Regular',
-  },
-  heroTitle: {
-    color: '#FBFBFB',
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 12,
-    fontFamily: 'Rubik-SemiBold',
-  },
-  heroSubtitle: {
-    color: '#F6F6FE',
-    fontSize: 12,
-    fontWeight: '400',
-    marginTop: 8,
-    lineHeight: 16,
-    fontFamily: 'Rubik-Regular',
-  },
-  startButton: {
-    backgroundColor: '#FBFBFB',
-    paddingHorizontal: 30,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginTop: 12,
-  },
-  startButtonText: {
-    color: '#8F31F9',
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: 'Rubik-SemiBold',
-  },
-  heroImage: {
-    width: 160,
-    height: 180,
-    position: 'absolute',
-    right: 5,
-    bottom: 0,
-  },
-  heroBackgroundVector: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '115%',
-    height: '100%',
-    opacity: 1,
-    resizeMode: 'cover',
-    tintColor: 'rgba(255, 255, 255, 1 )',
-  },
-  pageDots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    gap: 4,
-  },
-  pageDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 10,
-    backgroundColor: '#FBFBFB',
-    opacity: 0.5,
-  },
-  pageDotActive: {
-    width: 20,
-    opacity: 1,
-  },
+
   // Your Affiliates Section Styles
   affiliatesSection: {
     paddingHorizontal: 20,
@@ -550,6 +618,60 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#7D7D7D',
     fontFamily: 'Rubik-Regular',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    paddingHorizontal: 20,
+    gap: 20,
+  },
+  paginationButton: {
+    padding: 10,
+    backgroundColor: 'rgba(150, 61, 251, 0.1)',
+    borderRadius: 8,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paginationButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: 'rgba(150, 61, 251, 0.05)',
+  },
+  paginationText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1A1B20',
+    fontFamily: 'Rubik',
+  },
+
+  // Floating Action Button Styles
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 40,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    shadowColor: '#1187FE',
+    shadowOffset: { width: 0, height: 3.077 },
+    shadowOpacity: 0.5,
+    shadowRadius: 7.692,
+    elevation: 8,
+  },
+  fabIcon: {
+    flex: 1,
+    backgroundColor: '#1187FE',
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabImage: {
+    width: 70,
+    height: 70,
+    resizeMode: 'contain',
+    marginTop: 5
   },
 });
 

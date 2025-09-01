@@ -192,7 +192,7 @@ const CategoryDetailScreen = () => {
             <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: backButtonColor }]}>
               <Ionicons name="chevron-back-outline" size={20} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{displayTitle}</Text>
+            <Text style={styles.headerTitle} numberOfLines={2}>{displayTitle}</Text>
             <View style={{ width: 40 }} /> 
           </View>
           
@@ -202,7 +202,15 @@ const CategoryDetailScreen = () => {
               <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>Popular</Text></View>
               <Text style={styles.promoTitle}>Earn While You Refer</Text>
               <Text style={styles.promoSubtitle}>Share services you trust and{'\n'}get paid for every referral</Text>
-              <TouchableOpacity style={styles.referButton}><Text style={styles.referButtonText}>Refer Now</Text></TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.referButton}
+                onPress={() => navigation.navigate('ReferralForm', {
+                  product: productData,
+                  category: category
+                })}
+              >
+                <Text style={styles.referButtonText}>Refer Now</Text>
+              </TouchableOpacity>
             </View>
             <Image 
               source={require('../../assets/Icons/young-man.png')} 
@@ -355,6 +363,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     height: 56, // Standard header height for safe spacing
     zIndex: 11,
+    minHeight: 56, // Allow height to expand if needed
   },
   backButton: {
     width: 32,
@@ -367,6 +376,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Rubik-SemiBold',
     fontSize: 24,
     color: '#FBFBFB',
+    textAlign: 'center',
+    flex: 1,
+    flexWrap: 'wrap',
+    paddingHorizontal: 10,
   },
   promoCard: {
     flex: 1,

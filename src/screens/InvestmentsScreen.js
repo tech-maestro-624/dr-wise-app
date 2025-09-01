@@ -164,7 +164,12 @@ const InvestmentsScreen = () => {
               <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>Popular</Text></View>
               <Text style={styles.promoTitle}>Earn While You Refer</Text>
               <Text style={styles.promoSubtitle}>Share services you trust and{'\n'}get paid for every referral</Text>
-              <TouchableOpacity style={styles.referButton}><Text style={styles.referButtonText}>Refer Now</Text></TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.referButton}
+                onPress={() => navigation.navigate('ReferralForm')}
+              >
+                <Text style={styles.referButtonText}>Refer Now</Text>
+              </TouchableOpacity>
             </View>
             <Image 
               source={require('../../assets/Icons/young-man.png')} 
