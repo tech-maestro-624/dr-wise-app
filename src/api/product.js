@@ -1,5 +1,15 @@
 import apiClient from './https';
 
+// Get all products
+export const getAllProducts = async () => {
+  try {
+    const response = await apiClient.get('/products');
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Search products with fuzzy search
 export const searchProducts = async (query, limit = 10, threshold = 0.4) => {
   try {

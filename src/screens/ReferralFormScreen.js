@@ -21,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Contacts from 'expo-contacts';
 import { createLead } from '../api/lead';
 import { getCategories, getProductByCategory } from '../api/categorys';
+import { searchProducts, getAllProducts } from '../api/product';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
 
@@ -28,13 +29,20 @@ import Toast from 'react-native-toast-message';
 const ProductSelectionModal = ({
   visible,
   onClose,
-  categories,
   products,
-  selectedCategoryId,
-  onCategorySelect,
   selectedProducts,
-  onProductToggle
+  onProductToggle,
+  searchQuery,
+  onSearchChange,
+  isSearching
 }) => {
+  console.log('ProductSelectionModal render:', {
+    visible,
+    productsCount: products ? products.length : 0,
+    selectedProductsCount: selectedProducts ? selectedProducts.length : 0,
+    searchQuery,
+    isSearching
+  });
   return (
     <Modal
       visible={visible}
@@ -47,43 +55,56 @@ const ProductSelectionModal = ({
         <View style={styles.productModalContainer}>
           {/* Header */}
           <View style={styles.productModalHeader}>
-            <Text style={styles.productModalTitle}>Select Category & Products</Text>
+            <Text style={styles.productModalTitle}>Select Products</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#1A1B20" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.productModalScroll}>
-            {/* Categories Section */}
-            <Text style={styles.modalSectionTitle}>Categories</Text>
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category._id}
-                style={[
-                  styles.categoryItem,
-                  selectedCategoryId === category._id && styles.categoryItemSelected
-                ]}
-                onPress={() => onCategorySelect(category._id)}
-              >
-                <Text style={[
-                  styles.categoryItemText,
-                  selectedCategoryId === category._id && styles.categoryItemTextSelected
-                ]}>
-                  {category.name}
-                </Text>
-                {selectedCategoryId === category._id && (
-                  <Ionicons name="checkmark" size={20} color="#8F31F9" />
-                )}
-              </TouchableOpacity>
-            ))}
+          {/* Search Input */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <Ionicons name="search" size={20} color="#7D7D7D" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search products..."
+                value={searchQuery}
+                onChangeText={onSearchChange}
+                placeholderTextColor="#7D7D7D"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => onSearchChange('')}
+                  style={styles.clearButton}
+                >
+                  <Ionicons name="close-circle" size={20} color="#7D7D7D" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
 
+          <ScrollView style={styles.productModalScroll}>
             {/* Products Section */}
-            {selectedCategoryId && products.length > 0 && (
+            {(products && products.length > 0) ? (
               <>
-                <Text style={styles.modalSectionTitle}>Products</Text>
+                <Text style={styles.modalSectionTitle}>
+                  {(selectedProducts && selectedProducts.length > 0)
+                    ? `Products (${selectedProducts.length} selected)`
+                    : 'Products'
+                  }
+                </Text>
                 <Text style={styles.modalSectionSubtitle}>Select one or more products</Text>
+
+                {isSearching && (
+                  <View style={styles.searchingIndicator}>
+                    <Ionicons name="search" size={16} color="#8F31F9" />
+                    <Text style={styles.searchingText}>Searching...</Text>
+                  </View>
+                )}
+
                 {products.map((product) => {
-                  const isSelected = selectedProducts.includes(product._id);
+                  console.log('Rendering product:', { id: product._id, name: product.name });
+                  const isSelected = selectedProducts ? selectedProducts.includes(product._id) : false;
                   return (
                     <TouchableOpacity
                       key={product._id}
@@ -91,15 +112,32 @@ const ProductSelectionModal = ({
                         styles.productItem,
                         isSelected && styles.productItemSelected
                       ]}
-                      onPress={() => onProductToggle(product._id)}
+                      onPress={() => {
+                        console.log('Product pressed:', { id: product._id, name: product.name });
+                        if (onProductToggle && product._id) {
+                          onProductToggle(product._id);
+                        } else {
+                          console.error('onProductToggle or product._id is missing', { onProductToggle: !!onProductToggle, productId: product._id });
+                        }
+                      }}
                     >
                       <View style={styles.productItemContent}>
-                        <Text style={[
-                          styles.productItemText,
-                          isSelected && styles.productItemTextSelected
-                        ]}>
-                          {product.name}
-                        </Text>
+                        <View style={styles.productInfo}>
+                          <Text style={[
+                            styles.productItemText,
+                            isSelected && styles.productItemTextSelected
+                          ]}>
+                            {product.name}
+                          </Text>
+                          {product.categoryId && (
+                            <Text style={[
+                              styles.productCategoryText,
+                              isSelected && styles.productCategoryTextSelected
+                            ]}>
+                              {product.categoryId.name}
+                            </Text>
+                          )}
+                        </View>
                         <View style={[
                           styles.checkbox,
                           isSelected && styles.checkboxSelected
@@ -113,10 +151,16 @@ const ProductSelectionModal = ({
                   );
                 })}
               </>
-            )}
-
-            {selectedCategoryId && products.length === 0 && (
-              <Text style={styles.noProductsText}>No products available in this category</Text>
+            ) : (
+              <View style={styles.noProductsContainer}>
+                <Ionicons name="search-outline" size={48} color="#7D7D7D" />
+                <Text style={styles.noProductsText}>
+                  {searchQuery && searchQuery.length > 0
+                    ? 'No products found matching your search'
+                    : 'No products available'
+                  }
+                </Text>
+              </View>
             )}
           </ScrollView>
 
@@ -130,7 +174,9 @@ const ProductSelectionModal = ({
               locations={[0, 0.6, 1]}
               style={styles.doneButtonGradient}
             >
-              <Text style={styles.doneButtonText}>Done</Text>
+              <Text style={styles.doneButtonText}>
+                Done ({selectedProducts.length})
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -272,6 +318,17 @@ const ReferralFormScreen = () => {
     productIds: [] // Changed to array for multiple products
   });
 
+  // Ensure formData.productIds is always an array
+  useEffect(() => {
+    if (!Array.isArray(formData.productIds)) {
+      console.warn('formData.productIds is not an array, resetting to empty array');
+      setFormData(prev => ({
+        ...prev,
+        productIds: []
+      }));
+    }
+  }, [formData.productIds]);
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [contactsPermission, setContactsPermission] = useState(null);
@@ -282,93 +339,196 @@ const ReferralFormScreen = () => {
   });
 
 
-  // Categories and products state
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  // Products state
+  const [allProducts, setAllProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // Fetch categories on component mount
+  // Initialize filteredProducts with allProducts to avoid undefined errors
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await getCategories();
-        if (response.data) {
-          setCategories(response.data);
+    if (allProducts.length > 0 && filteredProducts.length === 0) {
+      setFilteredProducts(allProducts);
+    }
+  }, [allProducts, filteredProducts]);
 
-          // If category is passed via route params, set it as selected
-          if (category && response.data) {
-            // Try to find category by name first, then by _id
-            const categoryObj = response.data.find(cat =>
-              cat.name === category || cat._id === category
-            );
-            if (categoryObj) {
-              setSelectedCategoryId(categoryObj._id);
-            }
+  // Fetch all products on component mount
+  useEffect(() => {
+    const fetchAllProducts = async () => {
+      try {
+        console.log('Fetching all products...');
+        const response = await getAllProducts();
+        console.log('Products response:', response);
+        console.log('Response data type:', typeof response.data);
+        console.log('Response data:', response.data);
+
+        // Handle different response structures
+        let productsData = [];
+        if (response.data) {
+          if (Array.isArray(response.data)) {
+            productsData = response.data;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            productsData = response.data.data;
+          } else if (response.data.products && Array.isArray(response.data.products)) {
+            productsData = response.data.products;
           }
+        }
+
+        console.log('Extracted products data:', productsData.length);
+
+        if (productsData.length > 0) {
+          // Populate category information for each product
+          const productsWithCategories = productsData.map(prod => ({
+            ...prod,
+            categoryId: prod.categoryId || prod.category // Handle different field names
+          }));
+
+          console.log('Products loaded:', productsWithCategories.length);
+          console.log('Sample product:', productsWithCategories[0]);
+          setAllProducts(productsWithCategories);
+          setFilteredProducts(productsWithCategories);
 
           // If product is passed via route params, set it in form data
-          if (product) {
-            const productObj = response.data.find(cat =>
-              cat.products && cat.products.find(p =>
-                p.name === product || p._id === product
-              )
+          if (product && productsWithCategories.length > 0) {
+            const productObj = productsWithCategories.find(p =>
+              p.name === product || p._id === product
             );
             if (productObj) {
-              const prod = productObj.products.find(p =>
-                p.name === product || p._id === product
-              );
-              if (prod) {
-                setFormData(prev => ({
-                  ...prev,
-                  productIds: [prod._id]
-                }));
-              }
+              setFormData(prev => ({
+                ...prev,
+                productIds: [productObj._id]
+              }));
             }
+          }
+        } else {
+          console.log('No products found in response, trying fallback...');
+
+          // Fallback: try to get products from categories API
+          try {
+            const categoryResponse = await getCategories();
+            console.log('Categories response:', categoryResponse);
+
+            if (categoryResponse.data && Array.isArray(categoryResponse.data)) {
+              const fallbackProducts = [];
+              categoryResponse.data.forEach(cat => {
+                if (cat.products && Array.isArray(cat.products)) {
+                  cat.products.forEach(prod => {
+                    fallbackProducts.push({
+                      ...prod,
+                      categoryId: { name: cat.name, _id: cat._id }
+                    });
+                  });
+                }
+              });
+
+              console.log('Fallback products loaded:', fallbackProducts.length);
+              if (fallbackProducts.length > 0) {
+                setAllProducts(fallbackProducts);
+                setFilteredProducts(fallbackProducts);
+              } else {
+                setAllProducts([]);
+                setFilteredProducts([]);
+              }
+            } else {
+              setAllProducts([]);
+              setFilteredProducts([]);
+            }
+          } catch (fallbackError) {
+            console.error('Fallback also failed:', fallbackError);
+            setAllProducts([]);
+            setFilteredProducts([]);
           }
         }
       } catch (error) {
-        console.error('Error fetching categories:', error);
+        console.error('Error fetching products:', error);
         Toast.show({
           type: 'error',
           text1: 'Error',
-          text2: 'Failed to load categories',
+          text2: 'Failed to load products',
           position: 'top'
         });
       }
     };
 
-    fetchCategories();
-  }, [category]);
+    fetchAllProducts();
+  }, [product]);
 
-  // Fetch products when category is selected
+  // Handle search functionality - local filtering by default
   useEffect(() => {
-    const fetchProducts = async () => {
-      if (selectedCategoryId) {
+    console.log('Search useEffect triggered:', { searchQuery, allProductsLength: allProducts.length });
+
+    if (allProducts.length === 0) {
+      console.log('No products available for search');
+      setFilteredProducts([]);
+      return;
+    }
+
+    if (searchQuery.trim().length === 0) {
+      console.log('No search query, showing all products');
+      setFilteredProducts(allProducts);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+
+    // Local filtering for better performance - only use API as fallback for complex searches
+    const query = searchQuery.trim().toLowerCase();
+    console.log('Searching for:', query);
+
+    const filtered = allProducts.filter(product => {
+      const matchesName = product.name && product.name.toLowerCase().includes(query);
+      const matchesDescription = product.description && product.description.toLowerCase().includes(query);
+      const matchesCategory = product.categoryId && product.categoryId.name && product.categoryId.name.toLowerCase().includes(query);
+
+      const matches = matchesName || matchesDescription || matchesCategory;
+      if (matches) {
+        console.log('Product matched:', product.name, { matchesName, matchesDescription, matchesCategory });
+      }
+
+      return matches;
+    });
+
+    console.log('Local filtering results:', filtered.length, 'matches out of', allProducts.length);
+
+    // If local filtering returns too few results and query is longer than 3 chars, try API search
+    if (filtered.length < 3 && query.length > 3) {
+      console.log('Using API search as fallback');
+      const timeoutId = setTimeout(async () => {
         try {
-          console.log('Fetching products for category:', selectedCategoryId);
-          const response = await getProductByCategory(selectedCategoryId);
-          if (response.data) {
-            setProducts(response.data);
-            console.log('Products loaded:', response.data);
+          const response = await searchProducts(query, 20, 0.4);
+          console.log('API search response:', response);
+          if (response.data && response.data.results && response.data.results.length > filtered.length) {
+            // Use API results if they provide more/better matches
+            const searchResultsWithCategories = response.data.results.map(searchResult => {
+              const fullProduct = allProducts.find(p => p._id === searchResult._id);
+              return fullProduct || searchResult;
+            });
+            console.log('Using API results:', searchResultsWithCategories.length);
+            setFilteredProducts(searchResultsWithCategories);
+          } else {
+            console.log('Keeping local results');
+            setFilteredProducts(filtered);
           }
         } catch (error) {
-          console.error('Error fetching products:', error);
-          Toast.show({
-            type: 'error',
-            text1: 'Error',
-            text2: 'Failed to load products',
-            position: 'top'
-          });
+          console.error('Error with API search:', error);
+          // Keep local results
+          setFilteredProducts(filtered);
+        } finally {
+          setIsSearching(false);
         }
-      } else {
-        setProducts([]);
-      }
-    };
+      }, 500); // Longer debounce for API calls
 
-    fetchProducts();
-  }, [selectedCategoryId]);
+      return () => clearTimeout(timeoutId);
+    } else {
+      // Use local filtering results
+      console.log('Using local filtering results');
+      setFilteredProducts(filtered);
+      setIsSearching(false);
+    }
+  }, [searchQuery, allProducts]);
 
   // Handle input changes
   const handleInputChange = (field, value) => {
@@ -489,25 +649,44 @@ const ReferralFormScreen = () => {
 
   // Handle product selection
   const handleProductToggle = (productId) => {
+    console.log('handleProductToggle called with productId:', productId);
+
+    // Defensive checks
+    if (!productId) {
+      console.error('handleProductToggle: productId is undefined or null');
+      return;
+    }
+
     setFormData(prev => {
-      const isSelected = prev.productIds.includes(productId);
+      console.log('setFormData prev:', prev);
+
+      // Ensure productIds is an array
+      const currentProductIds = Array.isArray(prev.productIds) ? prev.productIds : [];
+      const isSelected = currentProductIds.includes(productId);
+
+      console.log('isSelected:', isSelected, 'currentProductIds:', currentProductIds);
+
       if (isSelected) {
         // Remove product if already selected
+        const newProductIds = currentProductIds.filter(id => id !== productId);
+        console.log('Removing product, newProductIds:', newProductIds);
         return {
           ...prev,
-          productIds: prev.productIds.filter(id => id !== productId)
+          productIds: newProductIds
         };
       } else {
         // Add product if not selected
+        const newProductIds = [...currentProductIds, productId];
+        console.log('Adding product, newProductIds:', newProductIds);
         return {
           ...prev,
-          productIds: [...prev.productIds, productId]
+          productIds: newProductIds
         };
       }
     });
 
     // Clear productIds error when user selects products
-    if (errors.productIds) {
+    if (errors && errors.productIds) {
       setErrors(prev => ({
         ...prev,
         productIds: ''
@@ -517,8 +696,12 @@ const ReferralFormScreen = () => {
 
   // Get selected product names for display
   const getSelectedProductNames = () => {
-    return products
-      .filter(product => formData.productIds.includes(product._id))
+    if (!filteredProducts || !Array.isArray(filteredProducts) || !formData.productIds || !Array.isArray(formData.productIds)) {
+      return '';
+    }
+
+    return filteredProducts
+      .filter(product => product && product._id && formData.productIds.includes(product._id))
       .map(product => product.name)
       .join(', ');
   };
@@ -540,11 +723,6 @@ const ReferralFormScreen = () => {
     // Email is now optional, but if provided, validate format
     if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email.trim())) {
       newErrors.email = 'Please enter a valid email address';
-    }
-
-    // Validate that category is selected
-    if (!selectedCategoryId) {
-      newErrors.category = 'Please select a category';
     }
 
     // Validate that at least one product is selected
@@ -573,35 +751,21 @@ const ReferralFormScreen = () => {
       return;
     }
 
-    // Check if category is selected
-    if (!selectedCategoryId) {
-      Toast.show({
-        type: 'error',
-        text1: 'Category Required',
-        text2: 'Please select a category before submitting.',
-        position: 'top'
-      });
-      return;
-    }
+
 
     setLoading(true);
 
     try {
-      // Get the selected category object from the categories array
-      const selectedCategoryObj = categories.find(cat => cat._id === selectedCategoryId);
-
-      console.log('Debug - Selected category ID:', selectedCategoryId);
-      console.log('Debug - Selected category object:', selectedCategoryObj);
       console.log('Debug - User object:', user);
       console.log('Debug - Form data:', formData);
 
-      // Fallback: if no category object found and selectedCategoryId looks like a name, try to find by name
-      let finalCategoryId = selectedCategoryObj?._id || selectedCategoryId;
-      if (!selectedCategoryObj && selectedCategoryId) {
-        const categoryByName = categories.find(cat => cat.name === selectedCategoryId);
-        if (categoryByName) {
-          finalCategoryId = categoryByName._id;
-          console.log('Debug - Found category by name:', categoryByName);
+      // Get the first selected product's category as the primary category
+      // This is a fallback in case the backend still requires categoryId
+      let primaryCategoryId = null;
+      if (formData.productIds.length > 0) {
+        const firstProduct = allProducts.find(p => p._id === formData.productIds[0]);
+        if (firstProduct && firstProduct.categoryId) {
+          primaryCategoryId = firstProduct.categoryId._id;
         }
       }
 
@@ -612,7 +776,7 @@ const ReferralFormScreen = () => {
         email: formData.email.trim() || undefined, // Optional field
         message: formData.message.trim() || undefined, // Optional field
         referrer: user?._id, // Authenticated user's ID
-        categoryId: finalCategoryId, // Use the resolved category ID
+        categoryId: primaryCategoryId, // Use primary category from first selected product
         productIds: formData.productIds, // Send array of product IDs
         source: 'product_referral',
         status: 'New' // Match backend status
@@ -720,48 +884,28 @@ const ReferralFormScreen = () => {
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.contentContainer}>
 
-            {/* Category Selection */}
+            {/* Product Selection */}
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Select Category</Text>
+              <Text style={styles.inputLabel}>Select Products (Multiple)</Text>
               <TouchableOpacity
-                style={[styles.dropdownButton, errors.category && styles.inputError]}
+                style={[styles.dropdownButton, errors.productIds && styles.inputError]}
                 onPress={() => setShowProductModal(true)}
               >
                 <Text style={styles.dropdownButtonText}>
-                  {selectedCategoryId
-                    ? categories.find(cat => cat._id === selectedCategoryId)?.name || 'Select Category'
-                    : 'Select Category'
+                  {formData.productIds.length > 0
+                    ? `${formData.productIds.length} product${formData.productIds.length > 1 ? 's' : ''} selected`
+                    : 'Select Products'
                   }
                 </Text>
                 <Ionicons name="chevron-down" size={20} color="#8F31F9" />
               </TouchableOpacity>
-              {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
+              {formData.productIds.length > 0 && (
+                <Text style={styles.selectedProductsText}>
+                  {getSelectedProductNames()}
+                </Text>
+              )}
+              {errors.productIds && <Text style={styles.errorText}>{errors.productIds}</Text>}
             </View>
-
-            {/* Product Selection */}
-            {selectedCategoryId && (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Select Products (Multiple)</Text>
-                <TouchableOpacity
-                  style={[styles.dropdownButton, errors.productIds && styles.inputError]}
-                  onPress={() => setShowProductModal(true)}
-                >
-                  <Text style={styles.dropdownButtonText}>
-                    {formData.productIds.length > 0
-                      ? `${formData.productIds.length} product${formData.productIds.length > 1 ? 's' : ''} selected`
-                      : 'Select Products'
-                    }
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color="#8F31F9" />
-                </TouchableOpacity>
-                {formData.productIds.length > 0 && (
-                  <Text style={styles.selectedProductsText}>
-                    {getSelectedProductNames()}
-                  </Text>
-                )}
-                {errors.productIds && <Text style={styles.errorText}>{errors.productIds}</Text>}
-              </View>
-            )}
 
             <Text style={styles.sectionTitle}>Enter Details</Text>
             <Text style={styles.sectionSubtitle}>
@@ -854,22 +998,17 @@ const ReferralFormScreen = () => {
       {/* Product Selection Modal */}
       <ProductSelectionModal
         visible={showProductModal}
-        onClose={() => setShowProductModal(false)}
-        categories={categories}
-        products={products}
-        selectedCategoryId={selectedCategoryId}
-        onCategorySelect={(categoryId) => {
-          setSelectedCategoryId(categoryId);
-          // Clear selected products when category changes
-          setFormData(prev => ({ ...prev, productIds: [] }));
-          // Clear category error
-          if (errors.category) {
-            setErrors(prev => ({ ...prev, category: '' }));
-          }
+        onClose={() => {
+          setShowProductModal(false);
+          setSearchQuery(''); // Clear search when closing modal
         }}
+        products={filteredProducts}
         selectedProducts={formData.productIds}
         onProductToggle={handleProductToggle}
-            />
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        isSearching={isSearching}
+      />
 
       {/* Success Modal */}
       <SuccessModal
@@ -889,7 +1028,7 @@ const ReferralFormScreen = () => {
             message: '',
             productIds: []
           });
-          setSelectedCategoryId(null);
+          setSearchQuery('');
           setErrors({});
         }}
       />
@@ -1407,6 +1546,72 @@ const styles = StyleSheet.create({
     fontFamily: 'Rubik-SemiBold',
     fontSize: 14,
     color: '#FFFFFF',
+  },
+
+  // Search Styles
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    backgroundColor: '#FFFFFF',
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F6FF',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1A1B20',
+    fontFamily: 'Rubik-Regular',
+  },
+  clearButton: {
+    padding: 5,
+  },
+
+  // Product Item Enhancements
+  productInfo: {
+    flex: 1,
+  },
+  productCategoryText: {
+    fontSize: 12,
+    color: '#7D7D7D',
+    fontFamily: 'Rubik-Regular',
+    marginTop: 2,
+  },
+  productCategoryTextSelected: {
+    color: '#8F31F9',
+  },
+
+  // Searching Indicator
+  searchingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  searchingText: {
+    fontSize: 14,
+    color: '#8F31F9',
+    fontFamily: 'Rubik-Medium',
+    marginLeft: 8,
+  },
+
+  // No Products Container
+  noProductsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
 });
 
