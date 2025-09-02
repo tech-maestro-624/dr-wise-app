@@ -67,7 +67,7 @@ const TermInsuranceCalculatorScreen = ({ navigation, route }) => {
         {/* Earnings Calculator Icon */}
         <View style={styles.iconContainer}>
           <Image
-            source={require('../../assets/Icons/earning.png')}
+            source={require('../../assets/Icons/TERM 1.png')}
             style={styles.termIcon}
             resizeMode="contain"
           />

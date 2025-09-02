@@ -122,6 +122,7 @@ const CreditsScreen = () => {
           description: transaction.description || transaction.type || 'Transaction',
           amount: `₹${Math.abs(transaction.amount || 0).toFixed(2)}`,
           type: transaction.type,
+          isLocked: transaction.type === 'LOCKED_REFERRAL_BONUS'
         }));
 
         setTransactions(transformedTransactions);
@@ -251,7 +252,11 @@ const CreditsScreen = () => {
                 <View key={item.id} style={styles.transactionItem}>
                   <View style={styles.transactionIconContainer}>
                     <Image
-                      source={require('../../assets/Icons/tickmark.png')}
+                      source={
+                        item.isLocked
+                          ? require('../../assets/Icons/locked.png')
+                          : require('../../assets/Icons/tickmark.png')
+                      }
                       style={styles.checkmarkIcon}
                       resizeMode="cover"
                     />
