@@ -28,6 +28,7 @@ import { updateUser } from '../api/user';
 import { getAffiliates } from '../api/affiliate';
 import { customerLogout } from '../api/auth';
 import { getUserSubscriptions } from '../api/subscription';
+import VerificationStatusBanner from '../components/VerificationStatusBanner';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const scale = Math.min(screenWidth / 375, screenHeight / 812);
@@ -47,6 +48,41 @@ const PolicyItem = ({ iconSource, text, onPress }) => (
   </TouchableOpacity>
 );
 
+// Renewal Modal Component
+const RenewalModal = ({ visible, onRenew }) => (
+  <Modal
+    visible={visible}
+    transparent={true}
+    animationType="fade"
+    onRequestClose={() => {}} // No close on back press
+  >
+    <View style={styles.renewalModalOverlay}>
+      <View style={styles.renewalModalContent}>
+        <View style={styles.iconContainer}>
+          <Ionicons name="alert-circle-outline" size={120} color="#F44336" />
+          <LinearGradient
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0)']}
+            start={{ x: 0.1, y: 0.5 }}
+            end={{ x: 0.9, y: 0.5 }}
+            style={styles.iconShadow}
+          />
+        </View>
+        <View style={styles.modalBottomContent}>
+          <View style={styles.modalTextContainer}>
+            <Text style={styles.renewalModalTitle}>Subscription Expired</Text>
+            <Text style={styles.renewalModalText}>
+              Your subscription has expired. Please renew to continue using the application.
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.renewButton} onPress={onRenew}>
+            <Text style={styles.renewButtonText}>Renew</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
+
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const { user: authUser, logout } = useAuth();
@@ -63,6 +99,7 @@ const ProfileScreen = () => {
   // State for subscription data
   const [subscription, setSubscription] = useState(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [showRenewalModal, setShowRenewalModal] = useState(false);
 
   // Fetch user data from backend
   const fetchUserData = async () => {
@@ -135,16 +172,25 @@ const ProfileScreen = () => {
 
         if (activeSubscription) {
           setSubscription(activeSubscription);
+          if (new Date(activeSubscription.endDate) < new Date()) {
+            setShowRenewalModal(true);
+          } else {
+            setShowRenewalModal(false);
+          }
         } else {
           setSubscription(null);
+          // Assuming no subscription is also a reason to show renewal
+          setShowRenewalModal(true);
         }
       } else {
         setSubscription(null);
+        setShowRenewalModal(true);
       }
     } catch (error) {
       console.error('Error fetching subscription data:', error);
       // Don't show alert for subscription fetch errors to avoid spam
       setSubscription(null);
+      setShowRenewalModal(true);
     } finally {
       setSubscriptionLoading(false);
     }
@@ -453,6 +499,18 @@ const ProfileScreen = () => {
             </View>
           </LinearGradient>
 
+          {/* --- Verification Status Banner --- */}
+          <VerificationStatusBanner
+            onPress={() => {
+              // Only navigate if verification is required (not pending/rejected)
+              const { verificationStatus } = user || {};
+              if (verificationStatus === 'required' || !verificationStatus) {
+                navigation.navigate('Verification');
+              }
+              // For pending/rejected status, banner is not clickable
+            }}
+          />
+
           {/* --- Content Section --- */}
           <View style={styles.content}>
             {/* Subscription Status Card */}
@@ -476,17 +534,17 @@ const ProfileScreen = () => {
                     <View style={styles.statusContainer}>
                       <Text style={[
                         styles.subscriptionStatus,
-                        subscription.status === 'active' && styles.activeStatus,
-                        subscription.status === 'expired' && styles.expiredStatus,
+                        (subscription.status === 'active' && new Date(subscription.endDate) >= new Date()) && styles.activeStatus,
+                        (subscription.status === 'expired' || new Date(subscription.endDate) < new Date()) && styles.expiredStatus,
                         subscription.status === 'pending' && styles.pendingStatus,
                         subscription.status === 'cancelled' && styles.cancelledStatus
                       ]}>
-                        {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
+                        {new Date(subscription.endDate) < new Date() ? 'Inactive' : (subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1))}
                       </Text>
                       <View style={[
                         styles.statusIndicator,
-                        subscription.status === 'active' && styles.activeIndicator,
-                        subscription.status === 'expired' && styles.expiredIndicator,
+                        (subscription.status === 'active' && new Date(subscription.endDate) >= new Date()) && styles.activeIndicator,
+                        (subscription.status === 'expired' || new Date(subscription.endDate) < new Date()) && styles.expiredIndicator,
                         subscription.status === 'pending' && styles.pendingIndicator,
                         subscription.status === 'cancelled' && styles.cancelledIndicator
                       ]} />
@@ -497,8 +555,8 @@ const ProfileScreen = () => {
                         new Date(subscription.endDate) < new Date() && styles.expiredText
                       ]}>
                         {new Date(subscription.endDate) < new Date()
-                          ? `Expired: ${new Date(subscription.endDate).toLocaleDateString()}`
-                          : `Expires: ${new Date(subscription.endDate).toLocaleDateString()}`
+                          ? `Expired: ${new Date(subscription.endDate).toLocaleDateString('en-GB')}`
+                          : `Expires: ${new Date(subscription.endDate).toLocaleDateString('en-GB')}`
                         }
                       </Text>
                     )}
@@ -606,6 +664,15 @@ const ProfileScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Renewal Modal */}
+      <RenewalModal
+        visible={showRenewalModal}
+        onRenew={() => {
+          setShowRenewalModal(false);
+          navigation.navigate('SubscriptionPlansScreen');
+        }}
+      />
     </View>
   );
 };
@@ -942,6 +1009,70 @@ const styles = StyleSheet.create({
     color: '#1A1B20',
     marginLeft: 16 * scale,
     fontFamily: 'Rubik-Medium',
+  },
+  // Renewal Modal Styles
+  renewalModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%',
+  },
+  renewalModalContent: {
+    width: 324,
+    height: 673,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 60,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconShadow: {
+    height: 10,
+    width: 100,
+    borderRadius: 5,
+    marginTop: 15,
+  },
+  modalBottomContent: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  modalTextContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  renewalModalTitle: {
+    fontSize: 22 * scale,
+    fontWeight: '700',
+    color: '#1A1B20',
+    fontFamily: 'Rubik-Bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  renewalModalText: {
+    fontSize: 16 * scale,
+    color: '#666666',
+    fontFamily: 'Rubik-Regular',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  renewButton: {
+    backgroundColor: '#8F31F9',
+    borderRadius: 8,
+    paddingVertical: 14,
+    width: '100%',
+    alignItems: 'center',
+  },
+  renewButtonText: {
+    fontSize: 16 * scale,
+    color: '#FFFFFF',
+    fontFamily: 'Rubik-SemiBold',
   },
 });
 

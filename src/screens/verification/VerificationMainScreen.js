@@ -11,6 +11,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/tokens';
+import { completeRegistrationWithVerification, getVerificationData } from '../../api/verification';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../../context/AuthContext';
+import Toast from 'react-native-toast-message';
 
 const stepsList = [
   { 
@@ -33,6 +37,8 @@ const stepsList = [
 export default function VerificationMainScreen({ navigation, route }) {
   // Modal state for verification completion
   const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAuth();
   
   // Initialize state from route params if available
   const [steps, setSteps] = useState(() => {
@@ -125,10 +131,58 @@ export default function VerificationMainScreen({ navigation, route }) {
   const allComplete = Object.values(steps).every(Boolean);
   console.log('All steps complete:', allComplete, steps);
 
-  const handleVerifyIdentity = () => {
+  const handleVerifyIdentity = async () => {
     if (allComplete) {
-      console.log('All verification steps completed!');
-      setShowModal(true);
+      setIsSubmitting(true);
+      try {
+        // Get stored verification data
+        const verificationData = getVerificationData();
+
+        // Get user data from AsyncStorage (stored during initial registration)
+        const userDataString = await AsyncStorage.getItem('tempUserData');
+        let userData = {};
+
+        if (userDataString) {
+          userData = JSON.parse(userDataString);
+        }
+
+        // Combine user data with verification data
+        const completeRegistrationData = {
+          ...userData,
+          otp: '123456', // Using default OTP for development
+          verified: true
+        };
+
+        console.log('Submitting complete registration data...');
+
+        // Submit complete registration with files and bank details
+        const response = await completeRegistrationWithVerification(completeRegistrationData);
+
+        if (response.data) {
+          Toast.show({
+            type: 'success',
+            text1: 'Registration Completed!',
+            text2: 'Account registered successfully. Please wait for verification approval.',
+            position: 'bottom',
+          });
+
+          // Clear temp data
+          await AsyncStorage.removeItem('tempUserData');
+
+          // Navigate to login screen (don't login user immediately)
+          navigation.navigate('Login');
+        }
+      } catch (error) {
+        console.error('Registration completion error:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Registration failed',
+          text2: error?.response?.data?.message || error.message,
+          position: 'bottom',
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -188,17 +242,17 @@ export default function VerificationMainScreen({ navigation, route }) {
         <View style={styles.bottomContainer}>
           <TouchableOpacity
             style={[
-              styles.verifyButton, 
-              allComplete ? styles.verifyButtonEnabled : styles.verifyButtonDisabled
+              styles.verifyButton,
+              allComplete && !isSubmitting ? styles.verifyButtonEnabled : styles.verifyButtonDisabled
             ]}
             onPress={handleVerifyIdentity}
-            disabled={!allComplete}
+            disabled={!allComplete || isSubmitting}
           >
             <Text style={[
               styles.verifyButtonText,
-              allComplete ? styles.verifyButtonTextEnabled : styles.verifyButtonTextDisabled
+              allComplete && !isSubmitting ? styles.verifyButtonTextEnabled : styles.verifyButtonTextDisabled
             ]}>
-              Verify my identity
+              {isSubmitting ? 'Completing Registration...' : 'Finish Registration'}
             </Text>
           </TouchableOpacity>
         </View>

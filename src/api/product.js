@@ -36,6 +36,16 @@ export const getProductsBySubCategory = async (subCategoryId) => {
   }
 };
 
+// Get products by category ID
+export const getProductsByCategory = async (categoryId) => {
+  try {
+    const response = await apiClient.get(`/products/category/${categoryId}`);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Get product by ID
 export const getProductById = async (productId) => {
   try {

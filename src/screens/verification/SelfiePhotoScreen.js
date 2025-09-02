@@ -17,6 +17,7 @@ import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { colors } from '../../theme/tokens';
+import { storeSelfieFile } from '../../api/verification';
 
 export default function SelfiePhotoScreen({ navigation, route }) {
   const [isCapturing, setIsCapturing] = useState(false);
@@ -241,6 +242,16 @@ export default function SelfiePhotoScreen({ navigation, route }) {
               <TouchableOpacity
                 style={styles.submitButton}
                 onPress={() => {
+                  // Store the selfie file data for later use in registration
+                  if (capturedImage) {
+                    const fileData = {
+                      uri: capturedImage,
+                      type: 'image/jpeg',
+                      fileName: 'selfie.jpg'
+                    };
+                    storeSelfieFile(fileData);
+                  }
+
                   // Get existing completed steps and add current one
                   const existingCompleted = route.params?.completedSteps || [];
                   const updatedCompleted = [...existingCompleted];

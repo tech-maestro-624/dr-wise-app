@@ -9,6 +9,8 @@ import {
 } from '@expo-google-fonts/rubik';
 import { View, Text } from 'react-native';
 import { AuthProvider } from './src/context/AuthContext';
+import Toast from 'react-native-toast-message';
+import toastConfig from './src/toast/toastConfig';
 
 
 
@@ -31,6 +33,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppNavigator />
+      <Toast config={toastConfig} />
     </AuthProvider>
   );
 }

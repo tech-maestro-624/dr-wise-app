@@ -7,34 +7,27 @@ import {
   StatusBar,
   StyleSheet,
   Dimensions,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const scale = Math.min(screenWidth / 375, screenHeight / 812);
-
 const TermInsuranceCalculatorScreen = ({ navigation, route }) => {
   const { serviceName, leadName, productId, productData } = route.params || {};
   const [referralCount, setReferralCount] = useState(1); // Start with 1 instead of 0
-
   // Get estimated price from product data, default to 0 if not available
   const estimatedPrice = productData?.estimatedPrice || 0;
-
   // Calculate total earnings
   const totalEarnings = estimatedPrice * referralCount;
-
   const incrementReferral = () => {
     setReferralCount(referralCount + 1);
   };
-
   const decrementReferral = () => {
     if (referralCount > 1) {
       setReferralCount(referralCount - 1);
     }
   };
-
   const handleProceed = () => {
     // Navigate to referral form with calculated data
     navigation.navigate('ReferralForm', {
@@ -46,22 +39,18 @@ const TermInsuranceCalculatorScreen = ({ navigation, route }) => {
       leadName: leadName
     });
   };
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
-      
       {/* Background Gradient */}
       <LinearGradient
         colors={['#F3ECFE', '#F6F6FE']}
         style={styles.backgroundGradient}
       />
-
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Earnings Calculator</Text>
       </View>
-
       {/* Main Content */}
       <View style={styles.mainContainer}>
         {/* Earnings Calculator Icon */}
@@ -72,15 +61,12 @@ const TermInsuranceCalculatorScreen = ({ navigation, route }) => {
             resizeMode="contain"
           />
         </View>
-
         {/* Service Title */}
         <Text style={styles.termInsuranceTitle}>{serviceName || 'Service Calculator'}</Text>
-
         {/* Description */}
         <Text style={styles.description}>
           Great! You've selected {serviceName || 'this service'}.{'\n'}Add the number of referrals to calculate your earnings.
         </Text>
-
         {/* Number of Referrals Section */}
         <View style={styles.referralsSection}>
           <Text style={styles.referralsLabel}>Number of referrals</Text>
@@ -105,33 +91,39 @@ const TermInsuranceCalculatorScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
         </View>
-
         {/* Estimated Total Earnings Card */}
         <View style={styles.coinsCard}>
-          <Text style={styles.coinsLabel}>Estimated Total Earnings</Text>
-          <Text style={styles.coinsValue}>₹{totalEarnings.toLocaleString()}</Text>
-          {estimatedPrice > 0 ? (
-            <Text style={styles.earningsBreakdown}>
-              ₹{estimatedPrice.toLocaleString()} × {referralCount} = ₹{totalEarnings.toLocaleString()}
-            </Text>
-          ) : (
-            <Text style={styles.noPriceText}>
-              Price not available for this service
-            </Text>
-          )}
-          <TouchableOpacity
-            style={[styles.redeemButton, (!estimatedPrice || referralCount <= 0) && styles.disabledButton]}
-            onPress={handleProceed}
-            disabled={!estimatedPrice || referralCount <= 0}
-          >
-            <Text style={styles.redeemButtonText}>Proceed to Referral</Text>
-          </TouchableOpacity>
+          <Image
+            source={require('../../assets/03-00-04-578_512.gif')}
+            style={styles.gifBackground}
+            contentFit="cover"
+          />
+          <View style={styles.overlay} />
+          <View style={styles.cardContent}>
+            <Text style={styles.coinsLabel}>Estimated Total Earnings</Text>
+            <Text style={styles.coinsValue}>₹{totalEarnings.toLocaleString()}</Text>
+            {estimatedPrice > 0 ? (
+              <Text style={styles.earningsBreakdown}>
+                ₹{estimatedPrice.toLocaleString()} × {referralCount} = ₹{totalEarnings.toLocaleString()}
+              </Text>
+            ) : (
+              <Text style={styles.noPriceText}>
+                Price not available for this service
+              </Text>
+            )}
+            <TouchableOpacity
+              style={[styles.redeemButton, (!estimatedPrice || referralCount <= 0) && styles.disabledButton]}
+              onPress={handleProceed}
+              disabled={!estimatedPrice || referralCount <= 0}
+            >
+              <Text style={styles.redeemButtonText}>Proceed to Referral</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -271,23 +263,38 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
   },
   coinsCard: {
-    backgroundColor: '#FBFBFB',
-    borderWidth: 1,
-    borderColor: '#FBFBFB',
     borderRadius: 20 * scale,
-    paddingVertical: 20 * scale,
-    paddingHorizontal: 16 * scale,
     width: 335 * scale,
     height: 170 * scale,
     alignItems: 'center',
-    shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 10 * scale,
-    elevation: 5,
+    borderWidth: 2 * scale,
+    borderColor: '#FFFFFF',
+  //  shadowColor: '#8F31F9',
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 0,
+    // },
+   // shadowOpacity: 0.1,
+    //shadowRadius: 10 * scale,
+    // elevation: 5,
+    overflow: 'hidden',
+  },
+  gifBackground: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    opacity: 100,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  cardContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20 * scale,
+    paddingHorizontal: 16 * scale,
   },
   coinsLabel: {
     fontSize: 14 * scale,
@@ -346,9 +353,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2 * scale,
   },
 });
-
 export default TermInsuranceCalculatorScreen;
-
-
-
-

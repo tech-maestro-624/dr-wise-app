@@ -46,32 +46,17 @@ const SignupScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      // Register the user
-      await register({ ...data, otp: '123456' });
-
-      // Send OTP after registration
-      const response = await sendOtp({ phoneNumber: data.phoneNumber });
-      const receivedOtp = '123456'; // In development, OTP is hardcoded
-
-      // Auto-verify OTP for development
-      const verifyResponse = await verifyOtp({
-        phoneNumber: data.phoneNumber,
-        otp: receivedOtp
-      });
-
-      const userData = verifyResponse.data.user || verifyResponse.data;
-      const token = verifyResponse.data.token;
-
-      await login(userData, token);
-      // Navigation will be handled automatically by AuthNavigator
+      // Store user data temporarily for later use during verification
+      await AsyncStorage.setItem('tempUserData', JSON.stringify(data));
 
       Toast.show({
         type: 'success',
-        text1: 'Registration successful!',
+        text1: 'Basic registration successful! Please complete verification.',
         position: 'bottom',
       });
 
-      navigation.navigate('Main');
+      // Navigate to verification screens
+      navigation.navigate('Verification');
       reset();
     } catch (error) {
       Toast.show({

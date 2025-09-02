@@ -19,6 +19,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
 
 import { colors } from '../../theme/tokens';
+import { storeAadharFile } from '../../api/verification';
 
 export default function GovernmentIDScreen({ navigation, route }) {
   const [isCapturing, setIsCapturing] = useState(false);
@@ -189,20 +190,30 @@ export default function GovernmentIDScreen({ navigation, route }) {
   };
 
   const handleSubmit = () => {
+    // Store the Aadhar file data for later use in registration
+    if (capturedImage) {
+      const fileData = {
+        uri: capturedImage,
+        type: 'image/jpeg',
+        fileName: 'aadhar.jpg'
+      };
+      storeAadharFile(fileData);
+    }
+
     // Get current completed steps from route params and add this step
-    const currentSteps = route?.params?.currentCompletedSteps || {
+    const currentSteps = route?.params?.completedSteps || {
       governmentId: false,
       selfiePhoto: false,
       bankDetails: false,
     };
-    
+
     const updatedSteps = {
       ...currentSteps,
       governmentId: true
     };
-    
+
     // Navigate back with completion status and all completed steps
-    navigation.navigate('Verification', { 
+    navigation.navigate('Verification', {
       completedStep: 'governmentId',
       completedSteps: updatedSteps
     });
@@ -306,6 +317,16 @@ export default function GovernmentIDScreen({ navigation, route }) {
               <TouchableOpacity
                 style={styles.submitButton}
                 onPress={() => {
+                  // Store the Aadhar file data for later use in registration
+                  if (capturedImage) {
+                    const fileData = {
+                      uri: capturedImage,
+                      type: 'image/jpeg',
+                      fileName: 'aadhar.jpg'
+                    };
+                    storeAadharFile(fileData);
+                  }
+
                   // Image is already cropped from launchCameraAsync, proceed directly
                   const existingCompleted = route.params?.completedSteps || [];
                   const updatedCompleted = [...existingCompleted];

@@ -9,6 +9,7 @@ const AuthContext = createContext({
   isAuthenticated: false,
   user: null,
   isAmbassador: false,
+  verificationStatus: 'pending',
   login: () => {},
   logout: () => {},
 });
@@ -21,6 +22,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAmbassador, setIsAmbassador] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState('pending');
 
   const checkUserRole = async (userData) => {
     try {
@@ -96,11 +98,14 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       setIsAuthenticated(true);
 
+      // Set verification status
+      setVerificationStatus(userData.verificationStatus || 'pending');
+
       // Check if user is ambassador
       const userIsAmbassador = await checkUserRole(userData);
       setIsAmbassador(userIsAmbassador);
 
-      console.log('AuthContext - Login completed. IsAmbassador:', userIsAmbassador);
+      console.log('AuthContext - Login completed. IsAmbassador:', userIsAmbassador, 'VerificationStatus:', userData.verificationStatus);
     } catch (error) {
       console.error('Error during login:', error);
     }
@@ -112,6 +117,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setUser(null);
       setIsAmbassador(false);
+      setVerificationStatus('pending');
       await AsyncStorage.removeItem('token');
       console.log('AuthContext - Token removed');
     } catch (error) {
@@ -139,6 +145,9 @@ export const AuthProvider = ({ children }) => {
         console.log('Token valid, user data:', userData);
         setUser(userData);
         setIsAuthenticated(true);
+
+        // Set verification status
+        setVerificationStatus(userData.verificationStatus || 'pending');
 
         // Check if user is ambassador
         const userIsAmbassador = await checkUserRole(userData);
@@ -171,7 +180,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, isAmbassador, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, isAmbassador, verificationStatus, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

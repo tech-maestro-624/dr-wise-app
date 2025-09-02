@@ -10,6 +10,18 @@ const getCategories = async (params={}) => {
   }
 }
 
+// Fetch category by name
+const getCategoryByName = async (name) => {
+  try {
+    const response = await apiClient.get('/categories', {
+      params: { name: name }
+    });
+    return response;
+  } catch (error) {
+    throw error;
+  }
+}
+
 // Fetch products by category
 const getProductByCategory = async (id) => {
   try {
@@ -30,6 +42,6 @@ const getProductsBySubCategory = async (subCategoryId) => {
   }
 }
 
-export { getCategories, getProductByCategory, getProductsBySubCategory };
+export { getCategories, getCategoryByName, getProductByCategory, getProductsBySubCategory };
 
 

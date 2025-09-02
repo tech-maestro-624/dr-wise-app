@@ -9,6 +9,7 @@ import {
   StatusBar,
   SafeAreaView,
   Image,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,8 @@ const LoginScreen = ({ navigation }) => {
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [verificationModalVisible, setVerificationModalVisible] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState({});
   const { login } = useAuth();
 
   const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
@@ -78,11 +81,69 @@ const LoginScreen = ({ navigation }) => {
       await login(userData, token);
       // Navigation will be handled automatically by AuthNavigator
     } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid OTP',
-        position: 'bottom',
-      });
+      console.log('Login error:', error.response?.data);
+
+      // Handle different error types
+      if (error.response?.status === 400) {
+        // User doesn't exist or invalid OTP
+        const errorMessage = error.response.data.message;
+        if (errorMessage.includes('does not exist') || errorMessage.includes('Incorrect phone number')) {
+          setVerificationMessage({
+            title: 'User Not Found',
+            subtitle: 'Account doesn\'t exist',
+            message: 'No account found with this phone number. Please sign up first.',
+          });
+          setVerificationModalVisible(true);
+        } else if (errorMessage.includes('Invalid') || errorMessage.includes('expired')) {
+          setVerificationMessage({
+            title: 'Invalid OTP',
+            subtitle: 'Verification failed',
+            message: 'The OTP you entered is incorrect or has expired. Please try again.',
+          });
+          setVerificationModalVisible(true);
+        } else {
+          // Other 400 errors
+          Toast.show({
+            type: 'error',
+            text1: errorMessage,
+            position: 'bottom',
+          });
+        }
+      } else if (error.response?.status === 403) {
+        // Verification status issues
+        const verificationStatus = error.response.data.verificationStatus;
+
+        if (verificationStatus === 'pending') {
+          setVerificationMessage({
+            title: 'Account Verification Pending',
+            subtitle: 'Your documents are under review',
+            message: 'We are currently reviewing your submitted documents.',
+          });
+          setVerificationModalVisible(true);
+        } else if (verificationStatus === 'rejected') {
+          setVerificationMessage({
+            title: 'Account Verification Rejected',
+            subtitle: 'Verification was not approved',
+            message: 'Your submitted documents were not approved. Please contact our support team for assistance.',
+          });
+          setVerificationModalVisible(true);
+        } else if (verificationStatus === 'required') {
+          setVerificationMessage({
+            title: 'Verification Required',
+            subtitle: 'Complete your account setup',
+            message: 'You need to complete the verification process to access your account.',
+          });
+          setVerificationModalVisible(true);
+        }
+      } else {
+        // Handle other errors (server errors, network issues, etc.)
+        Toast.show({
+          type: 'error',
+          text1: error.response?.data?.message || 'Login failed',
+          text2: 'Please try again later.',
+          position: 'bottom',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -253,6 +314,54 @@ const LoginScreen = ({ navigation }) => {
       </ScrollView>
       <Loader loading={loading} />
       <Toast config={toastConfig} />
+
+      {/* Verification Status Modal */}
+      <Modal
+        visible={verificationModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setVerificationModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <TouchableOpacity
+            onPress={() => setVerificationModalVisible(false)}
+            activeOpacity={1}
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' }}
+          />
+          <View
+            style={{
+              backgroundColor: '#FFF',
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 20,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: 'bold',
+                color: '#6B21A8',
+                marginBottom: 10,
+              }}
+            >
+              {verificationMessage.title}
+            </Text>
+            <Text style={{ fontSize: 14, color: '#333', marginBottom: 10 }}>
+              {verificationMessage.subtitle}
+            </Text>
+            <Text style={{ fontSize: 14, color: '#333' }}>
+              {verificationMessage.message}
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => setVerificationModalVisible(false)}
+              style={{ marginTop: 15, alignSelf: 'center' }}
+            >
+              <Text style={{ color: 'red', fontSize: 16 }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -469,6 +578,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
+
 });
 
 export default LoginScreen;

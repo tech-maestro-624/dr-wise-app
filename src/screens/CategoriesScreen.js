@@ -1,203 +1,292 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, SafeAreaView, Dimensions, Image, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+  Dimensions,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getProductsBySubCategory } from '../api/product';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getProductsBySubCategory, getProductsByCategory } from '../api/product';
+import { getCategoryByName } from '../api/categorys';
+import { getSubCategoryByName } from '../api/subCategories';
 import Toast from 'react-native-toast-message';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-const scale = Math.min(screenWidth / 375, screenHeight / 812);
+const { width, height } = Dimensions.get('window');
+
+// --- Responsive Scaling Utilities ---
+const guidelineBaseWidth = 375;
+const guidelineBaseHeight = 812;
+
+const scale = (size) => (width / guidelineBaseWidth) * size;
+const verticalScale = (size) => (height / guidelineBaseHeight) * size;
+const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
+// --- End of Responsive Utilities ---
 
 const CategoriesScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
   const { category, subCategory, categoryName } = route.params || {};
 
-  // State for products
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Determine the category type and star color
-  const getCategoryType = () => {
-    if (subCategory) {
-      // Try to determine category type from subcategory name or parent category
-      const subCatName = subCategory.name?.toLowerCase() || '';
-      if (subCatName.includes('life') || subCatName.includes('health') || subCatName.includes('motor') || subCatName.includes('general')) {
-        return 'insurance';
-      } else if (subCatName.includes('mutual') || subCatName.includes('fixed') || subCatName.includes('gold') || subCatName.includes('trading')) {
-        return 'investment';
-      } else if (subCatName.includes('loan') || subCatName.includes('home') || subCatName.includes('personal') || subCatName.includes('business')) {
-        return 'loan';
-      } else if (subCatName.includes('tax')) {
-        return 'tax';
-      } else if (subCatName.includes('travel')) {
-        return 'travel';
-      }
+  // Helper to determine category type for styling
+  const getCategoryTypeDetails = () => {
+    let type = 'insurance'; // Default
+    const name = (subCategory?.name || categoryName || category || '').toLowerCase();
+
+    if (name.includes('investment') || name.includes('mutual') || name.includes('gold')) {
+      type = 'investment';
+    } else if (name.includes('loan')) {
+      type = 'loan';
+    } else if (name.includes('tax')) {
+      type = 'tax';
+    } else if (name.includes('travel')) {
+      type = 'travel';
     }
 
-    // Fallback to category name
-    const catName = categoryName || category || '';
-    if (catName.toLowerCase().includes('insurance')) return 'insurance';
-    if (catName.toLowerCase().includes('investment')) return 'investment';
-    if (catName.toLowerCase().includes('loan')) return 'loan';
-    if (catName.toLowerCase().includes('tax')) return 'tax';
-    if (catName.toLowerCase().includes('travel')) return 'travel';
-    return 'insurance'; // default
-  };
-
-  const getStarColor = (categoryType) => {
-    switch (categoryType) {
-      case 'insurance':
-        return '#4CAF50'; // Green for Insurance
+    switch (type) {
       case 'investment':
-        return '#F6AC11'; // Yellow/Orange for Investments
+        return {
+          color: '#F6AC11',
+          bgColor: '#FEE9CF',
+          icon: require('../../assets/Icons/3d-star-symbol-illustration-vector-gold-star-icon-symbol-medel 1 (3).png'),
+        };
       case 'loan':
-        return '#C75B7A'; // Red for Loans
+        return {
+          color: '#C75B7A',
+          bgColor: '#F6DCDD',
+          icon: require('../../assets/Icons/3d-star-symbol-illustration-vector-gold-star-icon-symbol-medel 2.png'),
+        };
       case 'tax':
+        return {
+          color: '#8F31F9',
+          bgColor: 'rgba(143, 49, 249, 0.2)',
+          icon: require('../../assets/Icons/3d-star-symbol-illustration-vector-gold-star-icon-symbol-medel 1 (4).png'),
+        };
       case 'travel':
-        return '#8F31F9'; // Purple for Tax & Travel
+        return {
+          color: '#4CAF50',
+          bgColor: '#C9EBE9',
+          icon: require('../../assets/Icons/3d-star-symbol-illustration-vector-gold-star-icon-symbol-medel 1 (2).png'),
+        };
+      case 'insurance':
       default:
-        return '#4CAF50'; // Default green
+        return {
+          color: '#4CAF50',
+          bgColor: '#C9EBE9',
+          icon: require('../../assets/Icons/3d-star-symbol-illustration-vector-gold-star-icon-symbol-medel 1 (2).png'),
+        };
     }
   };
 
-  // Fetch products when component mounts
   useEffect(() => {
+    console.log('CategoriesScreen - Received params:', { category, subCategory, categoryName });
+
     const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        console.log('CategoriesScreen - SubCategory:', subCategory);
-        console.log('CategoriesScreen - CategoryName:', categoryName);
-
-        if (subCategory && subCategory._id) {
-          console.log('Fetching products for subcategory:', subCategory._id);
-          // Fetch products for subcategory
+      // If we have a subcategory object with _id, fetch by subcategory ID
+      if (subCategory?._id) {
+        try {
+          setLoading(true);
           const response = await getProductsBySubCategory(subCategory._id);
-          console.log('Products API response:', response);
-          console.log('Products response data:', response.data);
+          const productsData = response.data?.data || response.data || [];
+          setProducts(Array.isArray(productsData) ? productsData : []);
+        } catch (error) {
+          console.error('Error fetching products by subcategory:', error);
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'Failed to load products.',
+          });
+          setProducts([]);
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
 
-          // Handle backend response structure: { success: true, data: [...], pagination: {...} }
-          let productsData = [];
-          if (response.data) {
-            // Primary structure from backend
-            if (response.data.data && Array.isArray(response.data.data)) {
-              productsData = response.data.data;
-            } else if (Array.isArray(response.data)) {
-              productsData = response.data;
-            } else if (response.data.products && Array.isArray(response.data.products)) {
-              productsData = response.data.products;
-            } else if (typeof response.data === 'object' && Array.isArray(Object.values(response.data)[0])) {
-              // Handle case where data is wrapped in an object
-              productsData = Object.values(response.data)[0];
+      // If we have a subcategory object with name but no _id, find the subcategory first
+      if (subCategory && typeof subCategory === 'object' && subCategory.name && !subCategory._id) {
+        try {
+          setLoading(true);
+          console.log('Looking up subcategory by name:', subCategory.name);
+          // Find subcategory by name
+          const subCategoryResponse = await getSubCategoryByName(subCategory.name);
+          console.log('Subcategory lookup response:', subCategoryResponse);
+          console.log('Subcategory response.data:', subCategoryResponse.data);
+          console.log('Subcategory response.data.data:', subCategoryResponse.data?.data);
+
+          const subCategoriesData = subCategoryResponse.data?.data ||
+                                   subCategoryResponse.data ||
+                                   [];
+
+          console.log('Subcategories data:', subCategoriesData);
+
+          if (Array.isArray(subCategoriesData) && subCategoriesData.length > 0) {
+            const foundSubCategory = subCategoriesData[0]; // Use the first matching subcategory
+            console.log('Found subcategory:', foundSubCategory);
+            console.log('Subcategory ID:', foundSubCategory._id);
+            const response = await getProductsBySubCategory(foundSubCategory._id);
+            console.log('Products response:', response);
+            const productsData = response.data?.data || response.data || [];
+            console.log('Products data:', productsData);
+            setProducts(Array.isArray(productsData) ? productsData : []);
+          } else {
+            console.error('Subcategory not found:', subCategory.name);
+            setProducts([]);
+          }
+        } catch (error) {
+          console.error('Error fetching products by subcategory name:', error);
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'Failed to load products.',
+          });
+          setProducts([]);
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      // If we have a subcategory name as a string (fallback case)
+      if (subCategory && typeof subCategory === 'string') {
+        try {
+          setLoading(true);
+          // Find subcategory by name
+          const subCategoryResponse = await getSubCategoryByName(subCategory);
+          const subCategoriesData = subCategoryResponse.data?.data ||
+                                   subCategoryResponse.data ||
+                                   [];
+
+          if (Array.isArray(subCategoriesData) && subCategoriesData.length > 0) {
+            const foundSubCategory = subCategoriesData[0]; // Use the first matching subcategory
+            const response = await getProductsBySubCategory(foundSubCategory._id);
+            const productsData = response.data?.data || response.data || [];
+            setProducts(Array.isArray(productsData) ? productsData : []);
+          } else {
+            console.error('Subcategory not found:', subCategory);
+            setProducts([]);
+          }
+        } catch (error) {
+          console.error('Error fetching products by subcategory name:', error);
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'Failed to load products.',
+          });
+          setProducts([]);
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      // If we have a category (but no subcategory), we need to get the category ID
+      if (category) {
+        try {
+          setLoading(true);
+          let categoryId = category;
+
+          // If category is a string (like "Tax"), we need to find the category by name
+          if (typeof category === 'string' && !category.match(/^[0-9a-fA-F]{24}$/)) {
+            // This looks like a category name, not an ObjectId
+            const categoryResponse = await getCategoryByName(category);
+            const categoriesData = categoryResponse.data?.data || categoryResponse.data || [];
+
+            if (Array.isArray(categoriesData) && categoriesData.length > 0) {
+              categoryId = categoriesData[0]._id; // Use the first matching category
+            } else {
+              console.error('Category not found:', category);
+              setProducts([]);
+              setLoading(false);
+              return;
             }
           }
 
-          console.log('Parsed products:', productsData);
-          setProducts(productsData);
-        } else {
-          console.log('No subcategory provided, showing empty state');
-          // Fallback: if no subcategory, show empty state
+          const response = await getProductsByCategory(categoryId);
+          const productsData = response.data?.data || response.data || [];
+          setProducts(Array.isArray(productsData) ? productsData : []);
+        } catch (error) {
+          console.error('Error fetching products by category:', error);
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'Failed to load products.',
+          });
           setProducts([]);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: 'Failed to load products. Please try again.',
-        });
-        setProducts([]);
-      } finally {
-        setLoading(false);
+        return;
       }
+
+      // If neither subcategory nor category is available
+      setProducts([]);
+      setLoading(false);
     };
-
     fetchProducts();
-  }, [subCategory]);
+  }, [subCategory, category]);
 
-  const categoryType = getCategoryType();
-  const starColor = getStarColor(categoryType);
-  const displayTitle = subCategory?.name || categoryName || category || 'Categories';
+  const categoryDetails = getCategoryTypeDetails();
+  const displayTitle = subCategory?.name || categoryName || 'Category';
 
   return (
-    <LinearGradient
-      colors={['#F3ECFE', '#F6F6FE']}
-      locations={[0, 0.49]}
-      style={styles.container}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
-      <SafeAreaView style={styles.safeArea}>
-        
-        {/* Header */}
-        <View style={styles.header}>
+    <LinearGradient colors={['#F3ECFE', '#F6F6FE']} style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea} edges={['right', 'left', 'bottom']}>
+        {/* Header with dynamic padding for notch */}
+        <View style={[styles.header, { paddingTop: insets.top, paddingBottom: verticalScale(16) }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back-outline" size={24} color="#1A1B20" />
+            <Ionicons name="chevron-back" size={moderateScale(24)} color="#1A1B20" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{displayTitle}</Text>
-          <View style={{ width: 40 }} />
+          <Text style={styles.headerTitle} numberOfLines={1}>{displayTitle}</Text>
+          <View style={{ width: moderateScale(26) }} />
         </View>
 
-        {/* Content */}
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.contentContainer}>
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#8F31F9" />
-                <Text style={styles.loadingText}>Loading products...</Text>
-              </View>
-            ) : products.length > 0 ? (
-              products.map((product, index) => (
-                <TouchableOpacity
-                  key={product._id || index}
-                  style={styles.listItem}
-                  activeOpacity={0.7}
-                  onPress={() => navigation.navigate('CategoryDetail', {
-                    product: product,
-                    category: categoryName || category,
-                    subCategory: subCategory
-                  })}
-                >
-                  <View style={styles.itemContent}>
-                    <View style={styles.leftSection}>
-                      <View style={[styles.starIcon, {
-                        backgroundColor: starColor === '#F6AC11' ? '#FEE9CF' :
-                                     starColor === '#C75B7A' ? '#F6DCDD' :
-                                     starColor === '#8F31F9' ? 'rgba(143, 49, 249, 0.2)' : '#C9EBE9'
-                      }]}>
-                        <Image
-                          source={
-                            starColor === '#F6AC11' ? require('../../assets/Icons/3d-star-symbol-illustration-vector-gold-star-icon-symbol-medel 1 (3).png') :
-                            starColor === '#C75B7A' ? require('../../assets/Icons/3d-star-symbol-illustration-vector-gold-star-icon-symbol-medel 2.png') :
-                            starColor === '#8F31F9' ? require('../../assets/Icons/3d-star-symbol-illustration-vector-gold-star-icon-symbol-medel 1 (4).png') :
-                            require('../../assets/Icons/3d-star-symbol-illustration-vector-gold-star-icon-symbol-medel 1 (2).png')
-                          }
-                          style={[styles.starImage, {
-                            width: starColor === '#C75B7A' ? 52 * scale :
-                                   starColor === '#8F31F9' ? 60 * scale : 50 * scale,
-                            height: starColor === '#C75B7A' ? 52 * scale :
-                                    starColor === '#8F31F9' ? 60 * scale : 50 * scale
-                          }]}
-                        />
-                      </View>
-                      <View style={styles.textSection}>
-                        <Text style={styles.itemTitle}>{product.name}</Text>
-                        <Text style={styles.itemSubtitle}>
-                          {product.description ? product.description.substring(0, 30) + '...' : 'Share services you trust and get paid'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="#1A1B20" />
+        <ScrollView contentContainerStyle={styles.scrollViewContent} showsVerticalScrollIndicator={false}>
+          {loading ? (
+            <View style={styles.centeredContainer}>
+              <ActivityIndicator size="large" color="#8F31F9" />
+              <Text style={styles.infoText}>Loading products...</Text>
+            </View>
+          ) : products.length > 0 ? (
+            products.map((product) => (
+              <TouchableOpacity
+                key={product._id}
+                style={styles.listItem}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('CategoryDetail', { product, category: categoryName, subCategory })}
+              >
+                <View style={styles.itemContent}>
+                  <View style={[styles.starIcon, { backgroundColor: categoryDetails.bgColor }]}>
+                    <Image source={categoryDetails.icon} style={styles.starImage} />
                   </View>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No products available</Text>
-                <Text style={styles.emptySubText}>Products will be available soon for this category.</Text>
-              </View>
-            )}
-          </View>
+                  <View style={styles.textSection}>
+                    <Text style={styles.itemTitle} numberOfLines={1}>{product.name}</Text>
+                    <Text style={styles.itemSubtitle} numberOfLines={1}>
+                      {product.description || 'View details'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={moderateScale(20)} color="#1A1B20" />
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.centeredContainer}>
+              <Text style={styles.emptyText}>No Products Available</Text>
+              <Text style={styles.infoText}>Products for this category will be available soon.</Text>
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
@@ -215,127 +304,95 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    height: 80,
+    paddingHorizontal: moderateScale(20),
+    // paddingTop and paddingBottom are now dynamic
   },
   backButton: {
-    width: 26,
-    height: 26,
+    width: moderateScale(26),
+    height: moderateScale(26),
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(150, 61, 251, 0.05)',
-    borderRadius: 4,
+    borderRadius: moderateScale(4),
   },
   headerTitle: {
-    fontFamily: 'Rubik-SemiBold',
-    fontSize: 24 * scale,
-    lineHeight: 28 * scale,
+    fontFamily: 'Rubik-SemiBold', // Ensure you have this font linked
+    fontSize: moderateScale(20),
     textAlign: 'center',
     color: '#1A1B20',
-  },
-  scrollView: {
     flex: 1,
+    marginHorizontal: moderateScale(10),
   },
-  contentContainer: {
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 20,
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingHorizontal: moderateScale(20),
+    paddingTop: verticalScale(20),
+    paddingBottom: verticalScale(40),
   },
   listItem: {
-    width: Math.min(335 * scale, screenWidth - 40), // Responsive width with max 335px
-    height: 72 * scale,
-    backgroundColor: '#FBFBFB',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF',
+    borderRadius: moderateScale(10),
+    marginBottom: verticalScale(14),
     shadowColor: 'rgba(143, 49, 249, 0.1)',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 3,
-    borderRadius: 10 * scale,
-    marginBottom: 14 * scale,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: moderateScale(10),
+    elevation: 4,
+    minHeight: verticalScale(72),
+    justifyContent: 'center',
   },
   itemContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 6 * scale,
-    paddingVertical: 6 * scale,
-    height: '100%',
-  },
-  leftSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+    padding: moderateScale(6),
   },
   starIcon: {
-    width: 60 * scale,
-    height: 60 * scale,
-    backgroundColor: '#C9EBE9',
-    borderRadius: 8 * scale,
+    width: moderateScale(60),
+    height: moderateScale(60),
+    borderRadius: moderateScale(8),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 20 * scale,
+    marginRight: moderateScale(12),
+  },
+  starImage: {
+    width: '75%',
+    height: '75%',
+    resizeMode: 'contain',
   },
   textSection: {
     flex: 1,
+    justifyContent: 'center',
   },
   itemTitle: {
     fontFamily: 'Rubik-SemiBold',
-    fontSize: 18 * scale,
-    lineHeight: 21 * scale,
+    fontSize: moderateScale(16),
     color: '#1A1B20',
-    marginBottom: 4 * scale,
+    marginBottom: verticalScale(4),
   },
   itemSubtitle: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 12 * scale,
-    lineHeight: 14 * scale,
-    letterSpacing: 0.2 * scale,
+    fontSize: moderateScale(12),
     color: '#7D7D7D',
   },
-  starImage: {
-    width: 50 * scale,
-    height: 50 * scale,
-    resizeMode: 'contain',
-  },
-  loadingContainer: {
+  centeredContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 50,
+    padding: moderateScale(20),
   },
-  loadingText: {
-    marginTop: 16,
+  infoText: {
+    marginTop: verticalScale(10),
     fontFamily: 'Rubik-Regular',
-    fontSize: 16 * scale,
+    fontSize: moderateScale(14),
     color: '#7D7D7D',
     textAlign: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 50,
-    paddingHorizontal: 20,
   },
   emptyText: {
     fontFamily: 'Rubik-SemiBold',
-    fontSize: 18 * scale,
+    fontSize: moderateScale(18),
     color: '#1A1B20',
     textAlign: 'center',
-    marginBottom: 8,
-  },
-  emptySubText: {
-    fontFamily: 'Rubik-Regular',
-    fontSize: 14 * scale,
-    color: '#7D7D7D',
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });
 

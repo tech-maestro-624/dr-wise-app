@@ -20,11 +20,13 @@ const CategoryModal = ({ visible, onClose, category, subCategory, subCategoryIma
     onClose();
     // Pass subcategory data if available, otherwise pass category
     if (subCategory) {
+      console.log('CategoryModal - Navigating with subcategory:', { subCategory, categoryName: category });
       navigation.navigate('Categories', {
         subCategory: subCategory,
         categoryName: category
       });
     } else {
+      console.log('CategoryModal - Navigating with category only:', { category });
       navigation.navigate('Categories', { category: category });
     }
   };

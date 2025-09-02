@@ -3,276 +3,183 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   StatusBar,
   Image,
-  Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  Dimensions,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { getUserData } from '../api/auth';
 import { getWallet } from '../api/wallet';
 import { getTransactions } from '../api/transactions';
 
+const { width, height } = Dimensions.get('window');
+
+// --- Responsive Scaling Utilities ---
+const guidelineBaseWidth = 375;
+const guidelineBaseHeight = 812;
+
+const scale = (size) => (width / guidelineBaseWidth) * size;
+const verticalScale = (size) => (height / guidelineBaseHeight) * size;
+const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
+// --- End of Responsive Utilities ---
+
 const CreditsScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { user: authUser } = useAuth();
 
-  // State for user data
   const [user, setUser] = useState(null);
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [stats, setStats] = useState({ received: 0, redeemed: 0 });
-  const [loading, setLoading] = useState(false);
-  const [walletLoading, setWalletLoading] = useState(false);
-  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [walletLoading, setWalletLoading] = useState(true);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
 
-  // Calculate received and redeemed amounts from transactions (based on credit.tsx logic)
   const calculateStats = (transactionList) => {
     const totalReceived = transactionList
-      .filter(
-        (transaction) =>
-          transaction.type === 'credit' ||
-          transaction.type === 'JOINING_BONUS' ||
-          transaction.type === 'UNLOCK_REFERRAL_BONUS'
-      )
+      .filter(t => ['credit', 'JOINING_BONUS', 'UNLOCK_REFERRAL_BONUS'].includes(t.type))
       .reduce((acc, curr) => acc + (curr.amount || 0), 0);
-
     const totalRedeemed = transactionList
-      .filter(
-        (transaction) =>
-          transaction.type === 'debit' && transaction.status === 'approved'
-      )
+      .filter(t => t.type === 'debit' && t.status === 'approved')
       .reduce((acc, curr) => acc + Math.abs(curr.amount || 0), 0);
-
     return { received: totalReceived, redeemed: totalRedeemed };
   };
 
-  // Fetch user data
-  const fetchUserData = async () => {
+  const fetchAllData = useCallback(async () => {
     try {
-      const response = await getUserData();
-      if (response && response.data && response.data.user) {
-        setUser(response.data.user);
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      // Don't show alert for user data error as it's not critical for credits screen
-    }
-  };
+      // Parallel fetching
+      const [userDataRes, walletRes, transactionsRes] = await Promise.all([
+        getUserData(),
+        getWallet(),
+        getTransactions()
+      ]);
 
-  // Fetch wallet data
-  const fetchWalletData = async () => {
-    setWalletLoading(true);
-    try {
-      const response = await getWallet();
-      if (response && response.data) {
-        setWallet(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching wallet data:', error);
-      Alert.alert('Error', 'Failed to load wallet balance. Please try again.');
-    } finally {
+      // Process User Data
+      if (userDataRes?.data?.user) setUser(userDataRes.data.user);
+
+      // Process Wallet Data
+      if (walletRes?.data) setWallet(walletRes.data);
       setWalletLoading(false);
-    }
-  };
-
-  // Fetch transactions data
-  const fetchTransactionsData = async () => {
-    setTransactionsLoading(true);
-    try {
-      const response = await getTransactions();
-      if (response && response.data) {
-        // Handle different possible response structures
-        let transactionList = [];
-        if (Array.isArray(response.data)) {
-          transactionList = response.data;
-        } else if (response.data.transactions && Array.isArray(response.data.transactions)) {
-          transactionList = response.data.transactions;
-        } else if (response.data.data && Array.isArray(response.data.data)) {
-          transactionList = response.data.data;
-        }
-
-        console.log('Transaction list:', transactionList);
-
-        // Calculate received and redeemed amounts
+      
+      // Process Transactions Data
+      if (transactionsRes?.data) {
+        const transactionList = transactionsRes.data?.data || transactionsRes.data?.transactions || transactionsRes.data || [];
         const calculatedStats = calculateStats(transactionList);
         setStats(calculatedStats);
-
-        console.log('Calculated stats:', calculatedStats);
-
-        // Transform transactions to match UI structure
-        const transformedTransactions = transactionList.slice(0, 5).map((transaction, index) => ({
-          id: transaction._id || index.toString(),
-          title: transaction.type || 'Transaction',
-          date: transaction.date ? new Date(transaction.date).toLocaleDateString('en-IN', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-          }).replace(',', ',') : 'N/A',
-          description: transaction.description || transaction.type || 'Transaction',
-          amount: `₹${Math.abs(transaction.amount || 0).toFixed(2)}`,
-          type: transaction.type,
-          isLocked: transaction.type === 'LOCKED_REFERRAL_BONUS'
+        
+        const transformed = transactionList.slice(0, 5).map(t => ({
+          id: t._id,
+          title: t.type || 'Transaction',
+          date: t.date ? new Date(t.date).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : 'N/A',
+          description: t.description || 'No description',
+          amount: `₹${Math.abs(t.amount || 0).toFixed(2)}`,
+          isLocked: t.type === 'LOCKED_REFERRAL_BONUS',
         }));
-
-        setTransactions(transformedTransactions);
+        setTransactions(transformed);
       }
-    } catch (error) {
-      console.error('Error fetching transactions data:', error);
-      Alert.alert('Error', 'Failed to load transaction history. Please try again.');
-    } finally {
       setTransactionsLoading(false);
-    }
-  };
 
-  // Fetch all data
-  const fetchAllData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([
-        fetchUserData(),
-        fetchWalletData(),
-        fetchTransactionsData()
-      ]);
     } catch (error) {
       console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
+      Alert.alert('Error', 'Failed to load your credits data. Please pull to refresh.');
+      setWalletLoading(false);
+      setTransactionsLoading(false);
     }
-  };
-
-  // Initial data fetch
-  useEffect(() => {
-    fetchAllData();
   }, []);
 
-  // Re-fetch on screen focus
   useFocusEffect(
     useCallback(() => {
       fetchAllData();
-    }, [])
+    }, [fetchAllData])
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <LinearGradient
-        colors={['#F3ECFE', '#F6F6FE']}
-        locations={[0, 0.49]}
-        style={styles.background}
-      >
-        {/* --- Custom Header --- */}
-        <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['right', 'left', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <LinearGradient colors={['#F3ECFE', '#F6F6FE']} style={styles.background}>
+        
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <Text style={styles.headerTitle}>Credits</Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* --- Balance Card --- */}
           <View style={styles.balanceCard}>
             {walletLoading ? (
-              <View style={styles.loadingContainer}>
+              <View style={styles.centeredContainer}>
                 <ActivityIndicator size="large" color="#8F31F9" />
-                <Text style={styles.loadingText}>Loading balance...</Text>
+                <Text style={styles.infoText}>Loading balance...</Text>
               </View>
             ) : (
               <>
-                <Text style={styles.helloText}>
-                  Hello {user?.name || authUser?.name || 'User'}
-                </Text>
-                <Text style={styles.balanceAmount}>
-                  ₹{wallet?.balance ? wallet.balance.toFixed(2) : '0.00'}
-                </Text>
+                <Text style={styles.helloText}>Hello {user?.name || authUser?.name || 'User'}</Text>
+                <Text style={styles.balanceAmount}>₹{wallet?.balance?.toFixed(2) || '0.00'}</Text>
                 <Text style={styles.balanceLabel}>Your Balance</Text>
                 <View style={styles.divider} />
                 <View style={styles.statsContainer}>
                   <View style={styles.statItem}>
                     <Text style={styles.statLabel}>Received</Text>
-                    <Text style={styles.statAmount}>
-                      ₹{stats.received.toFixed(2)}
-                    </Text>
+                    <Text style={styles.statAmount}>₹{stats.received.toFixed(2)}</Text>
                   </View>
                   <View style={styles.statItem}>
                     <Text style={styles.statLabel}>Redeemed</Text>
-                    <Text style={styles.statAmount}>
-                      ₹{stats.redeemed.toFixed(2)}
-                    </Text>
+                    <Text style={styles.statAmount}>₹{stats.redeemed.toFixed(2)}</Text>
                   </View>
                 </View>
-                {wallet?.lockedRefBonus && wallet.lockedRefBonus > 0 && (
+                {wallet?.lockedRefBonus > 0 && (
                   <View style={styles.lockedBonusContainer}>
                     <Text style={styles.lockedBonusLabel}>Locked Referral Bonus</Text>
                     <View style={styles.lockedBonusContent}>
-                      <Text style={styles.lockedBonusAmount}>
-                        ₹{wallet.lockedRefBonus.toFixed(2)}
-                      </Text>
-                      <Ionicons name="lock-closed" size={18} color="#1A1B20" />
+                      <Text style={styles.lockedBonusAmount}>₹{wallet.lockedRefBonus.toFixed(2)}</Text>
+                      <Ionicons name="lock-closed" size={moderateScale(18)} color="#1A1B20" />
                     </View>
                   </View>
                 )}
+                <TouchableOpacity style={styles.redeemButton} onPress={() => navigation.navigate('Redeem')}>
+                  <Text style={styles.redeemButtonText}>Redeem</Text>
+                </TouchableOpacity>
               </>
             )}
-            <TouchableOpacity 
-              style={styles.redeemButton}
-              onPress={() => navigation.navigate('Redeem')}
-            >
-              <Text style={styles.redeemButtonText}>Redeem</Text>
-            </TouchableOpacity>
           </View>
 
-          {/* --- Transactions History --- */}
           <View style={styles.historyContainer}>
             <View style={styles.historyHeader}>
               <Text style={styles.historyTitle}>Transactions History</Text>
-              <TouchableOpacity 
-                style={styles.viewAllButton}
-                onPress={() => navigation.navigate('TransactionsHistory')}
-              >
+              <TouchableOpacity onPress={() => navigation.navigate('TransactionsHistory')}>
                 <Text style={styles.viewAllText}>View All</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Transaction List */}
             {transactionsLoading ? (
-              <View style={styles.transactionLoadingContainer}>
-                <ActivityIndicator size="small" color="#8F31F9" />
-                <Text style={styles.transactionLoadingText}>Loading transactions...</Text>
+              <View style={styles.centeredContainer}>
+                <ActivityIndicator color="#8F31F9" />
+                <Text style={styles.infoText}>Loading transactions...</Text>
               </View>
             ) : transactions.length > 0 ? (
               transactions.map((item) => (
                 <View key={item.id} style={styles.transactionItem}>
-                  <View style={styles.transactionIconContainer}>
-                    <Image
-                      source={
-                        item.isLocked
-                          ? require('../../assets/Icons/locked.png')
-                          : require('../../assets/Icons/tickmark.png')
-                      }
-                      style={styles.checkmarkIcon}
-                      resizeMode="cover"
-                    />
-                  </View>
+                  <Image
+                    source={item.isLocked ? require('../../assets/Icons/locked.png') : require('../../assets/Icons/tickmark.png')}
+                    style={styles.transactionIcon}
+                  />
                   <View style={styles.transactionDetails}>
-                    <Text style={styles.transactionTitle}>{item.title}</Text>
-                    <Text style={styles.transactionDate}>{item.date}</Text>
-                    <Text style={styles.transactionDescription}>{item.description}</Text>
+                    <Text style={styles.transactionTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.transactionDate} numberOfLines={1}>{item.date}</Text>
                   </View>
                   <Text style={styles.transactionAmount}>{item.amount}</Text>
                 </View>
               ))
             ) : (
-              <View style={styles.emptyTransactionsContainer}>
-                <Ionicons name="receipt-outline" size={48} color="#7D7D7D" />
-                <Text style={styles.emptyTransactionsText}>No transactions found</Text>
+              <View style={styles.centeredContainer}>
+                <Ionicons name="receipt-outline" size={moderateScale(48)} color="#7D7D7D" />
+                <Text style={styles.infoText}>No transactions found</Text>
               </View>
             )}
           </View>
@@ -291,57 +198,52 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    height: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 10,
+    paddingBottom: verticalScale(10),
   },
   headerTitle: {
     fontFamily: 'Rubik-SemiBold',
-    fontSize: 24,
+    fontSize: moderateScale(22),
     color: '#1A1B20',
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100, // Space for bottom nav bar
+    paddingHorizontal: moderateScale(20),
+    paddingBottom: verticalScale(100),
   },
   balanceCard: {
-    backgroundColor: '#FBFBFB',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: moderateScale(20),
+    padding: moderateScale(20),
     alignItems: 'center',
     shadowColor: 'rgba(143, 49, 249, 0.1)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
-    shadowRadius: 10,
+    shadowRadius: moderateScale(10),
     elevation: 5,
-    borderWidth: 1,
-    borderColor: '#FBFBFB',
-    marginTop: 12,
+    marginTop: verticalScale(12),
   },
   helloText: {
     fontFamily: 'Rubik-Medium',
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#1A1B20',
-    textAlign: 'center',
   },
   balanceAmount: {
     fontFamily: 'Rubik-Medium',
-    fontSize: 32,
+    fontSize: moderateScale(32),
     color: '#1A1B20',
-    marginVertical: 10,
+    marginVertical: verticalScale(10),
   },
   balanceLabel: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#7D7D7D',
-    letterSpacing: 0.2,
   },
   divider: {
-    height: 1.5,
+    height: 1,
     backgroundColor: 'rgba(125, 125, 125, 0.1)',
     width: '100%',
-    marginVertical: 20,
+    marginVertical: verticalScale(20),
   },
   statsContainer: {
     flexDirection: 'row',
@@ -353,166 +255,115 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#7D7D7D',
-    textAlign: 'center',
-    letterSpacing: 0.2,
   },
   statAmount: {
     fontFamily: 'Rubik-Medium',
-    fontSize: 18,
+    fontSize: moderateScale(18),
     color: '#1A1B20',
-    marginTop: 8,
-    textAlign: 'center',
+    marginTop: verticalScale(8),
   },
   lockedBonusContainer: {
     backgroundColor: 'rgba(125, 125, 125, 0.05)',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginTop: 25,
+    borderRadius: moderateScale(8),
+    paddingVertical: verticalScale(10),
+    paddingHorizontal: moderateScale(20),
+    marginTop: verticalScale(25),
     alignItems: 'center',
     width: '100%',
   },
   lockedBonusLabel: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#7D7D7D',
-    textAlign: 'center',
-    letterSpacing: 0.2,
-    marginBottom: 8,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  loadingText: {
-    fontFamily: 'Rubik-Regular',
-    fontSize: 14,
-    color: '#7D7D7D',
-    marginTop: 10,
-    textAlign: 'center',
+    marginBottom: verticalScale(8),
   },
   lockedBonusContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: moderateScale(8),
   },
   lockedBonusAmount: {
     fontFamily: 'Rubik-Medium',
-    fontSize: 18,
+    fontSize: moderateScale(18),
     color: '#1A1B20',
-    textAlign: 'center',
   },
   redeemButton: {
     backgroundColor: '#8F31F9',
-    borderRadius: 8,
-    height: 47,
+    borderRadius: moderateScale(8),
+    height: verticalScale(47),
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    marginTop: 20,
+    marginTop: verticalScale(20),
   },
   redeemButtonText: {
     fontFamily: 'Rubik-SemiBold',
-    fontSize: 16,
-    color: '#FBFBFB',
-    letterSpacing: 0.2,
+    fontSize: moderateScale(16),
+    color: '#FFFFFF',
   },
   historyContainer: {
-    marginTop: 30,
+    marginTop: verticalScale(30),
   },
   historyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: verticalScale(15),
   },
   historyTitle: {
     fontFamily: 'Rubik-Medium',
-    fontSize: 18,
+    fontSize: moderateScale(18),
     color: '#1A1B20',
-  },
-  viewAllButton: {
-    padding: 10,
   },
   viewAllText: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 18,
+    fontSize: moderateScale(16),
     color: '#8F31F9',
     textDecorationLine: 'underline',
   },
   transactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: verticalScale(15),
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(125, 125, 125, 0.1)',
   },
-  transactionIconContainer: {
-    width: 60,
-    height: 60,
-    // borderRadius: 8,
-    backgroundColor: 'rgba(150, 61, 251, 0.00)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  checkmarkIcon: {
-    width: 60,
-    height: 60,
-    
+  transactionIcon: {
+    width: moderateScale(50),
+    height: moderateScale(50),
+    marginRight: moderateScale(12),
   },
   transactionDetails: {
     flex: 1,
   },
   transactionTitle: {
     fontFamily: 'Rubik-SemiBold',
-    fontSize: 16,
+    fontSize: moderateScale(15),
     color: '#1A1B20',
+    marginBottom: verticalScale(2),
   },
   transactionDate: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: '#7D7D7D',
-    marginVertical: 2,
-    letterSpacing: 0.2,
-  },
-  transactionDescription: {
-    fontFamily: 'Rubik-Regular',
-    fontSize: 12,
-    color: '#7D7D7D',
-    letterSpacing: 0.2,
   },
   transactionAmount: {
-    fontFamily: 'Rubik-Regular',
-    fontSize: 16,
+    fontFamily: 'Rubik-Medium',
+    fontSize: moderateScale(16),
     color: '#1A1B20',
-    textAlign: 'right',
   },
-  transactionLoadingContainer: {
+  centeredContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 30,
+    paddingVertical: verticalScale(30),
   },
-  transactionLoadingText: {
+  infoText: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#7D7D7D',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  emptyTransactionsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  emptyTransactionsText: {
-    fontFamily: 'Rubik-Regular',
-    fontSize: 14,
-    color: '#7D7D7D',
-    marginTop: 10,
+    marginTop: verticalScale(10),
     textAlign: 'center',
   },
 });

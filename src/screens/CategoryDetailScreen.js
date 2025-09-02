@@ -1,396 +1,237 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Platform, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  StatusBar,
+  Dimensions,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path } from 'react-native-svg';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProductById } from '../api/product';
 import Toast from 'react-native-toast-message';
 
+const { width, height } = Dimensions.get('window');
 
+// --- Responsive Scaling Utilities ---
+const guidelineBaseWidth = 375;
+const guidelineBaseHeight = 812;
 
+const scale = (size) => (width / guidelineBaseWidth) * size;
+const verticalScale = (size) => (height / guidelineBaseHeight) * size;
+const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
+// --- End of Responsive Utilities ---
 
 const CategoryDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { category, planName, product, subCategory } = route.params || {};
+  const insets = useSafeAreaInsets();
+  const { category, product } = route.params || {};
 
-  // State for product data
   const [productData, setProductData] = useState(product || null);
   const [loading, setLoading] = useState(!product);
 
-  // Get hero section colors and background based on category or product
-  const getHeroColors = (category, productData) => {
-    // First try to determine from product data if available
-    if (productData && productData.categoryId) {
-      const catName = productData.categoryId.name?.toLowerCase() || '';
-      if (catName.includes('insurance')) return ['#1D8C7C', '#2AA795', '#197366'];
-      if (catName.includes('investment')) return ['#F6AC11', '#F7C459', '#C4890E'];
-      if (catName.includes('loan')) return ['#A5236A', '#D03A8C', '#952261'];
-      if (catName.includes('tax') || catName.includes('travel')) return ['#8F31F9', '#521B90'];
+  // --- Dynamic Theming based on Category ---
+  const getTheme = () => {
+    const name = (productData?.categoryId?.name || category || '').toLowerCase();
+
+    if (name.includes('investment')) {
+      return {
+        heroColors: ['#F6AC11', '#F7C459', '#C4890E'],
+        locations: [0.034, 0.319, 0.9839],
+        backButtonColor: '#F6AC11',
+      };
     }
-
-    // Fallback to category parameter
-    const catName = category?.toLowerCase() || '';
-    if (catName.includes('insurance')) return ['#1D8C7C', '#2AA795', '#197366'];
-    if (catName.includes('investment')) return ['#F6AC11', '#F7C459', '#C4890E'];
-    if (catName.includes('loan')) return ['#A5236A', '#D03A8C', '#952261'];
-    if (catName.includes('tax') || catName.includes('travel')) return ['#8F31F9', '#521B90'];
-
-    // Legacy category names
-    switch (category) {
-      case 'Life':
-      case 'Health':
-      case 'Motor':
-      case 'General':
-        return ['#1D8C7C', '#2AA795', '#197366']; // Green gradient for Insurance
-      case 'Mutual Fund':
-      case 'Fixed':
-      case 'BOND':
-      case 'Gold':
-      case 'LAS':
-      case 'NPS':
-      case 'Trading':
-        return ['#F6AC11', '#F7C459', '#C4890E']; // Orange gradient for Investments
-      case 'Home Loan':
-      case 'Personal Loans':
-      case 'Mortgage Loan':
-      case 'Business Loan':
-        return ['#A5236A', '#D03A8C', '#952261']; // Pink gradient for Loans
-      case 'Tax':
-      case 'Domestic Travel':
-      case 'International Travel':
-        return ['#8F31F9', '#521B90']; // Purple gradient for Tax & Travel
-      default:
-        return ['#1D8C7C', '#2AA795', '#197366']; // Default green for Insurance
+    if (name.includes('loan')) {
+      return {
+        heroColors: ['#A5236A', '#D03A8C', '#952261'],
+        locations: [0.0306, 0.3616, 0.9764],
+        backButtonColor: '#A5236A',
+      };
     }
-  };
-
-  // Get gradient locations based on category
-  const getGradientLocations = (category) => {
-    switch (category) {
-      case 'Mutual Fund':
-      case 'Fixed':
-      case 'BOND':
-      case 'Gold':
-      case 'LAS':
-      case 'NPS':
-      case 'Trading':
-        return [0.034, 0.319, 0.9839]; // Investments gradient locations
-      case 'Home Loan':
-      case 'Personal Loans':
-      case 'Mortgage Loan':
-      case 'Business Loan':
-        return [0.0306, 0.3616, 0.9764]; // Loans gradient locations
-      case 'Tax':
-      case 'Domestic Travel':
-      case 'International Travel':
-        return [0, 1]; // Purple gradient locations (2 colors only)
-      default:
-        return [0.0415, 0.3387, 0.9769]; // Default Insurance gradient locations
+    if (name.includes('tax') || name.includes('travel')) {
+      return {
+        heroColors: ['#8F31F9', '#521B90'],
+        locations: [0, 1],
+        backButtonColor: '#8F31F9',
+      };
     }
-  };
-
-      // Get background color based on category
-    const getBackgroundColor = (category) => {
-      return '#F6F5FD'; // Pure white background for all categories
+    // Default to Insurance
+    return {
+      heroColors: ['#1D8C7C', '#2AA795', '#197366'],
+      locations: [0.0415, 0.3387, 0.9769],
+      backButtonColor: '#52B4A6',
     };
-
-  // Get back button background color based on category
-  const getBackButtonColor = (category) => {
-    switch (category) {
-      case 'Mutual Fund':
-      case 'Fixed':
-      case 'BOND':
-      case 'Gold':
-      case 'LAS':
-      case 'NPS':
-      case 'Trading':
-        return '#F6AC11'; // Orange for Investments (matches hero gradient)
-      case 'Home Loan':
-      case 'Personal Loans':
-      case 'Mortgage Loan':
-      case 'Business Loan':
-        return '#A5236A'; // Pink for Loans (matches hero gradient)
-      case 'Tax':
-      case 'Domestic Travel':
-      case 'International Travel':
-        return '#8F31F9'; // Purple for Tax & Travel (matches hero gradient)
-      default:
-        return '#52B4A6'; // Default teal for Insurance
-    }
   };
 
-
-
-  // Fetch product data if not provided
   useEffect(() => {
     const fetchProductData = async () => {
-      // If we already have product data, no need to fetch
-      if (productData) {
+      if (productData) return; // Already have data
+      if (!product?._id) {
         setLoading(false);
         return;
       }
-
-      // If we have a product ID from planName (legacy support), fetch it
-      if (planName && typeof planName === 'string' && planName.length > 10) {
-        // Assume planName might be a product ID
-        try {
-          setLoading(true);
-          const response = await getProductById(planName);
-          if (response.data) {
-            setProductData(response.data);
-          }
-        } catch (error) {
-          console.error('Error fetching product:', error);
-          Toast.show({
-            type: 'error',
-            text1: 'Error',
-            text2: 'Failed to load product details.',
-          });
-        } finally {
-          setLoading(false);
-        }
-      } else {
+      try {
+        setLoading(true);
+        const response = await getProductById(product._id);
+        if (response.data) setProductData(response.data);
+      } catch (error) {
+        console.error('Error fetching product:', error);
+        Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load product details.' });
+      } finally {
         setLoading(false);
       }
     };
-
     fetchProductData();
-  }, [product, planName, productData]);
+  }, [product, productData]);
 
-  const heroColors = getHeroColors(category, productData);
-  const backgroundColor = getBackgroundColor(category);
-  const gradientLocations = getGradientLocations(category);
-  const backButtonColor = getBackButtonColor(category);
-
-  // Get display title from product data or fallback
-  const displayTitle = productData?.name || planName || 'Product Details';
+  const theme = getTheme();
+  const displayTitle = productData?.name || 'Product Details';
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <SafeAreaView style={styles.safeArea} edges={['right', 'left']}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
 
+      <ScrollView stickyHeaderIndices={[0]} showsVerticalScrollIndicator={false}>
         {/* --- Header Section --- */}
         <LinearGradient
-          colors={heroColors}
-          locations={gradientLocations} // Dynamic gradient locations based on category
-          start={{ x: 0.1, y: 0.1 }}   // Approximates 115.06deg angle
-          end={{ x: 0.9, y: 0.9 }}     // Approximates 115.06deg angle
-          style={styles.header}
+          colors={theme.heroColors}
+          locations={theme.locations}
+          style={[styles.header, { paddingTop: insets.top, height: verticalScale(300) }]}
         >
-          {/* Decorative Background Vector - Vector 5.png */}
-          <View style={styles.headerVector}>
-            <Image 
-              source={require('../../assets/Icons/Vector 5.png')} 
-              style={styles.vectorImage}
-              resizeMode="stretch"
-            />
-          </View>
-
-                    {/* Top Navigation */}
+          <Image source={require('../../assets/Icons/Vector 5.png')} style={styles.headerVector} />
+          
           <View style={styles.topNav}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: backButtonColor }]}>
-              <Ionicons name="chevron-back-outline" size={20} color="#FFFFFF" />
+            <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: theme.backButtonColor }]}>
+              <Ionicons name="chevron-back" size={moderateScale(20)} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle} numberOfLines={2}>{displayTitle}</Text>
-            <View style={{ width: 40 }} />
+            <Text style={styles.headerTitle} numberOfLines={1}>{displayTitle}</Text>
+            <View style={{ width: moderateScale(32) }} />
           </View>
           
-          {/* Promo Card */}
           <View style={styles.promoCard}>
             <View style={styles.promoTextContainer}>
               <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>Popular</Text></View>
               <Text style={styles.promoTitle}>Earn While You Refer</Text>
-              <Text style={styles.promoSubtitle}>Share services you trust and{'\n'}get paid for every referral</Text>
-              <TouchableOpacity 
-                style={styles.referButton}
-                onPress={() => navigation.navigate('ReferralForm', {
-                  product: productData,
-                  category: category
-                })}
-              >
+              <Text style={styles.promoSubtitle}>Share services you trust and get paid for every referral</Text>
+              <TouchableOpacity style={styles.referButton} onPress={() => navigation.navigate('ReferralForm', { product: productData, category })}>
                 <Text style={styles.referButtonText}>Refer Now</Text>
               </TouchableOpacity>
             </View>
-            <Image 
-              source={require('../../assets/Icons/young-man.png')} 
-              style={styles.promoImage}
-            />
+            <Image source={require('../../assets/Icons/young-man.png')} style={styles.promoImage} />
           </View>
         </LinearGradient>
 
         {/* --- Main Content --- */}
-        <View style={[styles.contentContainer, { backgroundColor }]}>
-          <ScrollView
-            contentContainerStyle={[styles.scrollContent, { backgroundColor }]}
-            showsVerticalScrollIndicator={false}
-            style={{ backgroundColor }}
-          >
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#8F31F9" />
-                <Text style={styles.loadingText}>Loading product details...</Text>
-              </View>
-            ) : productData ? (
-              <>
-                {/* Key Benefits Section */}
-                <View style={styles.keyBenefitsSection}>
-                  <Text style={styles.keyBenefitsTitle}>Key Benefits</Text>
-                  <Text style={styles.keyBenefitsDescription}>
-                    {productData.description || 'Discover the benefits of this product and start earning rewards by referring it to others.'}
-                  </Text>
-                </View>
-
-                {/* Benefits List with Shield Icon */}
-                <View style={styles.benefitsContainer}>
-                  <View style={styles.benefitsList}>
-                    {productData.benefits && productData.benefits.length > 0 ? (
-                      productData.benefits.map((benefit, index) => (
-                        <View key={index} style={styles.benefitItem}>
-                          <View style={styles.benefitDot} />
-                          <Text style={styles.benefitText}>{benefit}</Text>
-                        </View>
-                      ))
-                    ) : (
-                      // Default benefits if none provided
-                      <>
-                        <View style={styles.benefitItem}>
-                          <View style={styles.benefitDot} />
-                          <Text style={styles.benefitText}>Earn rewards by referring this product</Text>
-                        </View>
-                        <View style={styles.benefitItem}>
-                          <View style={styles.benefitDot} />
-                          <Text style={styles.benefitText}>Build your referral network</Text>
-                        </View>
-                        <View style={styles.benefitItem}>
-                          <View style={styles.benefitDot} />
-                          <Text style={styles.benefitText}>Track your earnings in real-time</Text>
-                        </View>
-                        <View style={styles.benefitItem}>
-                          <View style={styles.benefitDot} />
-                          <Text style={styles.benefitText}>Exclusive ambassador benefits</Text>
-                        </View>
-                      </>
-                    )}
-                  </View>
-
-                  {/* Group Icon */}
-                  <View style={styles.shieldIconContainer}>
-                    <Image source={require('../../assets/Icons/Group.png')} style={styles.groupIcon} />
-                  </View>
-                </View>
-              </>
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Product details not available</Text>
-                <Text style={styles.emptySubText}>Unable to load product information. Please try again later.</Text>
-              </View>
-            )}
-
-                        {/* Referral Card */}
-            <View style={styles.referralCard}>
-              <Image
-                source={require('../../assets/Icons/vectorCategoryDetails.png')}
-                style={styles.referralCardBackground}
-              />
-              <View style={styles.iconContainer}>
-                <Image source={require('../../assets/Icons/money_2656371 1.png')} style={styles.referralIcon} />
-              </View>
-              <Text style={styles.referralText}>
-                Earn upto ₹{productData?.estimatedPrice || 0} for{'\n'}your referral
-              </Text> 
+        <View style={styles.contentContainer}>
+          {loading ? (
+            <View style={styles.centeredContainer}>
+              <ActivityIndicator size="large" color="#8F31F9" />
+              <Text style={styles.infoText}>Loading product details...</Text>
             </View>
+          ) : productData ? (
+            <>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Key Benefits</Text>
+                <Text style={styles.sectionDescription}>{productData.description || 'No description available.'}</Text>
+              </View>
 
-            {/* Refer a Friend Button */}
-            <TouchableOpacity
-              style={styles.referFriendButton}
-              onPress={() => navigation.navigate('ReferralForm', {
-                product: productData,
-                category: category
-              })}
-            >
-              <Text style={styles.referFriendButtonText}>Refer a friend</Text>
-            </TouchableOpacity>
+              <View style={styles.benefitsContainer}>
+                <View style={styles.benefitsList}>
+                  {(productData.benefits && productData.benefits.length > 0 ? productData.benefits : [
+                    'Earn rewards by referring this product',
+                    'Build your referral network',
+                    'Track your earnings in real-time',
+                  ]).map((benefit, index) => (
+                    <View key={index} style={styles.benefitItem}>
+                      <View style={styles.benefitDot} />
+                      <Text style={styles.benefitText}>{benefit}</Text>
+                    </View>
+                  ))}
+                </View>
+                <Image source={require('../../assets/Icons/Group.png')} style={styles.groupIcon} />
+              </View>
 
-            </ScrollView>
+              <View style={styles.referralCard}>
+                <Image source={require('../../assets/Icons/vectorCategoryDetails.png')} style={styles.referralCardBackground} />
+                <Image source={require('../../assets/Icons/money_2656371 1.png')} style={styles.referralIcon} />
+                <Text style={styles.referralText}>
+                  Earn up to ₹{productData?.estimatedPrice || 0} for your referral
+                </Text>
+              </View>
+
+              <TouchableOpacity style={styles.referFriendButton} onPress={() => navigation.navigate('ReferralForm', { product: productData, category })}>
+                <Text style={styles.referFriendButtonText}>Refer a Friend</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.centeredContainer}>
+              <Text style={styles.emptyText}>Product Details Not Available</Text>
+              <Text style={styles.infoText}>Unable to load product information. Please try again later.</Text>
+            </View>
+          )}
         </View>
+      </ScrollView>
 
-        {/* --- Floating Action Button --- */}
-        <TouchableOpacity style={styles.fab}>
-          <Ionicons name="calculator-outline" size={18} color="#FFFFFF" />
-        </TouchableOpacity>
-
-
-      </SafeAreaView>
-    </View>
+      <TouchableOpacity style={[styles.fab, { bottom: insets.bottom > 0 ? insets.bottom : moderateScale(20) }]}>
+        <Ionicons name="calculator-outline" size={moderateScale(18)} color="#FFFFFF" />
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   safeArea: {
     flex: 1,
+    backgroundColor: '#F6F5FD',
   },
   header: {
-    width: '100%',
-    height: 300,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    borderBottomLeftRadius: moderateScale(20),
+    borderBottomRightRadius: moderateScale(20),
     overflow: 'hidden',
+    // paddingTop and height are now dynamic
   },
   headerVector: {
     position: 'absolute',
-    width: '100%',
-    height: '100%',
     top: 0,
     left: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  vectorImage: {
     width: '100%',
-    // height: '100%',
-    opacity: 0.9,
-    marginTop: 80,
-    // transform: [{ rotate: '1deg' }], // Subtle opacity for background decoration
+    height: '100%',
+    opacity: 0.8,
   },
   topNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    height: 56, // Standard header height for safe spacing
-    zIndex: 11,
-    minHeight: 56, // Allow height to expand if needed
+    paddingHorizontal: moderateScale(20),
+    height: verticalScale(56),
   },
   backButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(8),
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontFamily: 'Rubik-SemiBold',
-    fontSize: 24,
-    color: '#FBFBFB',
+    fontSize: moderateScale(20),
+    color: '#FFFFFF',
     textAlign: 'center',
     flex: 1,
-    flexWrap: 'wrap',
-    paddingHorizontal: 10,
+    marginHorizontal: moderateScale(10),
   },
   promoCard: {
-    flex: 1,
     flexDirection: 'row',
-    marginHorizontal: 20,
-    marginTop: 10,
-    zIndex: 12,
+    marginHorizontal: moderateScale(20),
+    marginTop: verticalScale(10),
+    flex: 1,
   },
   promoTextContainer: {
     flex: 1,
@@ -398,251 +239,183 @@ const styles = StyleSheet.create({
   },
   promoBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(6),
     borderRadius: 100,
     alignSelf: 'flex-start',
   },
   promoBadgeText: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 11,
-    color: '#FBFBFB',
+    fontSize: moderateScale(11),
+    color: '#FFFFFF',
   },
   promoTitle: {
     fontFamily: 'Rubik-SemiBold',
-    fontSize: 18,
-    color: '#FBFBFB',
-    marginTop: 12,
+    fontSize: moderateScale(18),
+    color: '#FFFFFF',
+    marginTop: verticalScale(12),
   },
   promoSubtitle: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: '#F6F6FE',
-    marginVertical: 4,
-    lineHeight: 14,
+    marginVertical: verticalScale(4),
+    lineHeight: verticalScale(16),
   },
   referButton: {
     backgroundColor: '#1A1B20',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: verticalScale(10),
+    paddingHorizontal: moderateScale(16),
+    borderRadius: moderateScale(8),
     alignSelf: 'flex-start',
-    marginTop: 12,
+    marginTop: verticalScale(12),
   },
   referButtonText: {
     fontFamily: 'Rubik-SemiBold',
-    fontSize: 12,
-    color: '#FBFBFB',
+    fontSize: moderateScale(12),
+    color: '#FFFFFF',
   },
   promoImage: {
     position: 'absolute',
-    right: -30,
-    bottom: -2,
-    width: 194,
-    height: 220,
+    right: moderateScale(-30),
+    bottom: verticalScale(-2),
+    width: moderateScale(194),
+    height: verticalScale(220),
     resizeMode: 'contain',
   },
   contentContainer: {
-    flex: 1,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    marginTop: 0,
-    paddingTop: 20,
-    zIndex: 1,
-    width: '100%',
-    backgroundColor: '#F6F5FD', // Ensure no default background
+    padding: moderateScale(20),
+    backgroundColor: '#F6F5FD',
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 120,
+  section: {
+    marginBottom: verticalScale(20),
   },
-      keyBenefitsSection: {
-      marginTop: 10,
-      marginBottom: 20,
-    },
-  keyBenefitsTitle: {
+  sectionTitle: {
     fontFamily: 'Rubik-Medium',
-    fontSize: 24,
+    fontSize: moderateScale(22),
     color: '#1A1B20',
-    marginBottom: 12,
+    marginBottom: verticalScale(12),
   },
-  keyBenefitsDescription: {
+  sectionDescription: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 14,
-    lineHeight: 17,
+    fontSize: moderateScale(14),
+    lineHeight: verticalScale(20),
     color: '#7D7D7D',
-    letterSpacing: 0.2,
   },
   benefitsContainer: {
     flexDirection: 'row',
-    marginBottom: 30,
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: verticalScale(30),
   },
   benefitsList: {
     flex: 1,
-    marginRight: 30,
+    marginRight: moderateScale(20),
   },
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 9,
+    marginBottom: verticalScale(10),
   },
   benefitDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: moderateScale(5),
+    height: moderateScale(5),
+    borderRadius: moderateScale(2.5),
     backgroundColor: '#8F31F9',
-    marginTop: 6,
-    marginRight: 9,
+    marginTop: verticalScale(6),
+    marginRight: moderateScale(10),
   },
   benefitText: {
     fontFamily: 'Rubik-Regular',
-    fontSize: 14,
-    lineHeight: 17,
+    fontSize: moderateScale(14),
+    lineHeight: verticalScale(20),
     color: '#1A1B20',
-    letterSpacing: 0.2,
     flex: 1,
   },
-  shieldIconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    marginLeft: 20,
+  groupIcon: {
+    width: moderateScale(90),
+    height: verticalScale(100),
+    resizeMode: 'contain',
   },
-      groupIcon: {
-      width: 100,
-      height: 110,
-      resizeMode: 'contain',
-    },
   referralCard: {
-    position: 'relative',
-    width: '100%',
-    height: 65,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#e9e5ebff', 
-    borderRadius: 12,
+    height: verticalScale(70),
+    borderRadius: moderateScale(12),
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
+    paddingHorizontal: moderateScale(15),
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#EAE6F1',
+    backgroundColor: '#FFFFFF'
   },
   referralCardBackground: {
     position: 'absolute',
-    width: 120,
-    height: 100,
-    left: -20,
-    top: -20,
+    width: moderateScale(120),
+    height: verticalScale(100),
+    left: moderateScale(-20),
+    top: verticalScale(-15),
     resizeMode: 'contain',
-    
-  },
-  iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 20,
+    opacity: 0.5,
   },
   referralIcon: {
-    width: 48,
-    height: 48,
+    width: moderateScale(40),
+    height: moderateScale(40),
     resizeMode: 'contain',
+    marginRight: moderateScale(15),
   },
   referralText: {
     fontFamily: 'Rubik-Medium',
-    fontSize: 14,
-    lineHeight: 17,
+    fontSize: moderateScale(14),
+    lineHeight: verticalScale(18),
     color: '#1A1B20',
     flex: 1,
-    textAlign: 'center',
-    justifyContent: 'center',
+  },
+  referFriendButton: {
+    width: '100%',
+    height: verticalScale(47),
+    backgroundColor: '#8F31F9',
+    borderRadius: moderateScale(8),
     alignItems: 'center',
-    },
-    referButton: {
-      backgroundColor: '#1A1B20',
-      borderRadius: 8,
-      paddingVertical: 6,
-      paddingHorizontal: 16,
-      alignSelf: 'flex-start',
-      marginTop: 10,
-    },
-    referButtonText: {
-      fontFamily: 'Rubik-SemiBold',
-      fontSize: 12,
-      lineHeight: 14,
-      letterSpacing: 0.2,
-      color: '#FBFBFB',
-    },
-    referFriendButton: {
-      width: '100%',
-      height: 47,
-      backgroundColor: '#8F31F9',
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 40,
-      marginBottom: 30,
-      marginHorizontal: 0,
-    },
-    referFriendButtonText: {
-      fontFamily: 'Rubik-SemiBold',
-      fontSize: 16,
-      lineHeight: 19,
-      letterSpacing: 0.2,
-      color: '#FBFBFB',
-    },
+    justifyContent: 'center',
+    marginTop: verticalScale(30),
+    marginBottom: verticalScale(20),
+  },
+  referFriendButtonText: {
+    fontFamily: 'Rubik-SemiBold',
+    fontSize: moderateScale(16),
+    color: '#FFFFFF',
+  },
   fab: {
     position: 'absolute',
-    bottom: 40,
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    right: moderateScale(20),
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
     backgroundColor: '#1187FE',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: 'rgba(17, 135, 254, 0.5)',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
+    shadowColor: '#1187FE',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
     elevation: 8,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  centeredContainer: {
+    paddingVertical: verticalScale(80),
     alignItems: 'center',
-    paddingVertical: 100,
   },
-  loadingText: {
-    marginTop: 16,
+  infoText: {
+    marginTop: verticalScale(16),
     fontFamily: 'Rubik-Regular',
-    fontSize: 16,
+    fontSize: moderateScale(14),
     color: '#7D7D7D',
     textAlign: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 100,
-    paddingHorizontal: 20,
   },
   emptyText: {
     fontFamily: 'Rubik-SemiBold',
-    fontSize: 18,
+    fontSize: moderateScale(18),
     color: '#1A1B20',
     textAlign: 'center',
-    marginBottom: 8,
-  },
-  emptySubText: {
-    fontFamily: 'Rubik-Regular',
-    fontSize: 14,
-    color: '#7D7D7D',
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });
 

@@ -125,45 +125,51 @@ function AuthNavigator() {
     return (
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-                {/* Authentication flow */}
-                {!isAuthenticated ? (
-                    <>
-                        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-                        <Stack.Screen name="Login" component={LoginScreen} />
-                        <Stack.Screen name="Signup" component={SignupScreen} />
-                    </>
-                ) : (
-                    <>
-                        {/* Role-based main screens */}
-                        {isAmbassador ? (
-                            <Stack.Screen name="Main" component={AffiliateTabNavigator} />
-                        ) : (
-                            <Stack.Screen name="Main" component={MainTabNavigator} />
-                        )}
+                {/* Authentication flow - available to all users */}
+                <>
+                    <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+                    <Stack.Screen name="Login" component={LoginScreen} />
+                    <Stack.Screen name="Signup" component={SignupScreen} />
 
-                        {/* Common screens for all authenticated users */}
-                        <Stack.Screen name="Leads" component={LeadsScreen} />
-                        <Stack.Screen name="Calculator" component={CalculatorScreen} />
-                        <Stack.Screen name="TermInsuranceCalculator" component={TermInsuranceCalculatorScreen} />
-                        <Stack.Screen name="Details" component={DetailScreen} />
-                        <Stack.Screen name="Insurances" component={InsurancesScreen} />
-                        <Stack.Screen name="Investments" component={InvestmentsScreen} />
-                        <Stack.Screen name="Loans" component={LoansScreen} />
-                        <Stack.Screen name="TransactionsHistory" component={TransactionsHistoryScreen} />
-                        <Stack.Screen name="FAQ" component={FAQScreen} />
-                        <Stack.Screen name="Redeem" component={RedeemScreen} />
-                        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-                        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
-                        <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
-                        <Stack.Screen name="Categories" component={CategoriesScreen} />
-                        <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
-                        <Stack.Screen name="ReferralForm" component={ReferralFormScreen} />
-                        <Stack.Screen name="Verification" component={VerificationMainScreen} />
-                        <Stack.Screen name="GovernmentIDScreen" component={GovernmentIDScreen} />
-                        <Stack.Screen name="SelfiePhotoScreen" component={SelfiePhotoScreen} />
-                        <Stack.Screen name="BankDetailsScreen" component={BankDetailsScreen} />
-                    </>
-                )}
+                    {/* Verification screens - available during registration process */}
+                    <Stack.Screen name="Verification" component={VerificationMainScreen} />
+                    <Stack.Screen name="GovernmentIDScreen" component={GovernmentIDScreen} />
+                    <Stack.Screen name="SelfiePhotoScreen" component={SelfiePhotoScreen} />
+                    <Stack.Screen name="BankDetailsScreen" component={BankDetailsScreen} />
+
+                    {!isAuthenticated ? (
+                        // Unauthenticated screens only
+                        <></>
+                    ) : (
+                        // Authenticated screens only
+                        <>
+                            {/* Role-based main screens */}
+                            {isAmbassador ? (
+                                <Stack.Screen name="Main" component={AffiliateTabNavigator} />
+                            ) : (
+                                <Stack.Screen name="Main" component={MainTabNavigator} />
+                            )}
+
+                            {/* Common screens for all authenticated users */}
+                            <Stack.Screen name="Leads" component={LeadsScreen} />
+                            <Stack.Screen name="Calculator" component={CalculatorScreen} />
+                            <Stack.Screen name="TermInsuranceCalculator" component={TermInsuranceCalculatorScreen} />
+                            <Stack.Screen name="Details" component={DetailScreen} />
+                            <Stack.Screen name="Insurances" component={InsurancesScreen} />
+                            <Stack.Screen name="Investments" component={InvestmentsScreen} />
+                            <Stack.Screen name="Loans" component={LoansScreen} />
+                            <Stack.Screen name="TransactionsHistory" component={TransactionsHistoryScreen} />
+                            <Stack.Screen name="FAQ" component={FAQScreen} />
+                            <Stack.Screen name="Redeem" component={RedeemScreen} />
+                            <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+                            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+                            <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+                            <Stack.Screen name="Categories" component={CategoriesScreen} />
+                            <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
+                            <Stack.Screen name="ReferralForm" component={ReferralFormScreen} />
+                        </>
+                    )}
+                </>
             </Stack.Navigator>
         </NavigationContainer>
     );
@@ -182,6 +188,10 @@ function AuthNavigatorWrapper() {
                     <Stack.Screen name="Onboarding" component={OnboardingScreen} />
                     <Stack.Screen name="Login" component={LoginScreen} />
                     <Stack.Screen name="Signup" component={SignupScreen} />
+                    <Stack.Screen name="Verification" component={VerificationMainScreen} />
+                    <Stack.Screen name="GovernmentIDScreen" component={GovernmentIDScreen} />
+                    <Stack.Screen name="SelfiePhotoScreen" component={SelfiePhotoScreen} />
+                    <Stack.Screen name="BankDetailsScreen" component={BankDetailsScreen} />
                 </Stack.Navigator>
             </NavigationContainer>
         );

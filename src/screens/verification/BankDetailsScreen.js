@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/tokens';
+import { storeBankDetails } from '../../api/verification';
 
 export default function BankDetailsScreen({ navigation, route }) {
   const [formData, setFormData] = useState({
@@ -59,16 +60,16 @@ export default function BankDetailsScreen({ navigation, route }) {
 
   const handleSubmit = () => {
     if (validateForm()) {
-      // Here you would typically save the bank details
-      console.log('Bank Details:', formData);
-      
+      // Store the bank details for later use in registration
+      storeBankDetails(formData);
+
       // Get existing completed steps and add current one
       const existingCompleted = route.params?.completedSteps || [];
       const updatedCompleted = [...existingCompleted];
       if (!updatedCompleted.includes('bankDetails')) {
         updatedCompleted.push('bankDetails');
       }
-      
+
       // Navigate back with updated completion status
       navigation.navigate('Verification', { completedSteps: updatedCompleted });
     } else {

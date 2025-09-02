@@ -4,22 +4,33 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   StatusBar,
   Dimensions,
   StyleSheet,
-  Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getCategories, getProductsBySubCategory } from '../api/categorys';
 import { getSubCategories } from '../api/subCategories';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-const scale = Math.min(screenWidth / 375, screenHeight / 812);
+const { width, height } = Dimensions.get('window');
+
+// --- Responsive Scaling Utilities ---
+// Using the same consistent scaling functions as the home screen
+const guidelineBaseWidth = 375;
+const guidelineBaseHeight = 812;
+
+const scale = (size) => (width / guidelineBaseWidth) * size;
+const verticalScale = (size) => (height / guidelineBaseHeight) * size;
+const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
+// --- End of Responsive Utilities ---
 
 const CalculatorScreen = ({ navigation, route }) => {
   const { leadName } = route.params || {};
+  const insets = useSafeAreaInsets(); // Hook for safe area values
+
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showSubCategory, setShowSubCategory] = useState(null);
@@ -37,7 +48,6 @@ const CalculatorScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
-      setCategories([]); // Set empty array on error
     }
   };
 
@@ -47,13 +57,9 @@ const CalculatorScreen = ({ navigation, route }) => {
       const condition = { parentCategory: categoryId };
       const response = await getSubCategories({
         condition: JSON.stringify(condition),
-        limit: 100 // Fetch all subcategories for this category
+        limit: 100
       });
-
-      if (response.data && response.data.success) {
-        return response.data.data || [];
-      }
-      return [];
+      return response.data?.data || [];
     } catch (error) {
       console.error('Error fetching subcategories:', error);
       return [];
@@ -64,11 +70,7 @@ const CalculatorScreen = ({ navigation, route }) => {
   const fetchProducts = async (subCategoryId) => {
     try {
       const response = await getProductsBySubCategory(subCategoryId);
-
-      if (response.data) {
-        return response.data || [];
-      }
-      return [];
+      return response.data || [];
     } catch (error) {
       console.error('Error fetching products:', error);
       return [];
@@ -76,77 +78,54 @@ const CalculatorScreen = ({ navigation, route }) => {
   };
 
   const handleCategorySelect = async (category) => {
-    if (selectedCategory && selectedCategory._id === category._id) {
-      setSelectedCategory(null);
+    if (selectedCategory?._id === category._id) {
+      setSelectedCategory(null); // Toggle off if same is clicked
       setShowSubCategory(null);
     } else {
       setSelectedCategory(category);
-      setShowSubCategory(null);
-
-      // Fetch subcategories if not already fetched
+      setShowSubCategory(null); // Close any open sub-category view
       if (!subCategoriesData[category._id]) {
         const subCategories = await fetchSubCategories(category._id);
-        setSubCategoriesData(prev => ({
-          ...prev,
-          [category._id]: subCategories
-        }));
+        setSubCategoriesData(prev => ({ ...prev, [category._id]: subCategories }));
       }
     }
   };
 
   const handleSubCategorySelect = async (subCategory) => {
-    if (showSubCategory && showSubCategory._id === subCategory._id) {
-      setShowSubCategory(null);
+    if (showSubCategory?._id === subCategory._id) {
+      setShowSubCategory(null); // Toggle off
     } else {
       setShowSubCategory(subCategory);
-
-      // Fetch products if not already fetched
       if (!productsData[subCategory._id]) {
         const products = await fetchProducts(subCategory._id);
-        setProductsData(prev => ({
-          ...prev,
-          [subCategory._id]: products
-        }));
+        setProductsData(prev => ({ ...prev, [subCategory._id]: products }));
       }
     }
   };
 
-  // Fetch categories on component mount
   useEffect(() => {
-    const loadCategories = async () => {
+    const loadData = async () => {
       await fetchCategories();
       setLoading(false);
     };
-    loadCategories();
+    loadData();
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['right', 'left', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
-      {/* Background Gradient */}
+
       <LinearGradient
         colors={['#F3ECFE', '#F6F6FE']}
         style={styles.backgroundGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 0.5 }}
       />
 
-      {/* Header */}
-      <View style={styles.header}>
+      {/* Header with dynamic padding top for notch */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <Text style={styles.headerTitle}>Calculator</Text>
       </View>
 
-      {/* Main Content */}
-      <ScrollView style={styles.mainContainer} showsVerticalScrollIndicator={false}>
-        {/* Loading Indicator */}
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading services...</Text>
-          </View>
-        )}
-
-        {/* Service Selection Dropdown */}
+      <ScrollView contentContainerStyle={styles.mainContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.serviceSelectionContainer}>
           <TouchableOpacity
             style={[styles.serviceDropdown, loading && styles.disabledDropdown]}
@@ -154,105 +133,96 @@ const CalculatorScreen = ({ navigation, route }) => {
             disabled={loading}
           >
             <Text style={styles.serviceDropdownText}>Select Your Service</Text>
-            <View style={styles.chevronIcon}>
-              <Ionicons 
-                name={showServiceDropdown ? "chevron-up" : "chevron-down"} 
-                size={20} 
-                color="#1A1B20" 
-              />
-            </View>
+            <Ionicons
+              name={showServiceDropdown ? "chevron-up" : "chevron-down"}
+              size={moderateScale(20)}
+              color="#1A1B20"
+            />
           </TouchableOpacity>
         </View>
 
-        {/* Main Categories - Only show when service dropdown is clicked */}
-        {showServiceDropdown && (
-          <View style={styles.categoriesContainer}>
-            {categories.map((category, index) => (
-              <View key={category._id || index} style={styles.categoryCard}>
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color="#8F31F9" />
+            <Text style={styles.loadingText}>Loading services...</Text>
+          </View>
+        )}
+
+        {showServiceDropdown && !loading && (
+          <View>
+            {categories.map((category) => (
+              <View key={category._id} style={styles.categoryCard}>
                 <TouchableOpacity
                   style={[
                     styles.categoryHeader,
-                    selectedCategory && selectedCategory._id === category._id && styles.selectedCategoryHeader
+                    selectedCategory?._id === category._id && styles.selectedCategoryHeader
                   ]}
                   onPress={() => handleCategorySelect(category)}
                 >
                   <Text style={[
                     styles.categoryTitle,
-                    selectedCategory && selectedCategory._id === category._id && styles.selectedCategoryTitle
+                    selectedCategory?._id === category._id && styles.selectedCategoryTitle
                   ]}>
                     {category.name}
                   </Text>
-                  <View style={styles.chevronIcon}>
-                    <Ionicons
-                      name={selectedCategory && selectedCategory._id === category._id ? "chevron-up" : "chevron-down"}
-                      size={20}
-                      color={selectedCategory && selectedCategory._id === category._id ? "#FBFBFB" : "#1A1B20"}
-                    />
-                  </View>
+                  <Ionicons
+                    name={selectedCategory?._id === category._id ? "chevron-up" : "chevron-down"}
+                    size={moderateScale(20)}
+                    color={selectedCategory?._id === category._id ? "#FFF" : "#1A1B20"}
+                  />
                 </TouchableOpacity>
 
-                {/* Sub Categories - Only show when category is selected */}
-                {selectedCategory && selectedCategory._id === category._id && (
+                {selectedCategory?._id === category._id && (
                   <View style={styles.subCategoriesContainer}>
                     {subCategoriesData[category._id]?.length > 0 ? (
-                      subCategoriesData[category._id].map((subCategory, subIndex) => (
-                      <View key={subCategory._id || subIndex} style={styles.subCategoryCard}>
-                        <TouchableOpacity
-                          style={[
-                            styles.subCategoryHeader,
-                            showSubCategory && showSubCategory._id === subCategory._id && styles.selectedSubCategoryHeader
-                          ]}
-                          onPress={() => handleSubCategorySelect(subCategory)}
-                        >
-                          <Text style={[
-                            styles.subCategoryTitle,
-                            showSubCategory && showSubCategory._id === subCategory._id && styles.selectedSubCategoryTitle
-                          ]}>
-                            {subCategory.name}
-                          </Text>
-                          <View style={styles.chevronIcon}>
+                      subCategoriesData[category._id].map((subCategory) => (
+                        <View key={subCategory._id} style={styles.subCategoryCard}>
+                          <TouchableOpacity
+                            style={[
+                              styles.subCategoryHeader,
+                              showSubCategory?._id === subCategory._id && styles.selectedSubCategoryHeader
+                            ]}
+                            onPress={() => handleSubCategorySelect(subCategory)}
+                          >
+                            <Text style={[
+                              styles.subCategoryTitle,
+                              showSubCategory?._id === subCategory._id && styles.selectedSubCategoryTitle
+                            ]}>
+                              {subCategory.name}
+                            </Text>
                             <Ionicons
-                              name={showSubCategory && showSubCategory._id === subCategory._id ? "chevron-up" : "chevron-down"}
-                              size={20}
-                              color={showSubCategory && showSubCategory._id === subCategory._id ? "#1A1B20" : "#1A1B20"}
+                              name={showSubCategory?._id === subCategory._id ? "chevron-up" : "chevron-down"}
+                              size={moderateScale(20)}
+                              color="#1A1B20"
                             />
-                          </View>
-                        </TouchableOpacity>
+                          </TouchableOpacity>
 
-                        {/* Products - Show when subcategory is selected */}
-                        {showSubCategory && showSubCategory._id === subCategory._id && (
-                          <View style={styles.plansContainer}>
-                            {productsData[subCategory._id]?.length > 0 ? (
-                              productsData[subCategory._id].map((product, productIndex) => (
-                                <TouchableOpacity
-                                  key={product._id || productIndex}
-                                  style={styles.planItem}
-                                  onPress={() => {
-                                    console.log('Navigating to calculator with product:', product);
-                                    navigation.navigate('TermInsuranceCalculator', {
+                          {showSubCategory?._id === subCategory._id && (
+                            <View style={styles.plansContainer}>
+                              {productsData[subCategory._id]?.length > 0 ? (
+                                productsData[subCategory._id].map((product) => (
+                                  <TouchableOpacity
+                                    key={product._id}
+                                    style={styles.planItem}
+                                    onPress={() => navigation.navigate('TermInsuranceCalculator', {
                                       serviceName: product.name,
                                       leadName: leadName,
                                       productId: product._id,
                                       productData: product
-                                    });
-                                  }}
-                                >
-                                  <Text style={styles.planText}>{product.name}</Text>
-                                </TouchableOpacity>
-                              ))
-                            ) : (
-                              <View style={styles.emptyProductsContainer}>
-                                <Text style={styles.emptyProductsText}>No products available</Text>
-                              </View>
-                            )}
-                          </View>
-                        )}
-                      </View>
+                                    })}
+                                  >
+                                    <Text style={styles.planText}>{product.name}</Text>
+                                  </TouchableOpacity>
+                                ))
+                              ) : (
+                                <Text style={styles.emptyText}>No products available</Text>
+                              )}
+                            </View>
+                          )}
+                        </View>
                       ))
                     ) : (
-                      <View style={styles.emptySubCategoriesContainer}>
-                        <Text style={styles.emptySubCategoriesText}>No subcategories available</Text>
-                      </View>
+                      <Text style={styles.emptyText}>No subcategories available</Text>
                     )}
                   </View>
                 )}
@@ -260,8 +230,6 @@ const CalculatorScreen = ({ navigation, route }) => {
             ))}
           </View>
         )}
-
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -273,206 +241,150 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3ECFE',
   },
   backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
   },
   header: {
-    height: 80 * scale,
+    height: verticalScale(60),
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 44 : 0,
+    // paddingTop is now dynamic
   },
   headerTitle: {
-    fontSize: 24 * scale,
+    fontSize: moderateScale(22),
     fontWeight: '700',
     color: '#1A1B20',
     fontFamily: 'Rubik',
-    lineHeight: 28 * scale,
-    textAlign: 'center',
   },
   mainContainer: {
-    flex: 1,
-    paddingHorizontal: 20 * scale,
-    paddingTop: 12 * scale,
+    flexGrow: 1,
+    paddingHorizontal: moderateScale(20),
+    paddingTop: verticalScale(12),
+    paddingBottom: verticalScale(40),
   },
   serviceSelectionContainer: {
-    marginBottom: 20 * scale,
+    marginBottom: verticalScale(20),
   },
   serviceDropdown: {
-    backgroundColor: '#FBFBFB',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-    borderRadius: 10 * scale,
-    paddingHorizontal: 16 * scale,
-    paddingVertical: 15 * scale,
+    backgroundColor: '#FFFFFF',
+    borderRadius: moderateScale(10),
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(15),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 10 * scale,
+    shadowRadius: moderateScale(10),
     elevation: 5,
   },
   serviceDropdownText: {
-    fontSize: 14 * scale,
+    fontSize: moderateScale(14),
     fontWeight: '700',
-    color: '#000000',
+    color: '#1A1B20',
     fontFamily: 'Rubik',
-    lineHeight: 17 * scale,
-    letterSpacing: 0.2 * scale,
   },
-  chevronIcon: {
-    transform: [{ rotate: '0deg' }],
+  disabledDropdown: {
+    opacity: 0.6,
   },
   categoriesContainer: {
-    marginBottom: 20 * scale,
+    marginBottom: verticalScale(20),
   },
   categoryCard: {
-    backgroundColor: '#FBFBFB',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-    borderRadius: 10 * scale,
-    marginBottom: 7 * scale,
+    backgroundColor: '#FFFFFF',
+    borderRadius: moderateScale(10),
+    marginBottom: verticalScale(10),
     shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 10 * scale,
-    elevation: 5,
+    shadowRadius: moderateScale(8),
+    elevation: 4,
     overflow: 'hidden',
   },
   categoryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 12 * scale,
-    paddingVertical: 8 * scale,
-    height: 45 * scale,
-    borderTopLeftRadius: 10 * scale,
-    borderTopRightRadius: 10 * scale,
+    padding: moderateScale(14),
   },
   selectedCategoryHeader: {
     backgroundColor: '#8F31F9',
   },
   categoryTitle: {
-    fontSize: 14 * scale,
+    fontSize: moderateScale(14),
     fontWeight: '700',
-    color: '#000000',
+    color: '#1A1B20',
     fontFamily: 'Rubik',
-    lineHeight: 17 * scale,
-    letterSpacing: 0.195 * scale,
   },
   selectedCategoryTitle: {
-    color: '#FBFBFB',
+    color: '#FFFFFF',
   },
   subCategoriesContainer: {
-    backgroundColor: '#FBFBFB',
-    paddingVertical: 6 * scale,
+    padding: moderateScale(8),
+    backgroundColor: '#FFFFFF',
   },
   subCategoryCard: {
-    backgroundColor: '#FBFBFB',
+    backgroundColor: '#F8F4FF',
+    borderRadius: moderateScale(8),
+    marginBottom: verticalScale(8),
     borderWidth: 1,
-    borderColor: '#FFFFFF',
-    borderRadius: 10 * scale,
-    marginBottom: 7 * scale,
-    marginHorizontal: 7 * scale,
-    shadowColor: '#8F31F9',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 10 * scale,
-    elevation: 5,
+    borderColor: '#E8D9FF'
   },
   subCategoryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 12 * scale,
-    paddingVertical: 8 * scale,
-    height: 40 * scale,
+    padding: moderateScale(12),
   },
   selectedSubCategoryHeader: {
-    backgroundColor: '#FBFBFB',
-    borderRadius: 5 * scale,
-    marginHorizontal: 7 * scale,
+    // Optional: Add specific style for selected subcategory header
   },
   subCategoryTitle: {
-    fontSize: 12.63 * scale,
-    fontWeight: '700',
-    color: '#000000',
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+    color: '#1A1B20',
     fontFamily: 'Rubik',
-    lineHeight: 15 * scale,
-    letterSpacing: 0.176 * scale,
   },
   selectedSubCategoryTitle: {
-    fontWeight: '600',
+    // Optional: Add specific style for selected subcategory text
   },
   plansContainer: {
     backgroundColor: 'rgba(150, 61, 251, 0.05)',
-    borderRadius: 10 * scale,
-    marginHorizontal: 7 * scale,
-    marginBottom: 6 * scale,
+    borderBottomLeftRadius: moderateScale(8),
+    borderBottomRightRadius: moderateScale(8),
+    padding: moderateScale(10),
+    borderTopWidth: 1,
+    borderColor: '#E8D9FF'
   },
   planItem: {
-    paddingHorizontal: 10 * scale,
-    paddingVertical: 6 * scale,
+    paddingVertical: verticalScale(8),
   },
   planText: {
-    fontSize: 12.63 * scale,
-    fontWeight: '700',
-    color: '#000000',
+    fontSize: moderateScale(13),
+    fontWeight: '500',
+    color: '#1A1B20',
     fontFamily: 'Rubik',
-    lineHeight: 15 * scale,
-    letterSpacing: 0.176 * scale,
   },
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40 * scale,
+    paddingVertical: verticalScale(40),
   },
   loadingText: {
-    fontSize: 16 * scale,
+    fontSize: moderateScale(16),
     fontWeight: '500',
     color: '#7D7D7D',
     fontFamily: 'Rubik',
+    marginTop: verticalScale(10)
   },
-  disabledDropdown: {
-    opacity: 0.6,
-  },
-  emptySubCategoriesContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20 * scale,
-  },
-  emptySubCategoriesText: {
-    fontSize: 14 * scale,
+  emptyText: {
+    fontSize: moderateScale(14),
     fontWeight: '400',
     color: '#7D7D7D',
     fontFamily: 'Rubik',
+    textAlign: 'center',
+    paddingVertical: verticalScale(20),
   },
-  emptyProductsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20 * scale,
-  },
-  emptyProductsText: {
-    fontSize: 14 * scale,
-    fontWeight: '400',
-    color: '#7D7D7D',
-    fontFamily: 'Rubik',
-  },
-
 });
 
 export default CalculatorScreen;

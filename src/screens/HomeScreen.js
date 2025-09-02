@@ -579,6 +579,7 @@ const HomeScreen = () => {
   };
   
   const handleCategoryPress = (category, subCategory = null, subCategoryImage = null) => {
+    console.log('HomeScreen - handleCategoryPress called with:', { category, subCategory, subCategoryImage });
     setSelectedCategory(category);
     setSelectedSubCategoryData(subCategory);
     setSelectedSubCategoryImage(subCategoryImage);
@@ -1815,13 +1816,13 @@ const HomeScreen = () => {
             
             <View style={styles.travelOptions}>
               {/* Invisible touch overlays for travel options */}
-              <TouchableOpacity 
-                onPress={() => handleCategoryPress('Domestic Travel')} 
+              <TouchableOpacity
+                onPress={() => handleCategoryPress('Travel', { name: 'Domestic Travel' })}
                 style={[styles.categoryOverlay, { top: 0, left: 0, width: '50%', height: 120 }]}
                 activeOpacity={1}
               />
-              <TouchableOpacity 
-                onPress={() => handleCategoryPress('International Travel')} 
+              <TouchableOpacity
+                onPress={() => handleCategoryPress('Travel', { name: 'International Travel' })}
                 style={[styles.categoryOverlay, { top: 0, left: '50%', width: '50%', height: 120 }]}
                 activeOpacity={1}
               />
