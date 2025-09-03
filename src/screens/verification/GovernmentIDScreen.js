@@ -285,7 +285,7 @@ export default function GovernmentIDScreen({ navigation, route }) {
         {/* Header with back button */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <Ionicons name="chevron-back-outline" size={24} color="#1A1A1A" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Government ID</Text>
           <View style={styles.headerSpacer} />

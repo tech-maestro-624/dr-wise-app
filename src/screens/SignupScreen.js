@@ -9,12 +9,19 @@ import {
   StatusBar,
   SafeAreaView,
   Image,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Controller, useForm } from 'react-hook-form';
 import Toast from 'react-native-toast-message';
-import { register, sendOtp, verifyOtp } from '../api/auth';
+import {
+  register,
+  sendOtp,
+  verifyOtp,
+  checkUserExists,
+  getUserByPhoneNumber,
+} from '../api/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import Loader from '../loader/loader';
@@ -23,6 +30,7 @@ import toastConfig from '../toast/toastConfig';
 const SignupScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [isUserExists, setIsUserExists] = useState(false);
   const { login } = useAuth();
 
   const { control, handleSubmit, formState: { errors }, reset } = useForm({
@@ -66,6 +74,20 @@ const SignupScreen = ({ navigation }) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkUser = async (phoneNumber) => {
+    try {
+      const response = await getUserByPhoneNumber(phoneNumber);
+      if (response.data.user) {
+        setIsUserExists(true);
+      } else {
+        setIsUserExists(false);
+      }
+    } catch (error) {
+      // Handle errors, e.g., user not found might be a 404
+      setIsUserExists(false);
     }
   };
 
@@ -175,7 +197,12 @@ const SignupScreen = ({ navigation }) => {
                     placeholder="Enter your phone number"
                     placeholderTextColor="#9CA3AF"
                     onBlur={onBlur}
-                    onChangeText={onChange}
+                    onChangeText={(text) => {
+                      onChange(text);
+                      if (text.length === 10) {
+                        checkUser(text);
+                      }
+                    }}
                     value={value}
                     keyboardType="phone-pad"
                     maxLength={10}
@@ -185,6 +212,7 @@ const SignupScreen = ({ navigation }) => {
               />
             </View>
             {errors.phoneNumber && <Text style={styles.errorText}>{errors.phoneNumber.message}</Text>}
+            {isUserExists && <Text style={styles.errorText}>User already exists with this phone number</Text>}
           </View>
 
           {/* Referral Code Input */}
@@ -239,38 +267,11 @@ const SignupScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>Or continue with</Text>
-            <View style={styles.divider} />
-          </View>
-
-          {/* Social Login Buttons */}
-          <View style={styles.socialContainer}>
-            <TouchableOpacity style={styles.socialButton}>
-              <Text style={styles.googleText}>G</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Ionicons name="logo-apple" size={20} color="#000000" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Text style={styles.facebookText}>f</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Promo Code */}
-          <View style={styles.promoContainer}>
-            <Text style={styles.promoText}>Have a Promo code? </Text>
-            <TouchableOpacity>
-              <Text style={styles.promoLink}>Click Here</Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Signup Button */}
           <TouchableOpacity
-            style={styles.signupButton}
+            style={[styles.signupButton, isUserExists && styles.signupButtonDisabled]}
             onPress={handleSubmit(onSubmit)}
+            disabled={isUserExists}
           >
             <Text style={styles.signupButtonText}>
               Sign Up
@@ -402,71 +403,6 @@ const styles = StyleSheet.create({
   termsLink: {
     fontFamily: 'Rubik-Regular',
     color: '#8B5CF6',
-    textDecorationLine: 'underline',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16, // Reduced from 32 to save space
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#D1D5DB',
-  },
-  dividerText: {
-    fontSize: 14,
-    fontFamily: 'Rubik-Regular',
-    color: '#6B7280',
-    paddingHorizontal: 16,
-  },
-  socialContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
-    marginBottom: 16, // Reduced from 32 to save space
-  },
-  socialButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  googleText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
-    color: '#EA4335',
-  },
-  facebookText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
-    color: '#1877F2',
-  },
-  promoContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 16, // Reduced from 24 to save more space
-  },
-  promoText: {
-    fontSize: 14,
-    fontFamily: 'Rubik-Regular',
-    color: '#6B7280',
-  },
-  promoLink: {
-    fontSize: 14,
-    fontFamily: 'Rubik-Regular',
-    color: '#1F2937',
     textDecorationLine: 'underline',
   },
   signupButton: {

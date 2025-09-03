@@ -79,6 +79,7 @@ const LoginScreen = ({ navigation }) => {
       const token = response.data.token;
 
       await login(userData, token);
+      navigation.navigate('Main');
       // Navigation will be handled automatically by AuthNavigator
     } catch (error) {
       console.log('Login error:', error.response?.data);
@@ -248,38 +249,8 @@ const LoginScreen = ({ navigation }) => {
             </View>
           )}
 
-          {/* Forgot Password */}
-          <TouchableOpacity style={styles.forgotPasswordContainer}>
-            <Text style={styles.forgotPasswordText}>Forgot Password</Text>
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>Or continue with</Text>
-            <View style={styles.divider} />
-          </View>
-
-          {/* Social Login Buttons */}
-          <View style={styles.socialContainer}>
-            <TouchableOpacity style={styles.socialButton}>
-              <Text style={styles.googleText}>G</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Ionicons name="logo-apple" size={20} color="#000000" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Text style={styles.facebookText}>f</Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Promo Code */}
-          <View style={styles.promoContainer}>
-            <Text style={styles.promoText}>Have a Promo code? </Text>
-            <TouchableOpacity>
-              <Text style={styles.promoLink}>Click Here</Text>
-            </TouchableOpacity>
-          </View>
+         
 
           {/* Login Button */}
           <TouchableOpacity
@@ -448,65 +419,6 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     marginTop: 4,
   },
-  forgotPasswordContainer: {
-    alignSelf: 'flex-end',
-    marginBottom: 32,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    fontFamily: 'Rubik-Regular',
-    color: '#1F2937',
-    textDecorationLine: 'underline',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#D1D5DB',
-  },
-  dividerText: {
-    fontSize: 14,
-    fontFamily: 'Rubik-Regular',
-    color: '#6B7280',
-    paddingHorizontal: 16,
-  },
-  socialContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
-    marginBottom: 32,
-  },
-  socialButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  googleText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
-    color: '#EA4335',
-  },
-  facebookText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    fontFamily: 'Rubik-Bold',
-    color: '#1877F2',
-  },
   promoContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -529,6 +441,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: 24,
+    marginTop: 64,
     shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

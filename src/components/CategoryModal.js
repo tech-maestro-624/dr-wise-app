@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Image, Dimensions, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -67,7 +67,7 @@ const CategoryModal = ({ visible, onClose, category, subCategory, subCategoryIma
           </View>
 
           {/* Content Section */}
-          <View style={styles.contentSection}>
+          <ScrollView style={styles.contentScrollView} contentContainerStyle={styles.contentSection}>
             {/* Title */}
             <Text style={styles.categoryTitle}>{displayName}</Text>
 
@@ -75,7 +75,7 @@ const CategoryModal = ({ visible, onClose, category, subCategory, subCategoryIma
             <Text style={styles.categoryDescription}>
               {displayDescription}
             </Text>
-          </View>
+          </ScrollView>
 
           {/* Button */}
           <TouchableOpacity style={styles.viewCategoriesButton} onPress={handleViewCategories}>
@@ -140,8 +140,11 @@ const styles = StyleSheet.create({
     color: '#1A1B20',
     marginBottom: 8 * scale,
   },
-  contentSection: {
+  contentScrollView: {
     flex: 1,
+    width: '100%',
+  },
+  contentSection: {
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20 * scale,

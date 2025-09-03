@@ -54,7 +54,17 @@ const register = async(data = {}) => {
   }
 }
 
-export { sendOtp, verifyOtp, customerLogout, getUserData, customerLogin, register };
+const getUserByPhoneNumber = async (phoneNumber) => {
+  try {
+    const response = await apiClient.get(`/auth/${phoneNumber}`);
+    console.log('getUserByPhoneNumber response', response);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export { sendOtp, verifyOtp, customerLogout, getUserData, customerLogin, register, getUserByPhoneNumber };
 
 
 

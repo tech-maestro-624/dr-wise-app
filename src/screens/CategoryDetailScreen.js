@@ -179,9 +179,8 @@ const CategoryDetailScreen = () => {
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={[styles.fab, { bottom: insets.bottom > 0 ? insets.bottom : moderateScale(20) }]}>
-        <Ionicons name="calculator-outline" size={moderateScale(18)} color="#FFFFFF" />
-      </TouchableOpacity>
+      {/* --- Floating Action Button (FAB) --- */}
+      {/* The FAB has been removed as per the user's request */}
     </SafeAreaView>
   );
 };
