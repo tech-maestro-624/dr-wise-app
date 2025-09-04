@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  SafeAreaView, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
   StatusBar,
   ScrollView,
-  Modal
+  Modal,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/tokens';
 import { completeRegistrationWithVerification, getVerificationData } from '../../api/verification';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
-import Toast from 'react-native-toast-message';
 
 const stepsList = [
   { 
@@ -159,27 +159,18 @@ export default function VerificationMainScreen({ navigation, route }) {
         const response = await completeRegistrationWithVerification(completeRegistrationData);
 
         if (response.data) {
-          Toast.show({
-            type: 'success',
-            text1: 'Registration Completed!',
-            text2: 'Account registered successfully. Please wait for verification approval.',
-            position: 'bottom',
-          });
+          // Show success modal instead of toast
+          setShowModal(true);
 
           // Clear temp data
           await AsyncStorage.removeItem('tempUserData');
-
-          // Navigate to login screen (don't login user immediately)
-          navigation.navigate('Login');
         }
       } catch (error) {
         console.error('Registration completion error:', error);
-        Toast.show({
-          type: 'error',
-          text1: 'Registration failed',
-          text2: error?.response?.data?.message || error.message,
-          position: 'bottom',
-        });
+        Alert.alert(
+          'Registration Failed',
+          error?.response?.data?.message || error.message
+        );
       } finally {
         setIsSubmitting(false);
       }

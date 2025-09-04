@@ -1,48 +1,22 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
   SafeAreaView,
   StatusBar,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../theme/tokens';
 import { storeBankDetails } from '../../api/verification';
 
-const SuccessModal = ({ visible, onClose }) => (
-  <Modal
-    visible={visible}
-    transparent={true}
-    animationType="fade"
-    onRequestClose={onClose}
-  >
-    <View style={styles.modalOverlay}>
-      <View style={styles.modalContent}>
-        <Image 
-          source={require('../../../assets/3d_checkmark_2023_4 1.png')}
-          style={styles.successImage}
-        />
-        <Text style={styles.successTitle}>Congrats!</Text>
-        <Text style={styles.successSubtitle}>
-          Your account is under verification process please wait some time.
-        </Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={onClose}>
-          <Text style={styles.refreshButtonText}>Refresh</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </Modal>
-);
 
 export default function BankDetailsScreen({ navigation, route }) {
   const [formData, setFormData] = useState({
@@ -54,7 +28,6 @@ export default function BankDetailsScreen({ navigation, route }) {
   });
 
   const [errors, setErrors] = useState({});
-  const [isSuccessModalVisible, setSuccessModalVisible] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
@@ -92,25 +65,26 @@ export default function BankDetailsScreen({ navigation, route }) {
       // Store the bank details for later use in registration
       storeBankDetails(formData);
 
-      // Show the success modal
-      setSuccessModalVisible(true);
+      // Navigate back without showing success modal
+      const existingCompleted = route.params?.completedSteps || [];
+      const updatedCompleted = [...existingCompleted];
+      if (!updatedCompleted.includes('bankDetails')) {
+        updatedCompleted.push('bankDetails');
+      }
+
+      // Navigate back with updated completion status
+      navigation.navigate('Verification', { completedSteps: updatedCompleted });
+
+      Alert.alert(
+        'Success',
+        'Bank details saved successfully!',
+        [{ text: 'OK' }]
+      );
     } else {
       Alert.alert('Validation Error', 'Please fill all required fields correctly');
     }
   };
 
-  const handleModalClose = () => {
-    setSuccessModalVisible(false);
-    // Get existing completed steps and add current one
-    const existingCompleted = route.params?.completedSteps || [];
-    const updatedCompleted = [...existingCompleted];
-    if (!updatedCompleted.includes('bankDetails')) {
-      updatedCompleted.push('bankDetails');
-    }
-
-    // Navigate back with updated completion status
-    navigation.navigate('Verification', { completedSteps: updatedCompleted });
-  };
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -226,7 +200,7 @@ export default function BankDetailsScreen({ navigation, route }) {
           </View>
 
           {/* UPI Section */}
-          <View style={styles.upiSection}>
+          {/* <View style={styles.upiSection}>
             <View style={styles.upiIconContainer}>
               <View style={styles.upiIcon}>
                 <Ionicons name="arrow-up" size={24} color="#8B5CF6" />
@@ -239,7 +213,7 @@ export default function BankDetailsScreen({ navigation, route }) {
             <TouchableOpacity style={styles.upiArrow}>
               <Ionicons name="chevron-forward" size={24} color="#6B7280" />
             </TouchableOpacity>
-          </View>
+          </View> */}
         </ScrollView>
 
         {/* Submit Button */}
@@ -249,7 +223,6 @@ export default function BankDetailsScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-      <SuccessModal visible={isSuccessModalVisible} onClose={handleModalClose} />
     </SafeAreaView>
   );
 }
@@ -376,55 +349,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-   
-  },
-  modalContent: {
-    width: 324,
-    height: 673,
-    backgroundColor: '#FBFBFB',
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 30,
-  },
-
-  
-  successImage: {
-    width: 135,
-    height: 135,
-    marginBottom: 100,
-    resizeMode: 'contain',
-  },
-  successTitle: {
-    fontSize: 32,
-    fontWeight: '500',
-    color: '#1A1B20',
-    marginBottom: 16,
-  },
-  successSubtitle: {
-    fontSize: 18,
-    color: '#7D7D7D',
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  refreshButton: {
-    backgroundColor: '#8F31F9',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    width: 261,
-    alignItems: 'center',
-  },
-  refreshButtonText: {
-    color: '#FBFBFC',
-    fontSize: 16,
     fontWeight: '600',
   },
 });

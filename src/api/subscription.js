@@ -3,7 +3,7 @@ import api from './https';
 
 export const getUserSubscriptions = async (userId) => {
   try {
-    const response = await api.get('/subscription', {
+    const response = await api.get('/subscription/status', {
       params: { userId }
     });
     return response;

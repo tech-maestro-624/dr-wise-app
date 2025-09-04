@@ -10,8 +10,10 @@ const AuthContext = createContext({
   user: null,
   isAmbassador: false,
   verificationStatus: 'pending',
+  isLoading: true,
   login: () => {},
   logout: () => {},
+  manualValidateToken: () => {},
 });
 
 export { AuthContext };
@@ -23,6 +25,7 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAmbassador, setIsAmbassador] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState('pending');
+  const [loginTimestamp, setLoginTimestamp] = useState(null);
 
   const checkUserRole = async (userData) => {
     try {
@@ -86,14 +89,13 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (userData, token) => {
     try {
-      console.log('AuthContext - Login called with user:', userData?.name);
-      console.log('AuthContext - User data:', JSON.stringify(userData, null, 2));
-
       // Store token first
       if (token) {
         await AsyncStorage.setItem('token', token);
-        console.log('AuthContext - Token stored');
       }
+
+      // Set login timestamp to prevent validateToken from interfering
+      setLoginTimestamp(Date.now());
 
       setUser(userData);
       setIsAuthenticated(true);
@@ -104,8 +106,6 @@ export const AuthProvider = ({ children }) => {
       // Check if user is ambassador
       const userIsAmbassador = await checkUserRole(userData);
       setIsAmbassador(userIsAmbassador);
-
-      console.log('AuthContext - Login completed. IsAmbassador:', userIsAmbassador, 'VerificationStatus:', userData.verificationStatus);
     } catch (error) {
       console.error('Error during login:', error);
     }
@@ -113,13 +113,12 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      console.log('AuthContext - Logout called');
       setIsAuthenticated(false);
       setUser(null);
       setIsAmbassador(false);
       setVerificationStatus('pending');
+      setLoginTimestamp(null);
       await AsyncStorage.removeItem('token');
-      console.log('AuthContext - Token removed');
     } catch (error) {
       console.error('Error during logout:', error);
     }
@@ -127,48 +126,70 @@ export const AuthProvider = ({ children }) => {
 
   const validateToken = async () => {
     try {
-      console.log('Validating token...');
+      // Check if login was performed recently (within last 2 seconds)
+      // If so, skip validation to avoid race condition
+      if (loginTimestamp && (Date.now() - loginTimestamp) < 2000) {
+        console.log('Skipping token validation due to recent login');
+        setIsLoading(false);
+        return;
+      }
+
       const token = await AsyncStorage.getItem('token');
+      console.log('Token found in storage:', !!token);
 
       if (!token) {
-        console.log('No token found');
+        console.log('No token found, user is not authenticated');
         setIsAuthenticated(false);
         setIsLoading(false);
         return;
       }
 
-      console.log('Token found, validating with API...');
       const response = await getUserData();
 
-      if (response && response.data) {
-        const userData = response.data.user || response.data;
-        console.log('Token valid, user data:', userData);
+      if (response && response.data && response.data.user) {
+        const userData = response.data.user;
         setUser(userData);
         setIsAuthenticated(true);
 
         // Set verification status
         setVerificationStatus(userData.verificationStatus || 'pending');
 
-        // Check if user is ambassador
+        // Check if user is ambassador - this will determine which screen to show
         const userIsAmbassador = await checkUserRole(userData);
         setIsAmbassador(userIsAmbassador);
-
-        console.log('AuthContext - Setting authenticated to true');
       } else {
-        console.log('Token validation failed - no user data');
-        await AsyncStorage.removeItem('token');
-        setIsAuthenticated(false);
-        console.log('AuthContext - Setting authenticated to false');
+        // If API fails but we have a token, don't log out immediately
+        // This handles temporary network issues or API downtime
+        // For app reloads, if we have a token, trust it and set authenticated
+        setIsAuthenticated(true);
       }
     } catch (error) {
-      console.error('Token validation failed:', error);
-      await AsyncStorage.removeItem('token');
-      setIsAuthenticated(false);
-      console.log('AuthContext - Setting authenticated to false due to error');
+      // If it's a 401 (token expired/invalid), then log out
+      if (error.response?.status === 401) {
+        await AsyncStorage.removeItem('token');
+        setIsAuthenticated(false);
+        setUser(null);
+        setIsAmbassador(false);
+        setVerificationStatus('pending');
+        setLoginTimestamp(null);
+      } else {
+        // For other errors (network issues, server errors), keep user logged in
+        // For app reloads, if we have a token in storage, trust it
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
+      }
     } finally {
       setIsLoading(false);
-      console.log('AuthContext - Loading complete');
     }
+  };
+
+  const manualValidateToken = async () => {
+    setLoginTimestamp(null); // Reset timestamp to allow validation
+    await validateToken();
   };
 
   useEffect(() => {
@@ -180,7 +201,16 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, isAmbassador, verificationStatus, login, logout }}>
+    <AuthContext.Provider value={{
+      isAuthenticated,
+      user,
+      isAmbassador,
+      verificationStatus,
+      isLoading,
+      login,
+      logout,
+      manualValidateToken
+    }}>
       {children}
     </AuthContext.Provider>
   );

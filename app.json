@@ -24,7 +24,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.drwise",
       "infoPlist": {
-        "NSCameraUsageDescription": "This app needs access to camera to capture government ID documents for verification purposes."
+        "NSCameraUsageDescription": "This app needs access to camera to capture government ID documents for verification purposes.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -43,6 +44,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3d6d1643-75e1-4e66-a16e-f00997ad9399"
+      }
     }
   }
 }

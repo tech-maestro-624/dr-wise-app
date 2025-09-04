@@ -79,7 +79,12 @@ const LoginScreen = ({ navigation }) => {
       const token = response.data.token;
 
       await login(userData, token);
-      navigation.navigate('Main');
+
+      // Small delay to ensure login completes before navigation
+      setTimeout(() => {
+        navigation.navigate('Main');
+      }, 300);
+
       // Navigation will be handled automatically by AuthNavigator
     } catch (error) {
       console.log('Login error:', error.response?.data);
@@ -91,24 +96,25 @@ const LoginScreen = ({ navigation }) => {
         if (errorMessage.includes('does not exist') || errorMessage.includes('Incorrect phone number')) {
           setVerificationMessage({
             title: 'User Not Found',
-            subtitle: 'Account doesn\'t exist',
+            subtitle: 'Account Not Registered',
             message: 'No account found with this phone number. Please sign up first.',
           });
           setVerificationModalVisible(true);
         } else if (errorMessage.includes('Invalid') || errorMessage.includes('expired')) {
           setVerificationMessage({
             title: 'Invalid OTP',
-            subtitle: 'Verification failed',
+            subtitle: 'Verification Failed',
             message: 'The OTP you entered is incorrect or has expired. Please try again.',
           });
           setVerificationModalVisible(true);
         } else {
           // Other 400 errors
-          Toast.show({
-            type: 'error',
-            text1: errorMessage,
-            position: 'bottom',
+          setVerificationMessage({
+            title: 'Login Error',
+            subtitle: 'Authentication Failed',
+            message: errorMessage,
           });
+          setVerificationModalVisible(true);
         }
       } else if (error.response?.status === 403) {
         // Verification status issues
@@ -117,21 +123,21 @@ const LoginScreen = ({ navigation }) => {
         if (verificationStatus === 'pending') {
           setVerificationMessage({
             title: 'Account Verification Pending',
-            subtitle: 'Your documents are under review',
-            message: 'We are currently reviewing your submitted documents.',
+            subtitle: 'Documents Under Review',
+            message: 'Your account verification is still pending. Our admin team is reviewing your submitted documents. You will receive access once approved.',
           });
           setVerificationModalVisible(true);
         } else if (verificationStatus === 'rejected') {
           setVerificationMessage({
             title: 'Account Verification Rejected',
-            subtitle: 'Verification was not approved',
+            subtitle: 'Verification Not Approved',
             message: 'Your submitted documents were not approved. Please contact our support team for assistance.',
           });
           setVerificationModalVisible(true);
         } else if (verificationStatus === 'required') {
           setVerificationMessage({
             title: 'Verification Required',
-            subtitle: 'Complete your account setup',
+            subtitle: 'Complete Account Setup',
             message: 'You need to complete the verification process to access your account.',
           });
           setVerificationModalVisible(true);
@@ -289,46 +295,23 @@ const LoginScreen = ({ navigation }) => {
       {/* Verification Status Modal */}
       <Modal
         visible={verificationModalVisible}
-        animationType="slide"
-        transparent
+        animationType="fade"
+        transparent={true}
         onRequestClose={() => setVerificationModalVisible(false)}
       >
-        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-          <TouchableOpacity
-            onPress={() => setVerificationModalVisible(false)}
-            activeOpacity={1}
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' }}
-          />
-          <View
-            style={{
-              backgroundColor: '#FFF',
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              padding: 20,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: 'bold',
-                color: '#6B21A8',
-                marginBottom: 10,
-              }}
-            >
-              {verificationMessage.title}
-            </Text>
-            <Text style={{ fontSize: 14, color: '#333', marginBottom: 10 }}>
-              {verificationMessage.subtitle}
-            </Text>
-            <Text style={{ fontSize: 14, color: '#333' }}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{verificationMessage.title}</Text>
+            <Text style={styles.modalSubtitle}>{verificationMessage.subtitle}</Text>
+            <Text style={styles.modalMessage}>
               {verificationMessage.message}
             </Text>
 
             <TouchableOpacity
+              style={styles.modalButton}
               onPress={() => setVerificationModalVisible(false)}
-              style={{ marginTop: 15, alignSelf: 'center' }}
             >
-              <Text style={{ color: 'red', fontSize: 16 }}>Close</Text>
+              <Text style={styles.modalButtonText}>Continue to Login</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -490,6 +473,65 @@ const styles = StyleSheet.create({
     color: '#8B5CF6',
     fontWeight: '600',
     textDecorationLine: 'underline',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 32,
+    margin: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    fontFamily: 'Rubik-Bold',
+    color: '#1F2937',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Rubik-SemiBold',
+    color: '#8B5CF6',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalMessage: {
+    fontSize: 16,
+    fontFamily: 'Rubik-Regular',
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  modalButton: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    minWidth: 200,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    fontFamily: 'Rubik-SemiBold',
+    color: '#FFFFFF',
   },
 
 });

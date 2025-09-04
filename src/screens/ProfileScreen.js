@@ -28,7 +28,9 @@ import { updateUser } from '../api/user';
 import { getAffiliates } from '../api/affiliate';
 import { customerLogout } from '../api/auth';
 import { getUserSubscriptions } from '../api/subscription';
+import { createRenewalOrder, processPayment } from '../api/payment';
 import VerificationStatusBanner from '../components/VerificationStatusBanner';
+import RazorpayCheckout from 'react-native-razorpay';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const scale = Math.min(screenWidth / 375, screenHeight / 812);
@@ -48,8 +50,82 @@ const PolicyItem = ({ iconSource, text, onPress }) => (
   </TouchableOpacity>
 );
 
+// Purchase Modal Component for New Users
+const PurchaseModal = ({ visible, onPurchase, loading = false }) => (
+  <Modal
+    visible={visible}
+    transparent={true}
+    animationType="slide"
+    onRequestClose={() => {}} // No close on back press
+  >
+    <View style={styles.purchaseModalOverlay}>
+      <View style={styles.purchaseModalContent}>
+        {/* Logo Section */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../../assets/Icons/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+            onError={(error) => console.log('Logo load error:', error)}
+          />
+        </View>
+
+        {/* Welcome Text */}
+        <View style={styles.welcomeContainer}>
+          <Text style={styles.purchaseModalTitle}>Welcome to Dr. Wise!</Text>
+          <Text style={styles.purchaseModalText}>
+            Start your journey with our affiliate program and earn rewards.
+          </Text>
+        </View>
+
+        {/* Price Section */}
+        <View style={styles.priceSection}>
+          <View style={styles.priceContainer}>
+            <Text style={styles.mainPrice}>₹499</Text>
+            <View style={styles.priceDetails}>
+              <Text style={styles.pricePeriod}>per year</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* CTA Button */}
+        <TouchableOpacity
+          style={[styles.purchaseButton, loading && styles.purchaseButtonDisabled]}
+          onPress={onPurchase}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={loading ? ['#CCCCCC', '#AAAAAA'] : ['#8F31F9', '#B75CFF', '#8F31F9']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.buttonGradient}
+          >
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color="#FFFFFF" size="small" />
+                <Text style={styles.loadingText}>Processing...</Text>
+              </View>
+            ) : (
+              <View style={styles.buttonContent}>
+                <Ionicons name="card-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.purchaseButtonText}>Start My Subscription</Text>
+              </View>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Footer Note */}
+        <Text style={styles.footerNote}>
+          Secure payment powered by Razorpay
+        </Text>
+      </View>
+    </View>
+  </Modal>
+);
+
 // Renewal Modal Component
-const RenewalModal = ({ visible, onRenew }) => (
+const RenewalModal = ({ visible, onRenew, loading = false }) => (
   <Modal
     visible={visible}
     transparent={true}
@@ -74,8 +150,16 @@ const RenewalModal = ({ visible, onRenew }) => (
               Your subscription has expired. Please renew to continue using the application.
             </Text>
           </View>
-          <TouchableOpacity style={styles.renewButton} onPress={onRenew}>
-            <Text style={styles.renewButtonText}>Renew</Text>
+          <TouchableOpacity
+            style={[styles.renewButton, loading && styles.renewButtonDisabled]}
+            onPress={onRenew}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.renewButtonText}>Renew Subscription</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -100,6 +184,10 @@ const ProfileScreen = () => {
   const [subscription, setSubscription] = useState(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [showRenewalModal, setShowRenewalModal] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [subscriptionChecked, setSubscriptionChecked] = useState(false);
+  const [hasFetchedSubscription, setHasFetchedSubscription] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   // Fetch user data from backend
   const fetchUserData = async () => {
@@ -135,16 +223,12 @@ const ProfileScreen = () => {
           }
         }
 
-        console.log('User data fetched:', userData);
-
         // Fetch subscription data immediately with the user ID
         fetchSubscriptionData(userData._id);
       } else {
-        console.error('Invalid response format for user data');
         Alert.alert('Error', 'Failed to load user data. Please try again.');
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
       const errorMessage = error?.response?.data?.message || error.message || 'Failed to load user data';
       Alert.alert('Error', errorMessage);
     } finally {
@@ -158,41 +242,279 @@ const ProfileScreen = () => {
     const currentUserId = userId || user?._id;
     if (!currentUserId) return;
 
+    // Prevent infinite fetching - only fetch once per user
+    if (hasFetchedSubscription) {
+      return;
+    }
+
     setSubscriptionLoading(true);
+    setSubscriptionChecked(false);
+    setHasFetchedSubscription(true);
+
     try {
+      console.log('ProfileScreen - Fetching subscription for userId:', currentUserId, 'hasFetched:', hasFetchedSubscription);
       const response = await getUserSubscriptions(currentUserId);
 
+      console.log('ProfileScreen - Subscription API response:', {
+        status: response.status,
+        success: response.data?.success,
+        data: response.data?.data,
+        fullResponse: response.data
+      });
+
       if (response && response.data && response.data.success && response.data.data) {
-        // Get the most recent active subscription
-        const subscriptions = response.data.data;
+        // Handle subscription status response
+        const statusData = response.data.data;
 
-        const activeSubscription = subscriptions.find(sub =>
-          sub.status === 'active' && (sub.userId === user._id || sub.userId?._id === user._id)
-        );
+        console.log('ProfileScreen - Processing status data:', statusData);
+        console.log('ProfileScreen - Subscription found:', statusData.hasSubscription, statusData.subscription);
 
-        if (activeSubscription) {
-          setSubscription(activeSubscription);
-          if (new Date(activeSubscription.endDate) < new Date()) {
+        if (statusData.hasSubscription && statusData.subscription) {
+          console.log('ProfileScreen - Found active subscription:', statusData.subscription);
+          setSubscription(statusData.subscription);
+          // Check if active subscription is expired
+          if (new Date(statusData.subscription.endDate) < new Date()) {
+            // User had active subscription but it's expired - show renewal modal
             setShowRenewalModal(true);
+            setShowPurchaseModal(false);
           } else {
+            // User has active subscription - no modals
             setShowRenewalModal(false);
+            setShowPurchaseModal(false);
           }
         } else {
-          setSubscription(null);
-          // Assuming no subscription is also a reason to show renewal
-          setShowRenewalModal(true);
+          // No active subscription found
+          console.log('ProfileScreen - No active subscription found, status:', statusData.status);
+          if (statusData.status === 'expired') {
+            // User had subscriptions before but they're expired - show renewal modal
+            setSubscription(null);
+            setShowRenewalModal(true);
+            setShowPurchaseModal(false);
+          } else {
+            // New user with no subscriptions ever - show purchase modal
+            setSubscription(null);
+            setShowRenewalModal(false);
+            setShowPurchaseModal(true);
+          }
         }
       } else {
+        // API returned empty data - treat as new user
         setSubscription(null);
-        setShowRenewalModal(true);
+        setShowRenewalModal(false);
+        setShowPurchaseModal(true);
       }
     } catch (error) {
-      console.error('Error fetching subscription data:', error);
-      // Don't show alert for subscription fetch errors to avoid spam
+      // On error, treat as new user and show purchase modal
       setSubscription(null);
-      setShowRenewalModal(true);
+      setShowRenewalModal(false);
+      setShowPurchaseModal(true);
     } finally {
       setSubscriptionLoading(false);
+    }
+  };
+
+  // Handle Razorpay payment for new subscription purchase
+  const handlePurchasePayment = async () => {
+    if (!user) {
+      Alert.alert('Error', 'User data not available');
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      // Determine subscription type based on user role
+      const isAmbassador = user.roles?.some(role =>
+        role.name?.toLowerCase() === 'ambassador' ||
+        role._id === '673998264fcfab01f5dd61d6'
+      );
+
+      const subscriptionType = isAmbassador ? 'ambassador' : 'affiliate';
+
+      // Prepare order data for new subscription
+      const orderData = {
+        userId: user._id,
+        affiliateId: isAmbassador ? user.ambassadorId : null,
+        subscriptionType: subscriptionType
+      };
+
+      // Create Razorpay order
+      const orderResponse = await createRenewalOrder(orderData);
+
+      if (!orderResponse.data.success) {
+        throw new Error(orderResponse.data.message || 'Failed to create payment order');
+      }
+
+      const orderDetails = orderResponse.data.data;
+
+      // Configure Razorpay options
+      const options = {
+        key: orderDetails.key,
+        amount: orderDetails.amount * 100, // Razorpay expects amount in paisa
+        currency: orderDetails.currency,
+        name: 'Dr. Wise',
+        description: `${subscriptionType.charAt(0).toUpperCase() + subscriptionType.slice(1)} Subscription`,
+        order_id: orderDetails.orderId,
+        prefill: {
+          email: user.email,
+          contact: user.phoneNumber,
+          name: user.name
+        },
+        theme: {
+          color: '#8F31F9'
+        }
+      };
+
+      // Open Razorpay checkout
+      const paymentResult = await RazorpayCheckout.open(options);
+
+      // Process the successful payment
+      const paymentData = {
+        razorpay_payment_id: paymentResult.razorpay_payment_id,
+        razorpay_order_id: paymentResult.razorpay_order_id,
+        razorpay_signature: paymentResult.razorpay_signature,
+        userId: user._id,
+        affiliateId: isAmbassador ? user.ambassadorId : null
+      };
+
+      const processResponse = await processPayment(paymentData);
+
+                    if (processResponse.data.success) {
+                Alert.alert(
+                  'Payment Successful',
+                  'Welcome to Dr. Wise! Your subscription is now active.',
+                  [
+                    {
+                      text: 'Get Started',
+                      onPress: async () => {
+                        console.log('ProfileScreen - Starting subscription refresh after purchase payment');
+                        setShowPurchaseModal(false);
+                        // Reset fetch flag to allow re-fetching subscription data
+                        setHasFetchedSubscription(false);
+                        // Refresh subscription data
+                        await fetchSubscriptionData(user._id);
+                        console.log('ProfileScreen - Subscription refresh completed after purchase payment');
+                      }
+                    }
+                  ]
+                );
+              } else {
+                throw new Error(processResponse.data.message || 'Payment processing failed');
+              }
+
+    } catch (error) {
+      // Handle different types of errors
+      if (error.code === 'PAYMENT_CANCELLED') {
+        Alert.alert('Payment Cancelled', 'You cancelled the payment. Please try again when ready.');
+      } else if (error.code === 'NETWORK_ERROR') {
+        Alert.alert('Network Error', 'Please check your internet connection and try again.');
+      } else {
+        Alert.alert('Payment Failed', error.message || 'An error occurred during payment. Please try again.');
+      }
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // Handle Razorpay payment for subscription renewal
+  const handleRenewalPayment = async () => {
+    if (!user || !subscription) {
+      Alert.alert('Error', 'User or subscription data not available');
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      // Determine subscription type based on user role
+      const isAmbassador = user.roles?.some(role =>
+        role.name?.toLowerCase() === 'ambassador' ||
+        role._id === '673998264fcfab01f5dd61d6'
+      );
+
+      const subscriptionType = isAmbassador ? 'ambassador' : 'affiliate';
+
+      // Prepare order data
+      const orderData = {
+        userId: user._id,
+        affiliateId: isAmbassador ? user.ambassadorId : null,
+        subscriptionType: subscriptionType
+      };
+
+      // Create Razorpay order
+      const orderResponse = await createRenewalOrder(orderData);
+
+      if (!orderResponse.data.success) {
+        throw new Error(orderResponse.data.message || 'Failed to create payment order');
+      }
+
+      const orderDetails = orderResponse.data.data;
+
+      // Configure Razorpay options
+      const options = {
+        key: orderDetails.key,
+        amount: orderDetails.amount * 100, // Razorpay expects amount in paisa
+        currency: orderDetails.currency,
+        name: 'Dr. Wise',
+        description: `${subscriptionType.charAt(0).toUpperCase() + subscriptionType.slice(1)} Subscription Renewal`,
+        order_id: orderDetails.orderId,
+        prefill: {
+          email: user.email,
+          contact: user.phoneNumber,
+          name: user.name
+        },
+        theme: {
+          color: '#8F31F9'
+        }
+      };
+
+      // Open Razorpay checkout
+      const paymentResult = await RazorpayCheckout.open(options);
+
+      // Process the successful payment
+      const paymentData = {
+        razorpay_payment_id: paymentResult.razorpay_payment_id,
+        razorpay_order_id: paymentResult.razorpay_order_id,
+        razorpay_signature: paymentResult.razorpay_signature,
+        userId: user._id,
+        affiliateId: isAmbassador ? user.ambassadorId : null
+      };
+
+      const processResponse = await processPayment(paymentData);
+
+      if (processResponse.data.success) {
+        Alert.alert(
+          'Payment Successful',
+          'Your subscription has been renewed successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: async () => {
+                console.log('ProfileScreen - Starting subscription refresh after renewal payment');
+                setShowRenewalModal(false);
+                // Reset fetch flag to allow re-fetching subscription data
+                setHasFetchedSubscription(false);
+                // Refresh subscription data
+                await fetchSubscriptionData(user._id);
+                console.log('ProfileScreen - Subscription refresh completed after renewal payment');
+              }
+            }
+          ]
+        );
+      } else {
+        throw new Error(processResponse.data.message || 'Payment processing failed');
+      }
+
+    } catch (error) {
+
+      // Handle different types of errors
+      if (error.code === 'PAYMENT_CANCELLED') {
+        Alert.alert('Payment Cancelled', 'You cancelled the payment. Please try again when ready.');
+      } else if (error.code === 'NETWORK_ERROR') {
+        Alert.alert('Network Error', 'Please check your internet connection and try again.');
+      } else {
+        Alert.alert('Payment Failed', error.message || 'An error occurred during payment. Please try again.');
+      }
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -220,23 +542,30 @@ const ProfileScreen = () => {
     fetchUserData();
   }, []);
 
-  // Fetch subscription data when user state changes
+  // Fetch subscription data when user state changes (only once per user)
   useEffect(() => {
-    if (user?._id && !subscription && !subscriptionLoading) {
-      // Only fetch if we don't already have subscription data and not currently loading
+    if (user?._id && !hasFetchedSubscription && !subscriptionLoading) {
       fetchSubscriptionData(user._id);
     }
-  }, [user?._id, subscription, subscriptionLoading]);
+  }, [user?._id, hasFetchedSubscription, subscriptionLoading]);
 
-  // Re-fetch on focus
+  // Reset fetch state when user changes
+  useEffect(() => {
+    if (user?._id) {
+      setHasFetchedSubscription(false);
+      setSubscriptionChecked(false);
+      setShowRenewalModal(false);
+      setShowPurchaseModal(false);
+    }
+  }, [user?._id]);
+
+  // Re-fetch on focus (only user data, not subscription to prevent infinite loop)
   useFocusEffect(
     useCallback(() => {
       fetchUserData();
-      // Also refresh subscription data on focus
-      if (user?._id) {
-        fetchSubscriptionData(user._id);
-      }
-    }, [user?._id])
+      // Don't refetch subscription data on focus to prevent infinite requests
+      // The subscription data is already fetched once and cached
+    }, [])
   );
 
   const handleLogout = async () => {
@@ -665,13 +994,18 @@ const ProfileScreen = () => {
         </View>
       </Modal>
 
-      {/* Renewal Modal */}
+      {/* Purchase Modal for New Users */}
+      <PurchaseModal
+        visible={showPurchaseModal}
+        loading={paymentLoading}
+        onPurchase={handlePurchasePayment}
+      />
+
+      {/* Renewal Modal for Expired Subscriptions */}
       <RenewalModal
         visible={showRenewalModal}
-        onRenew={() => {
-          setShowRenewalModal(false);
-          navigation.navigate('SubscriptionPlansScreen');
-        }}
+        loading={paymentLoading}
+        onRenew={handleRenewalPayment}
       />
     </View>
   );
@@ -1069,10 +1403,139 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
+  renewButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
   renewButtonText: {
     fontSize: 16 * scale,
     color: '#FFFFFF',
     fontFamily: 'Rubik-SemiBold',
+  },
+  // Purchase Modal Styles
+  purchaseModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  purchaseModalContent: {
+    width: screenWidth * 0.85,
+    maxWidth: 320,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 25 * scale,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 15 * scale,
+    padding: 10 * scale,
+    backgroundColor: '#7a2ed6',
+    borderRadius: 25 * scale,
+  },
+  logoImage: {
+    width: 100 * scale,
+    height: 100 * scale,
+    borderRadius: 20 * scale,
+  },
+  welcomeContainer: {
+    alignItems: 'center',
+    marginBottom: 20 * scale,
+  },
+  purchaseModalTitle: {
+    fontSize: 20 * scale,
+    fontWeight: '700',
+    color: '#1A1B20',
+    fontFamily: 'Rubik-Bold',
+    marginBottom: 8 * scale,
+    textAlign: 'center',
+  },
+  purchaseModalText: {
+    fontSize: 14 * scale,
+    color: '#666666',
+    fontFamily: 'Rubik-Regular',
+    textAlign: 'center',
+    lineHeight: 18 * scale,
+  },
+  priceSection: {
+    alignItems: 'center',
+    marginBottom: 20 * scale,
+  },
+  priceContainer: {
+    alignItems: 'center',
+  },
+  mainPrice: {
+    fontSize: 32 * scale,
+    fontWeight: '700',
+    color: '#1A1B20',
+    fontFamily: 'Rubik-Bold',
+    marginBottom: 4 * scale,
+  },
+  priceDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pricePeriod: {
+    fontSize: 14 * scale,
+    color: '#666666',
+    fontFamily: 'Rubik-Regular',
+    marginRight: 8 * scale,
+  },
+  priceSavings: {
+    fontSize: 12 * scale,
+    color: '#4CAF50',
+    fontFamily: 'Rubik-Medium',
+    backgroundColor: '#E8F5E8',
+    paddingHorizontal: 8 * scale,
+    paddingVertical: 2 * scale,
+    borderRadius: 8 * scale,
+  },
+  purchaseButton: {
+    width: '100%',
+    borderRadius: 12 * scale,
+    overflow: 'hidden',
+    marginBottom: 12 * scale,
+  },
+  buttonGradient: {
+    paddingVertical: 14 * scale,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  purchaseButtonText: {
+    fontSize: 16 * scale,
+    color: '#FFFFFF',
+    fontFamily: 'Rubik-SemiBold',
+    marginLeft: 8 * scale,
+  },
+  purchaseButtonDisabled: {
+    opacity: 0.6,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 16 * scale,
+    color: '#FFFFFF',
+    fontFamily: 'Rubik-SemiBold',
+    marginLeft: 8 * scale,
+  },
+  footerNote: {
+    fontSize: 12 * scale,
+    color: '#999999',
+    fontFamily: 'Rubik-Regular',
+    textAlign: 'center',
   },
 });
 

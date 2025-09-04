@@ -54,11 +54,9 @@ const ReferralStatusScreen = () => {
       if (response && response.data && response.data.user) {
         setUser(response.data.user);
       } else {
-        console.error('Invalid user data response format');
         Alert.alert('Error', 'Failed to load user data. Please try again.');
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
       const errorMessage = error?.response?.data?.message || error.message || 'Failed to load user data';
       Alert.alert('Error', errorMessage);
     }
